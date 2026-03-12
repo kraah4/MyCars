@@ -4,257 +4,337 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MyCars — Evidence vozidel</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f0f0f'/%3E%3Cpath d='M5 19l2.5-6.5c.3-.8 1-1.5 2-1.5h13c1 0 1.7.7 2 1.5L27 19v4H5v-4z' fill='%23e8c547'/%3E%3Ccircle cx='9.5' cy='23' r='2.5' fill='%230f0f0f'/%3E%3Ccircle cx='22.5' cy='23' r='2.5' fill='%230f0f0f'/%3E%3Crect x='7' y='14' width='18' height='5' rx='1' fill='%230f0f0f' opacity='.3'/%3E%3C/svg%3E">
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23141418'/%3E%3Cpath d='M5 19l2.5-6.5c.3-.8 1-1.5 2-1.5h13c1 0 1.7.7 2 1.5L27 19v4H5v-4z' fill='%233b82f6'/%3E%3Ccircle cx='9.5' cy='23' r='2.5' fill='%23141418'/%3E%3Ccircle cx='22.5' cy='23' r='2.5' fill='%23141418'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:#0f0f0f; --surface:#181818; --surface2:#222; --surface3:#2a2a2a;
-    --border:#333; --accent:#e8c547; --accent2:#ff6b35;
-    --text:#f0ece0; --text2:#888; --text3:#555;
-    --green:#4caf82; --red:#e05c5c; --blue:#5b8dee;
-    --radius:6px; --font-display:'Syne',sans-serif; --font-mono:'DM Mono',monospace;
+    --bg: #0d0d11;
+    --surface: #141418;
+    --surface2: #1c1c22;
+    --surface3: #242430;
+    --border: #2a2a36;
+    --border2: #363644;
+    --accent: #3b82f6;
+    --accent-dim: rgba(59,130,246,.12);
+    --accent2: #f97316;
+    --text: #eeeef4;
+    --text2: #8888a0;
+    --text3: #44445a;
+    --green: #22c55e;
+    --green-dim: rgba(34,197,94,.12);
+    --red: #ef4444;
+    --red-dim: rgba(239,68,68,.12);
+    --amber: #f59e0b;
+    --amber-dim: rgba(245,158,11,.12);
+    --blue: #6366f1;
+    --radius: 8px;
+    --radius-sm: 5px;
+    --font: 'Outfit', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --sidebar-w: 248px;
   }
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  html{font-size:16.8px}
-  body{background:var(--bg);color:var(--text);font-family:var(--font-mono);min-height:100vh;overflow-x:hidden}
-  #app{display:flex;height:100vh;overflow:hidden}
-  #sidebar{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-  #main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-  #topbar{height:58px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0;background:var(--surface)}
-  #content{flex:1;overflow-y:auto;padding:24px}
-  .sidebar-logo{padding:18px 16px 12px;border-bottom:1px solid var(--border)}
-  .sidebar-logo h1{font-family:var(--font-display);font-size:1.2rem;font-weight:800;color:var(--accent);letter-spacing:-.02em}
-  .sidebar-logo span{color:var(--text2);font-size:.7rem}
-  .sidebar-section{padding:10px 8px 4px}
-  .sidebar-section-label{font-size:.65rem;color:var(--text3);text-transform:uppercase;letter-spacing:.12em;padding:0 8px;margin-bottom:4px}
-  .nav-btn{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border:none;background:none;color:var(--text2);font-family:var(--font-mono);font-size:.82rem;cursor:pointer;border-radius:var(--radius);text-align:left;transition:all .15s}
-  .nav-btn:hover{background:var(--surface2);color:var(--text)}
-  .nav-btn.active{background:var(--surface3);color:var(--accent)}
-  .nav-btn .icon{width:20px;text-align:center;flex-shrink:0;font-size:1.05rem;line-height:1}
-  .cars-list{padding:0 8px;flex:1;overflow-y:auto}
-  .car-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius);cursor:pointer;transition:all .15s;margin-bottom:2px}
-  .car-item:hover{background:var(--surface2)}
-  .car-item.active{background:var(--surface3);border-left:2px solid var(--accent)}
-  .car-item.inactive-car{opacity:.5}
-  .car-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-  .car-name{font-size:.82rem;color:var(--text);flex:1;min-width:0}
-  .car-name small{display:block;color:var(--text2);font-size:.7rem}
-  .sidebar-bottom{padding:8px;border-top:1px solid var(--border);display:flex;gap:4px}
-  .sidebar-bottom button{flex:1;padding:7px 4px;border:1px solid var(--border);background:none;color:var(--text2);font-family:var(--font-mono);font-size:.72rem;cursor:pointer;border-radius:var(--radius);transition:all .15s}
-  .sidebar-bottom button:hover{border-color:var(--accent);color:var(--accent)}
-  .topbar-title{font-family:var(--font-display);font-size:1rem;font-weight:700;flex:1}
-  .topbar-title span{color:var(--text2);font-weight:400;font-size:.8rem}
-  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);font-family:var(--font-mono);font-size:.8rem;cursor:pointer;border:1px solid transparent;transition:all .15s;white-space:nowrap}
-  .btn-primary{background:var(--accent);color:#111;border-color:var(--accent);font-weight:500}
-  .btn-primary:hover{background:#f5d45a}
-  .btn-ghost{background:none;color:var(--text2);border-color:var(--border)}
-  .btn-ghost:hover{border-color:var(--text2);color:var(--text)}
-  .btn-danger{background:none;color:var(--red);border-color:var(--red)}
-  .btn-danger:hover{background:var(--red);color:#fff}
-  .btn-fuel{background:none;color:var(--green);border-color:var(--green)}
-  .btn-fuel:hover{background:var(--green);color:#111}
-  .lang-btn{padding:5px 10px;background:none;border:1px solid var(--border);color:var(--text2);font-family:var(--font-mono);font-size:.75rem;cursor:pointer;border-radius:var(--radius);transition:all .15s}
-  .lang-btn.active{border-color:var(--accent);color:var(--accent)}
-  .stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:24px}
-  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden}
-  .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
-  .stat-card.yellow::before{background:var(--accent)}
-  .stat-card.orange::before{background:var(--accent2)}
-  .stat-card.green::before{background:var(--green)}
-  .stat-card.blue::before{background:var(--blue)}
-  .stat-card.red::before{background:var(--red)}
-  .stat-label{font-size:.68rem;color:var(--text2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
-  .stat-value{font-family:var(--font-display);font-size:1.4rem;font-weight:700;color:var(--text)}
-  .stat-value.small{font-size:1rem}
-  .stat-sub{font-size:.7rem;color:var(--text3);margin-top:3px}
-  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-  .table-header{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface2);flex-wrap:wrap}
-  .table-header-title{font-family:var(--font-display);font-size:.9rem;font-weight:700;flex:1}
-  .search-input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:.8rem;padding:6px 10px;border-radius:var(--radius);width:160px;transition:border-color .15s}
-  .search-input:focus{outline:none;border-color:var(--accent)}
-  .filter-select{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:.8rem;padding:6px 8px;border-radius:var(--radius);cursor:pointer}
-  .filter-select:focus{outline:none}
-  table{width:100%;border-collapse:collapse}
-  thead tr{background:var(--surface2)}
-  th{padding:10px 12px;text-align:left;font-size:.68rem;color:var(--text2);text-transform:uppercase;letter-spacing:.1em;font-weight:500;cursor:pointer;user-select:none;white-space:nowrap;border-bottom:1px solid var(--border)}
-  th:hover{color:var(--text)}
-  td{padding:9px 12px;font-size:.82rem;border-bottom:1px solid var(--border);vertical-align:middle}
-  tbody tr{transition:background .1s}
-  tbody tr:hover{background:var(--surface2)}
-  tbody tr:last-child td{border-bottom:none}
-  .td-mono{font-family:var(--font-mono)}
-  .td-right{text-align:right}
-  .td-muted{color:var(--text2)}
-  .cat-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:.72rem;white-space:nowrap}
-  .fuel-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:.72rem;background:#1a2e1a;color:var(--green);border:1px solid #2a4a2a}
-  .full-tank-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:4px}
-  .partial-tank-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--text3);margin-right:4px}
-  .row-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s}
-  tbody tr:hover .row-actions{opacity:1}
-  .row-btn{width:26px;height:26px;border-radius:3px;border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer;font-size:.83rem;display:flex;align-items:center;justify-content:center;transition:all .12s}
-  .row-btn:hover{background:var(--surface3);color:var(--text)}
-  .row-btn.del:hover{border-color:var(--red);color:var(--red)}
-  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .2s}
-  .modal-overlay.open{opacity:1;pointer-events:all}
-  .modal{background:var(--surface);border:1px solid var(--border);border-radius:8px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;transform:translateY(16px);transition:transform .2s}
-  .modal.wide{max-width:700px}
-  .modal-overlay.open .modal{transform:translateY(0)}
-  .modal-head{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
-  .modal-head h2{font-family:var(--font-display);font-size:1.1rem;font-weight:700;flex:1}
-  .modal-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);padding:0 20px}
-  .modal-tab{padding:10px 16px;border:none;background:none;color:var(--text2);font-family:var(--font-mono);font-size:.82rem;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
-  .modal-tab:hover{color:var(--text)}
-  .modal-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-  .modal-tab-content{display:none}
-  .modal-tab-content.active{display:block}
-  .modal-close{width:28px;height:28px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:var(--radius);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all .12s}
-  .modal-close:hover{border-color:var(--red);color:var(--red)}
-  .modal-body{padding:20px}
-  .modal-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
-  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .form-grid .full{grid-column:1/-1}
-  .form-grid .third{grid-column:span 1}
-  .form-group{display:flex;flex-direction:column;gap:5px}
-  .form-label{font-size:.72rem;color:var(--text2);text-transform:uppercase;letter-spacing:.08em}
-  .form-label.required::after{content:' *';color:var(--accent)}
-  .form-input,.form-select,.form-textarea{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:.85rem;padding:8px 10px;border-radius:var(--radius);transition:border-color .15s;width:100%}
-  .form-input:focus,.form-select:focus,.form-textarea:focus{outline:none;border-color:var(--accent)}
-  .form-input.error{border-color:var(--red)}
-  .form-error{font-size:.7rem;color:var(--red)}
-  .form-textarea{resize:vertical;min-height:60px}
-  .form-section-label{font-size:.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:.12em;grid-column:1/-1;padding-top:8px;border-top:1px solid var(--border);margin-top:4px}
-  .chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
-  .bar-chart{display:flex;align-items:flex-end;gap:6px;height:140px}
-  .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
-  .bar{width:100%;border-radius:3px 3px 0 0;min-height:2px;transition:height .4s ease;position:relative;cursor:pointer}
-  .bar:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--surface3);border:1px solid var(--border);padding:4px 8px;border-radius:3px;font-size:.72rem;white-space:nowrap;z-index:10;pointer-events:none}
-  .bar-label{font-size:.78rem;color:var(--text2);text-align:center;margin-top:3px}
-  .cat-chart{display:flex;flex-direction:column;gap:8px}
-  .cat-row{display:flex;align-items:center;gap:10px}
-  .cat-row-name{font-size:.78rem;color:var(--text2);width:140px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .cat-bar-wrap{flex:1;height:8px;background:var(--surface3);border-radius:4px;overflow:hidden}
-  .cat-bar-fill{height:100%;border-radius:4px;transition:width .5s ease}
-  .cat-row-val{font-size:.75rem;color:var(--text);width:90px;text-align:right;font-family:var(--font-mono);flex-shrink:0}
-  .alerts-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
-  .alert-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius);border:1px solid;font-size:.82rem}
-  .alert-item.warn{border-color:#7a6020;background:#2a220a;color:#e8c547}
-  .alert-item.danger{border-color:#7a2020;background:#2a0a0a;color:#e05c5c}
-  .alert-item.info{border-color:#1e3a6e;background:#0a1428;color:#5b8dee}
-  .alert-icon{font-size:1rem;flex-shrink:0}
-  .alert-text{flex:1}
-  .alert-text strong{display:block}
-  .alert-text small{color:inherit;opacity:.7}
-  .reminders-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:20px}
-  .reminder-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
-  .reminder-card.ok{border-left:3px solid var(--green)}
-  .reminder-card.warn{border-left:3px solid var(--accent)}
-  .reminder-card.due{border-left:3px solid var(--red)}
-  .reminder-name{font-size:.78rem;color:var(--text2);margin-bottom:4px}
-  .reminder-val{font-family:var(--font-display);font-size:1rem;font-weight:700}
-  .reminder-meta{font-size:.7rem;color:var(--text3);margin-top:3px}
-  .reminder-status{font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;margin-top:6px}
-  .reminder-status.ok{color:var(--green)}
-  .reminder-status.warn{color:var(--accent)}
-  .reminder-status.due{color:var(--red)}
-  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:20px}
-  .tab{padding:8px 16px;border:none;background:none;color:var(--text2);font-family:var(--font-mono);font-size:.82rem;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
-  .tab:hover{color:var(--text)}
-  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-  .empty{text-align:center;padding:48px 20px;color:var(--text3)}
-  .empty .empty-icon{font-size:2.5rem;margin-bottom:12px}
-  .empty p{font-size:.9rem}
-  #toast{position:fixed;bottom:20px;right:20px;background:var(--surface3);border:1px solid var(--border);color:var(--text);padding:10px 16px;border-radius:var(--radius);font-size:.82rem;z-index:9999;transform:translateY(20px);opacity:0;transition:all .2s;pointer-events:none}
-  #toast.show{transform:translateY(0);opacity:1}
-  #toast.success{border-color:var(--green)}
-  #toast.error{border-color:var(--red)}
-  ::-webkit-scrollbar{width:6px;height:6px}
-  ::-webkit-scrollbar-track{background:transparent}
-  ::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
-  .pagination{display:flex;align-items:center;gap:6px;padding:10px 16px;border-top:1px solid var(--border);font-size:.78rem;color:var(--text2)}
-  .pagination .flex1{flex:1}
-  .page-btn{padding:4px 10px;border:1px solid var(--border);background:none;color:var(--text2);font-family:var(--font-mono);font-size:.78rem;cursor:pointer;border-radius:3px}
-  .page-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
-  .page-btn:disabled{opacity:.3;cursor:default}
-  .car-header{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-  .car-header-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
-  .car-header-info{flex:1;min-width:0}
-  .car-header-name{font-family:var(--font-display);font-size:1.1rem;font-weight:700}
-  .car-header-meta{font-size:.75rem;color:var(--text2);margin-top:2px}
-  .section-title{font-family:var(--font-display);font-size:.85rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
-  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
-  @media(max-width:900px){.two-col{grid-template-columns:1fr}}
-  .color-swatch{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;display:inline-block}
-  .color-swatch:hover,.color-swatch.selected{border-color:#fff;transform:scale(1.15)}
-  .status-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:3px;font-size:.72rem}
-  .status-badge.active{background:#0d2a1a;color:var(--green);border:1px solid #1a4a2a}
-  .status-badge.inactive{background:#2a1a1a;color:var(--text3);border:1px solid #3a2a2a}
-  .doc-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px}
-  .doc-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
-  .doc-card.ok{border-top:2px solid var(--green)}
-  .doc-card.warn{border-top:2px solid var(--accent)}
-  .doc-card.due{border-top:2px solid var(--red)}
-  .doc-label{font-size:.68rem;color:var(--text2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
-  .doc-date{font-size:.9rem;font-weight:600;color:var(--text)}
-  .doc-meta{font-size:.7rem;color:var(--text3);margin-top:3px}
-  .fuel-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px}
-  .toggle-wrap{display:flex;align-items:center;gap:10px}
-  .toggle{position:relative;width:40px;height:22px;flex-shrink:0}
-  .toggle input{opacity:0;width:0;height:0;position:absolute}
-  .toggle-slider{position:absolute;inset:0;background:var(--surface3);border-radius:11px;cursor:pointer;transition:.2s;border:1px solid var(--border)}
-  .toggle-slider::before{content:'';position:absolute;width:16px;height:16px;left:2px;bottom:2px;background:var(--text3);border-radius:50%;transition:.2s}
-  .toggle input:checked+.toggle-slider{background:#0d2a1a;border-color:var(--green)}
-  .toggle input:checked+.toggle-slider::before{transform:translateX(18px);background:var(--green)}
-  .date-triple{display:flex;align-items:center;gap:0;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);transition:border-color .15s;overflow:hidden}
-  .date-triple:focus-within{border-color:var(--accent)}
-  .date-triple.error{border-color:var(--red)}
-  .date-triple input{background:none;border:none;color:var(--text);font-family:var(--font-mono);font-size:.85rem;padding:8px 0;text-align:center;outline:none;-moz-appearance:textfield}
-  .date-triple input::-webkit-outer-spin-button,.date-triple input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-  .date-triple input.dt-d{width:36px}
-  .date-triple input.dt-m{width:36px}
-  .date-triple input.dt-y{width:52px;padding-right:8px}
-  .date-triple .dt-sep{color:var(--text3);font-size:.85rem;padding:0 1px;user-select:none}
-  .toggle-label{font-size:.85rem;color:var(--text2)}
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+  html { font-size: 15px }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; overflow-x: hidden; -webkit-font-smoothing: antialiased }
+
+  /* ── Layout ─────────────────────────────────── */
+  #app { display: flex; height: 100vh; overflow: hidden }
+  #sidebar { width: var(--sidebar-w); min-width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden }
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden }
+  #topbar { height: 60px; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; gap: 10px; flex-shrink: 0; background: var(--surface) }
+  #content { flex: 1; overflow-y: auto; padding: 28px 28px }
+
+  /* ── Sidebar ────────────────────────────────── */
+  .sidebar-logo { padding: 22px 20px 18px; border-bottom: 1px solid var(--border) }
+  .sidebar-logo h1 { font-size: 1.25rem; font-weight: 700; color: var(--text); letter-spacing: -.03em; line-height: 1 }
+  .sidebar-logo h1 span { color: var(--accent) }
+  .sidebar-logo p { color: var(--text3); font-size: .78rem; margin-top: 3px; font-weight: 400 }
+  .sidebar-section { padding: 20px 12px 8px }
+  .sidebar-section-label { font-size: .68rem; font-weight: 600; color: var(--text3); letter-spacing: .08em; padding: 0 8px; margin-bottom: 6px; text-transform: none }
+  .nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: none; background: none; color: var(--text2); font-family: var(--font); font-size: .88rem; font-weight: 400; cursor: pointer; border-radius: var(--radius-sm); text-align: left; transition: all .15s }
+  .nav-btn:hover { background: var(--surface2); color: var(--text) }
+  .nav-btn.active { background: var(--accent-dim); color: var(--accent); font-weight: 500 }
+  .nav-btn .icon { width: 18px; text-align: center; flex-shrink: 0; font-size: 1rem; line-height: 1; opacity: .7 }
+  .nav-btn.active .icon { opacity: 1 }
+  .cars-list { padding: 0 12px; flex: 1; overflow-y: auto }
+  .car-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--radius-sm); cursor: pointer; transition: all .15s; margin-bottom: 1px }
+  .car-item:hover { background: var(--surface2) }
+  .car-item.active { background: var(--surface2); box-shadow: inset 2px 0 0 var(--accent) }
+  .car-item.inactive-car { opacity: .45 }
+  .car-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0 }
+  .car-name { font-size: .84rem; color: var(--text); flex: 1; min-width: 0; line-height: 1.3 }
+  .car-name small { display: block; color: var(--text2); font-size: .72rem; font-family: var(--font-mono); margin-top: 1px }
+  .sidebar-add { padding: 8px 12px }
+  .sidebar-add button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border: 1px dashed var(--border2); background: none; color: var(--text2); font-family: var(--font); font-size: .84rem; cursor: pointer; border-radius: var(--radius-sm); transition: all .15s; justify-content: center }
+  .sidebar-add button:hover { border-color: var(--accent); color: var(--accent) }
+
+  /* ── Topbar ─────────────────────────────────── */
+  .topbar-title { font-size: 1rem; font-weight: 600; flex: 1; letter-spacing: -.02em }
+  .topbar-title span { color: var(--text2); font-weight: 400; font-size: .85rem }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: var(--radius-sm); font-family: var(--font); font-size: .84rem; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: all .15s; white-space: nowrap }
+  .btn-primary { background: var(--accent); color: #03091c; border-color: var(--accent) }
+  .btn-primary:hover { background: #2563eb; border-color: #2563eb }
+  .btn-ghost { background: none; color: var(--text2); border-color: var(--border2) }
+  .btn-ghost:hover { border-color: var(--text2); color: var(--text) }
+  .btn-danger { background: none; color: var(--red); border-color: var(--red) }
+  .btn-danger:hover { background: var(--red); color: #fff }
+  .btn-fuel { background: none; color: var(--accent); border-color: var(--border2) }
+  .btn-fuel:hover { background: rgba(59,130,246,.12); border-color: var(--accent); color: var(--accent) }
+  .lang-btn { padding: 5px 11px; background: none; border: 1px solid var(--border2); color: var(--text2); font-family: var(--font); font-size: .78rem; font-weight: 500; cursor: pointer; border-radius: var(--radius-sm); transition: all .15s }
+  .lang-btn.active { border-color: var(--accent); color: var(--accent) }
+
+  /* ── Section titles ─────────────────────────── */
+  .section-title { font-size: .9rem; font-weight: 600; color: var(--text); margin-bottom: 14px; padding-left: 10px; border-left: 3px solid var(--accent); letter-spacing: -.01em }
+
+  /* ── Stat cards ─────────────────────────────── */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 14px; margin-bottom: 26px }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; position: relative; overflow: hidden }
+  .stat-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; border-radius: var(--radius) var(--radius) 0 0 }
+  .stat-card.yellow::after { background: var(--accent) }
+  .stat-card.orange::after { background: var(--accent2) }
+  .stat-card.green::after { background: var(--green) }
+  .stat-card.blue::after { background: var(--blue) }
+  .stat-card.red::after { background: var(--red) }
+  .stat-label { font-size: .72rem; font-weight: 500; color: var(--text2); margin-bottom: 8px; letter-spacing: .01em }
+  .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--text); letter-spacing: -.03em; line-height: 1 }
+  .stat-value.small { font-size: 1.05rem }
+  .stat-sub { font-size: .72rem; color: var(--text3); margin-top: 5px; font-family: var(--font-mono) }
+
+  /* ── Tables ─────────────────────────────────── */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden }
+  .table-header { display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: transparent; flex-wrap: wrap }
+  .table-header-title { font-size: .9rem; font-weight: 600; flex: 1; letter-spacing: -.01em }
+  .search-input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: .82rem; padding: 7px 12px; border-radius: var(--radius-sm); width: 180px; transition: border-color .15s }
+  .search-input:focus { outline: none; border-color: var(--accent) }
+  .filter-select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: .82rem; padding: 7px 10px; border-radius: var(--radius-sm); cursor: pointer }
+  .filter-select:focus { outline: none }
+  table { width: 100%; border-collapse: collapse }
+  thead tr { background: var(--surface2) }
+  th { padding: 10px 14px; text-align: left; font-size: .72rem; font-weight: 600; color: var(--text2); letter-spacing: .04em; cursor: pointer; user-select: none; white-space: nowrap; border-bottom: 1px solid var(--border); text-transform: none }
+  th:hover { color: var(--text) }
+  td { padding: 10px 14px; font-size: .84rem; border-bottom: 1px solid var(--border); vertical-align: middle }
+  tbody tr { transition: background .1s }
+  tbody tr:hover { background: var(--surface2) }
+  tbody tr:last-child td { border-bottom: none }
+  .td-mono { font-family: var(--font-mono); font-size: .78rem }
+  .td-right { text-align: right }
+  .td-muted { color: var(--text2) }
+
+  /* ── Badges ─────────────────────────────────── */
+  .cat-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: .72rem; font-weight: 500; white-space: nowrap }
+  .fuel-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: .72rem; font-weight: 500; background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,197,94,.2) }
+  .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 20px; font-size: .72rem; font-weight: 500 }
+  .status-badge.active { background: var(--green-dim); color: var(--green) }
+  .status-badge.inactive { background: var(--surface3); color: var(--text3) }
+
+  /* ── Row actions ────────────────────────────── */
+  .row-actions { display: flex; gap: 4px; opacity: 0; transition: opacity .15s }
+  tbody tr:hover .row-actions { opacity: 1 }
+  .row-btn { width: 26px; height: 26px; border-radius: 4px; border: 1px solid var(--border2); background: none; color: var(--text2); cursor: pointer; font-size: .8rem; display: flex; align-items: center; justify-content: center; transition: all .12s }
+  .row-btn:hover { background: var(--surface3); color: var(--text) }
+  .row-btn.del:hover { border-color: var(--red); color: var(--red) }
+  .row-btn .edit-icon { display: inline-block; transform: rotate(-45deg); line-height: 1 }
+
+  /* ── Modals ─────────────────────────────────── */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(4px); opacity: 0; pointer-events: none; transition: opacity .2s }
+  .modal-overlay.open { opacity: 1; pointer-events: all }
+  .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 12px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; transform: translateY(12px); transition: transform .2s; box-shadow: 0 24px 64px rgba(0,0,0,.5) }
+  .modal.wide { max-width: 700px }
+  .modal-overlay.open .modal { transform: translateY(0) }
+  .modal-head { padding: 20px 22px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px }
+  .modal-head h2 { font-size: 1.05rem; font-weight: 600; flex: 1; letter-spacing: -.02em }
+  .modal-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 22px }
+  .modal-tab { padding: 10px 16px; border: none; background: none; color: var(--text2); font-family: var(--font); font-size: .84rem; font-weight: 400; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s }
+  .modal-tab:hover { color: var(--text) }
+  .modal-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500 }
+  .modal-tab-content { display: none }
+  .modal-tab-content.active { display: block }
+  .modal-close { width: 28px; height: 28px; border: 1px solid var(--border2); background: none; color: var(--text2); border-radius: var(--radius-sm); cursor: pointer; font-size: .95rem; display: flex; align-items: center; justify-content: center; transition: all .12s }
+  .modal-close:hover { border-color: var(--red); color: var(--red) }
+  .modal-body { padding: 22px }
+  .modal-foot { padding: 16px 22px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end }
+
+  /* ── Forms ──────────────────────────────────── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px }
+  .form-grid .full { grid-column: 1/-1 }
+  .form-group { display: flex; flex-direction: column; gap: 6px }
+  .form-label { font-size: .75rem; font-weight: 500; color: var(--text2); letter-spacing: .02em }
+  .form-label.required::after { content: ' *'; color: var(--accent) }
+  .form-input, .form-select, .form-textarea { background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: .88rem; padding: 9px 12px; border-radius: var(--radius-sm); transition: border-color .15s; width: 100% }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--accent) }
+  .form-input.error { border-color: var(--red) }
+  .form-error { font-size: .75rem; color: var(--red) }
+  .form-textarea { resize: vertical; min-height: 64px }
+  .form-section-label { font-size: .78rem; font-weight: 600; color: var(--text); grid-column: 1/-1; padding: 10px 0 4px; border-bottom: 1px solid var(--border); margin-top: 6px; padding-left: 10px; border-left: 3px solid var(--accent) }
+
+  /* ── Charts ─────────────────────────────────── */
+  .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px }
+  .bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 140px }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end }
+  .bar { width: 100%; border-radius: 4px 4px 0 0; min-height: 2px; transition: height .4s ease; position: relative; cursor: pointer }
+  .bar:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--surface3); border: 1px solid var(--border2); padding: 5px 10px; border-radius: 5px; font-size: .72rem; white-space: nowrap; z-index: 10; pointer-events: none }
+  .bar-label { font-size: .72rem; color: var(--text2); text-align: center; margin-top: 3px }
+  .cat-chart { display: flex; flex-direction: column; gap: 10px }
+  .cat-row { display: flex; align-items: center; gap: 12px }
+  .cat-row-name { font-size: .8rem; color: var(--text2); width: 140px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  .cat-bar-wrap { flex: 1; height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden }
+  .cat-bar-fill { height: 100%; border-radius: 3px; transition: width .5s ease }
+  .cat-row-val { font-size: .75rem; color: var(--text); width: 100px; text-align: right; font-family: var(--font-mono); flex-shrink: 0 }
+
+  /* ── Alerts ─────────────────────────────────── */
+  .alerts-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px }
+  .alert-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--radius); border: 1px solid; font-size: .84rem }
+  .alert-item.warn { border-color: rgba(245,158,11,.3); background: var(--amber-dim); color: var(--amber) }
+  .alert-item.danger { border-color: rgba(239,68,68,.3); background: var(--red-dim); color: var(--red) }
+  .alert-item.info { border-color: rgba(99,102,241,.3); background: rgba(99,102,241,.08); color: var(--blue) }
+  .alert-icon { font-size: 1rem; flex-shrink: 0 }
+  .alert-text { flex: 1 }
+  .alert-text strong { display: block }
+  .alert-text small { color: inherit; opacity: .7 }
+
+  /* ── Reminder cards ─────────────────────────── */
+  .reminders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 24px }
+  .reminder-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px }
+  .reminder-card.ok { border-left: 3px solid var(--green) }
+  .reminder-card.warn { border-left: 3px solid var(--amber) }
+  .reminder-card.due { border-left: 3px solid var(--red) }
+  .reminder-name { font-size: .78rem; color: var(--text2); margin-bottom: 5px; font-weight: 500 }
+  .reminder-val { font-size: 1rem; font-weight: 700; letter-spacing: -.02em }
+  .reminder-meta { font-size: .72rem; color: var(--text3); margin-top: 4px; font-family: var(--font-mono) }
+  .reminder-status { font-size: .7rem; font-weight: 600; margin-top: 8px; letter-spacing: .02em }
+  .reminder-status.ok { color: var(--green) }
+  .reminder-status.warn { color: var(--amber) }
+  .reminder-status.due { color: var(--red) }
+
+  /* ── Tabs ───────────────────────────────────── */
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 22px }
+  .tab { padding: 9px 18px; border: none; background: none; color: var(--text2); font-family: var(--font); font-size: .84rem; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s; font-weight: 400 }
+  .tab:hover { color: var(--text) }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500 }
+
+  /* ── Empty state ────────────────────────────── */
+  .empty { text-align: center; padding: 56px 20px; color: var(--text3) }
+  .empty .empty-icon { font-size: 2.5rem; margin-bottom: 14px; opacity: .5 }
+  .empty p { font-size: .9rem }
+
+  /* ── Toast ──────────────────────────────────── */
+  #toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface3); border: 1px solid var(--border2); color: var(--text); padding: 11px 18px; border-radius: var(--radius); font-size: .84rem; z-index: 9999; transform: translateY(16px); opacity: 0; transition: all .2s; pointer-events: none; font-weight: 500 }
+  #toast.show { transform: translateY(0); opacity: 1 }
+  #toast.success { border-color: var(--green); color: var(--green) }
+  #toast.error { border-color: var(--red); color: var(--red) }
+
+  /* ── Scrollbar ──────────────────────────────── */
+  ::-webkit-scrollbar { width: 5px; height: 5px }
+  ::-webkit-scrollbar-track { background: transparent }
+  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px }
+
+  /* ── Pagination ─────────────────────────────── */
+  .pagination { display: flex; align-items: center; gap: 6px; padding: 12px 18px; border-top: 1px solid var(--border); font-size: .8rem; color: var(--text2) }
+  .pagination .flex1 { flex: 1 }
+  .page-btn { padding: 5px 11px; border: 1px solid var(--border2); background: none; color: var(--text2); font-family: var(--font); font-size: .8rem; cursor: pointer; border-radius: var(--radius-sm) }
+  .page-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent) }
+  .page-btn:disabled { opacity: .3; cursor: default }
+
+  /* ── Car header ─────────────────────────────── */
+  .car-header { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 22px; margin-bottom: 22px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap }
+  .car-header-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0 }
+  .car-header-info { flex: 1; min-width: 0 }
+  .car-header-name { font-size: 1.1rem; font-weight: 600; letter-spacing: -.02em }
+  .car-header-meta { font-size: .78rem; color: var(--text2); margin-top: 3px; font-family: var(--font-mono) }
+
+  /* ── Doc cards ──────────────────────────────── */
+  .doc-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 22px }
+  .doc-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px }
+  .doc-card.ok { border-top: 2px solid var(--green) }
+  .doc-card.warn { border-top: 2px solid var(--amber) }
+  .doc-card.due { border-top: 2px solid var(--red) }
+  .doc-label { font-size: .72rem; font-weight: 500; color: var(--text2); margin-bottom: 6px }
+  .doc-date { font-size: .95rem; font-weight: 600; color: var(--text); font-family: var(--font-mono) }
+  .doc-meta { font-size: .72rem; color: var(--text3); margin-top: 3px }
+
+  /* ── Fuel stats / two-col ────────────────────── */
+  .fuel-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 22px }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 26px }
+  @media(max-width: 900px) { .two-col { grid-template-columns: 1fr } }
+
+  /* ── Color swatches ─────────────────────────── */
+  .color-swatch { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: all .15s; display: inline-block }
+  .color-swatch:hover, .color-swatch.selected { border-color: #fff; transform: scale(1.15) }
+
+  /* ── Toggle ─────────────────────────────────── */
+  .toggle-wrap { display: flex; align-items: center; gap: 10px }
+  .toggle { position: relative; width: 40px; height: 22px; flex-shrink: 0 }
+  .toggle input { opacity: 0; width: 0; height: 0; position: absolute }
+  .toggle-slider { position: absolute; inset: 0; background: var(--surface3); border-radius: 11px; cursor: pointer; transition: .2s; border: 1px solid var(--border2) }
+  .toggle-slider::before { content: ''; position: absolute; width: 16px; height: 16px; left: 2px; bottom: 2px; background: var(--text3); border-radius: 50%; transition: .2s }
+  .toggle input:checked + .toggle-slider { background: rgba(59,130,246,.15); border-color: var(--accent) }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(18px); background: var(--accent) }
+  .toggle-label { font-size: .88rem; color: var(--text2) }
+
+  /* ── Date triple ────────────────────────────── */
+  .date-triple { display: flex; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: border-color .15s; overflow: hidden }
+  .date-triple:focus-within { border-color: var(--accent) }
+  .date-triple.error { border-color: var(--red) }
+  .date-triple input { background: none; border: none; color: var(--text); font-family: var(--font-mono); font-size: .85rem; padding: 9px 0; text-align: center; outline: none; -moz-appearance: textfield }
+  .date-triple input::-webkit-outer-spin-button, .date-triple input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0 }
+  .date-triple input.dt-d { width: 38px }
+  .date-triple input.dt-m { width: 38px }
+  .date-triple input.dt-y { width: 56px; padding-right: 10px }
+  .date-triple .dt-sep { color: var(--text3); font-size: .9rem; padding: 0 2px; user-select: none }
+
+  /* ── Settings page ──────────────────────────── */
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px }
+  @media(max-width: 700px) { .settings-grid { grid-template-columns: 1fr } }
+  .settings-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px }
+  .settings-card-title { font-size: .9rem; font-weight: 600; margin-bottom: 4px; letter-spacing: -.01em }
+  .settings-card-desc { font-size: .8rem; color: var(--text2); margin-bottom: 16px; line-height: 1.5 }
+  .settings-card .btn { width: 100%; justify-content: center; margin-top: 6px }
+  .settings-info-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: .84rem }
+  .settings-info-row:last-child { border-bottom: none }
+  .settings-info-row span:first-child { color: var(--text2) }
+  .settings-info-row span:last-child { font-family: var(--font-mono); font-size: .78rem; color: var(--text) }
 </style>
 </head>
 <body>
 <div id="app">
   <aside id="sidebar">
     <div class="sidebar-logo">
-      <h1>MyCars <span style="font-size:.55rem;color:var(--text3);font-weight:400;letter-spacing:.05em;vertical-align:middle;margin-left:2px;">v3.0</span></h1>
-      <span id="sidebar-subtitle">Evidence vozidel</span>
+      <h1>My<span>Cars</span></h1>
+      <p id="sidebar-subtitle">Evidence vozidel · v3.2</p>
     </div>
+
     <div class="sidebar-section">
       <div class="sidebar-section-label">Navigace</div>
-      <button class="nav-btn active" onclick="showPage('dashboard')" id="nav-dashboard" title="Přehled / Dashboard"><span class="icon">⊞</span><span data-cs="Přehled" data-en="Dashboard">Přehled</span></button>
-      <button class="nav-btn" onclick="showPage('records')" id="nav-records" title="Záznamy / Records"><span class="icon">☰</span><span data-cs="Záznamy" data-en="Records">Záznamy</span></button>
-      <button class="nav-btn" onclick="showPage('fuel')" id="nav-fuel" title="Tankování / Fuel log"><span class="icon">⊟</span><span data-cs="Tankování" data-en="Fuel log">Tankování</span></button>
-      <button class="nav-btn" onclick="showPage('analytics')" id="nav-analytics" title="Analytika / Analytics"><span class="icon">◫</span><span data-cs="Analytika" data-en="Analytics">Analytika</span></button>
-      <button class="nav-btn" onclick="showPage('reminders')" id="nav-reminders" title="Připomínky / Reminders"><span class="icon">◷</span><span data-cs="Připomínky" data-en="Reminders">Připomínky</span></button>
+      <button class="nav-btn active" onclick="showPage('dashboard')" id="nav-dashboard" title="Přehled"><span class="icon">⊞</span><span data-cs="Přehled" data-en="Dashboard">Přehled</span></button>
+      <button class="nav-btn" onclick="showPage('records')" id="nav-records" title="Záznamy"><span class="icon">☰</span><span data-cs="Záznamy" data-en="Records">Záznamy</span></button>
+      <button class="nav-btn" onclick="showPage('fuel')" id="nav-fuel" title="Tankování"><span class="icon">⊟</span><span data-cs="Tankování" data-en="Fuel log">Tankování</span></button>
+      <button class="nav-btn" onclick="showPage('analytics')" id="nav-analytics" title="Analytika"><span class="icon">◫</span><span data-cs="Analytika" data-en="Analytics">Analytika</span></button>
+      <button class="nav-btn" onclick="showPage('reminders')" id="nav-reminders" title="Připomínky"><span class="icon">◷</span><span data-cs="Připomínky" data-en="Reminders">Připomínky</span></button>
     </div>
+
     <div class="sidebar-section" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
       <div class="sidebar-section-label">Vozidla</div>
       <div class="cars-list" id="cars-list"></div>
-      <div style="padding:0 8px 8px;">
-        <button class="nav-btn" onclick="openCarModal()" style="color:var(--accent);border:1px dashed var(--text3);border-radius:var(--radius);justify-content:center;" title="Přidat nové vozidlo">
-          <span data-cs="Přidat vozidlo" data-en="Add vehicle">Přidat vozidlo</span>
-        </button>
-      </div>
     </div>
-    <div class="sidebar-bottom">
-      <button onclick="exportData()" title="Exportovat data do JSON souboru"><span style="font-size:1.1rem;line-height:1;">↑</span> Export</button>
-      <button onclick="document.getElementById('import-file').click()" title="Importovat data z JSON souboru"><span style="font-size:1.1rem;line-height:1;">↓</span> Import</button>
-      <button onclick="openCsvImportModal()" title="Importovat záznamy nebo tankování z CSV souboru" style="color:var(--green);border-color:var(--green);">CSV</button>
-      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
-      <input type="file" id="import-csv-file" accept=".csv" style="display:none" onchange="handleCsvFile(event)">
+
+    <div class="sidebar-add">
+      <button onclick="openCarModal()" title="Přidat nové vozidlo">
+        <span data-cs="Přidat vozidlo" data-en="Add vehicle">Přidat vozidlo</span>
+      </button>
     </div>
+
+    <div style="border-top:1px solid var(--border);padding:8px 12px;">
+      <button class="nav-btn" onclick="showPage('settings')" id="nav-settings" title="Nastavení"><span class="icon">◎</span><span data-cs="Nastavení" data-en="Settings">Nastavení</span></button>
+    </div>
+
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+    <input type="file" id="import-csv-file" accept=".csv" style="display:none" onchange="handleCsvFile(event)">
   </aside>
 
   <main id="main">
     <div id="topbar">
       <div class="topbar-title" id="page-title">Přehled</div>
-      <button class="lang-btn active" id="btn-cs" onclick="setLang('cs')" title="Přepnout do češtiny">CS</button>
-      <button class="lang-btn" id="btn-en" onclick="setLang('en')" title="Switch to English">EN</button>
-      <button class="btn btn-fuel" id="add-fuel-btn" onclick="openFuelModal()" style="margin-left:4px;" title="Přidat záznam tankování"><span data-cs="Nové tankování" data-en="New fuel entry">Nové tankování</span></button>
+      <button class="btn btn-fuel" id="add-fuel-btn" onclick="openFuelModal()" style="margin-left:auto;" title="Přidat záznam tankování"><span data-cs="Nové tankování" data-en="New fuel entry">Nové tankování</span></button>
       <button class="btn btn-primary" onclick="openRecordModal()" title="Přidat servisní záznam"><span data-cs="Nový záznam" data-en="New record">Nový záznam</span></button>
     </div>
     <div id="content"></div>
@@ -677,75 +757,24 @@ function loadData(){
   try{
     const d=localStorage.getItem('autoservis_v3');
     if(d){const p=JSON.parse(d);state.cars=p.cars||[];state.records=p.records||[];state.reminders=p.reminders||[];state.fuels=p.fuels||[];}
-    if(!state.cars.length)loadDemoData();
     if(state.cars.length)state.currentCarId=state.cars[0].id;
-  }catch(e){loadDemoData();}
+  }catch(e){console.warn('Chyba při načítání dat',e);}
 }
 function saveData(){
   localStorage.setItem('autoservis_v3',JSON.stringify({cars:state.cars,records:state.records,reminders:state.reminders,fuels:state.fuels,savedAt:new Date().toISOString()}));
-}
-function loadDemoData(){
-  const cid='car_demo';
-  state.cars=[{
-    id:cid,make:'Škoda',model:'Octavia',year:2008,plate:'1Z3 4567',vin:'TMBBG61Z982000001',
-    fuelType:'petrol',status:'active',startOdo:243927,color:'#e8c547',
-    stk:'2024-09-05',stkWarn:30,emission:'2024-09-05',emissionWarn:30,
-    pov:'2025-03-14',povWarn:30,insurance:null,insuranceWarn:30,
-    oilInterval:10000,oilLastKm:245448,oilWarn:1000,note:''
-  }];
-  state.records=[
-    {id:'r1',carId:cid,date:'2022-03-11',odo:243927,desc:'Nákup vozidla',cat:'Nákup vozidla',qty:1,price:58000,note:''},
-    {id:'r2',carId:cid,date:'2022-03-14',odo:243927,desc:'POV',cat:'Pojištění',qty:1,price:2997,note:''},
-    {id:'r3',carId:cid,date:'2022-03-16',odo:244200,desc:'Evidenční kontrola',cat:'Poplatky',qty:1,price:550,note:''},
-    {id:'r4',carId:cid,date:'2022-03-21',odo:244200,desc:'Přepis',cat:'Poplatky',qty:1,price:800,note:''},
-    {id:'r5',carId:cid,date:'2022-04-01',odo:244000,desc:'Roletka do kufru',cat:'Vybavení',qty:1,price:1200,note:''},
-    {id:'r6',carId:cid,date:'2022-09-05',odo:245448,desc:'Práce',cat:'Práce',qty:1,price:5000,note:'Servis'},
-    {id:'r7',carId:cid,date:'2022-09-05',odo:245448,desc:'Použité letní pneu',cat:'Pneumatiky',qty:4,price:1000,note:''},
-    {id:'r8',carId:cid,date:'2022-09-05',odo:245448,desc:'STK',cat:'STK',qty:1,price:3500,note:''},
-    {id:'r9',carId:cid,date:'2022-09-05',odo:245448,desc:'Zadní brzdové kotouče Fremax',cat:'Brzdy',qty:2,price:1370,note:''},
-    {id:'r10',carId:cid,date:'2022-09-05',odo:245448,desc:'Pravý zadní náboj kola FAG',cat:'Nápravy',qty:1,price:2302,note:''},
-    {id:'r11',carId:cid,date:'2022-09-05',odo:245448,desc:'Pravé přední ložisko kola FAG',cat:'Ložiska',qty:1,price:2120,note:''},
-    {id:'r12',carId:cid,date:'2022-09-05',odo:245448,desc:'Olejový, vzduchový, kabinový filtr MANN',cat:'Filtry',qty:3,price:544.33,note:''},
-    {id:'r13',carId:cid,date:'2022-09-05',odo:245448,desc:'Výměna oleje Castrol',cat:'Olej',qty:7,price:231.43,note:''},
-    {id:'r14',carId:cid,date:'2022-09-05',odo:245448,desc:'Zadní brzdové destičky Fremax',cat:'Brzdy',qty:2,price:590,note:''},
-    {id:'r15',carId:cid,date:'2022-09-05',odo:245448,desc:'Ramínka stěračů Bosch aerotwin',cat:'Stěrače',qty:1,price:679,note:''},
-    {id:'r16',carId:cid,date:'2022-09-05',odo:245448,desc:'Levý zadní brzdový třmen',cat:'Brzdy',qty:1,price:500,note:''},
-    {id:'r17',carId:cid,date:'2022-12-21',odo:248120,desc:'Výměna alternátoru za repasovaný',cat:'Elektroinstalace',qty:1,price:2500,note:''},
-  ];
-  state.fuels=[
-    {id:'f1',carId:cid,date:'2022-07-04',odo:245448,fuelTypeId:'p95',liters:42,cost:1890,fullTank:true,note:''},
-    {id:'f2',carId:cid,date:'2022-09-05',odo:245448,fuelTypeId:'p95',liters:5,cost:235,fullTank:false,note:'Doplnění'},
-    {id:'f3',carId:cid,date:'2022-11-08',odo:247127,fuelTypeId:'p95',liters:44,cost:2068,fullTank:true,note:''},
-    {id:'f4',carId:cid,date:'2022-12-12',odo:247220,fuelTypeId:'p95',liters:10,cost:480,fullTank:false,note:''},
-    {id:'f5',carId:cid,date:'2022-11-29',odo:247788,fuelTypeId:'p95',liters:43,cost:2021,fullTank:true,note:''},
-    {id:'f6',carId:cid,date:'2022-12-27',odo:248642,fuelTypeId:'p95',liters:38,cost:1786,fullTank:true,note:''},
-    {id:'f7',carId:cid,date:'2023-02-24',odo:250272,fuelTypeId:'p95',liters:45,cost:2115,fullTank:true,note:''},
-    {id:'f8',carId:cid,date:'2023-03-05',odo:250692,fuelTypeId:'p95',liters:12,cost:564,fullTank:false,note:''},
-  ];
-  state.reminders=[
-    {id:'rem1',carId:cid,name:'Výměna oleje',type:'km',interval:10000,lastDone:245448,warnAt:1000},
-    {id:'rem2',carId:cid,name:'STK',type:'date',date:'2024-09-05'},
-    {id:'rem3',carId:cid,name:'POV',type:'date',date:'2025-03-14'},
-  ];
-  saveData();
 }
 
 // ─── LANG ────────────────────────────────────────────────────
 function setLang(l){
   state.lang=l;
-  document.getElementById('btn-cs').classList.toggle('active',l==='cs');
-  document.getElementById('btn-en').classList.toggle('active',l==='en');
-  document.getElementById('sidebar-subtitle').textContent=l==='cs'?'Evidence vozidel':'Vehicle tracker';
+  document.getElementById('sidebar-subtitle').textContent=l==='cs'?'Evidence vozidel · v3.2':'Vehicle tracker · v3.2';
   document.title=l==='cs'?'MyCars — Evidence vozidel':'MyCars — Vehicle tracker';
-  // Přepnout popisky s data-cs/data-en atributy
   document.querySelectorAll('[data-cs]').forEach(el=>{
     const val=el.getAttribute('data-'+l);
     if(val) el.textContent=val;
   });
-  // Aktualizovat label stavového toglu pokud je modal otevřený
   const tog=document.getElementById('c-status-toggle');
   if(tog) updateStatusToggleLabel(tog.checked);
-  // Popisek label "Stav"
   const lbl=document.getElementById('c-status-label');
   if(lbl) lbl.textContent=l==='cs'?'Stav':'Status';
   renderAll();
@@ -762,7 +791,7 @@ function renderCarsList(){
       <span class="car-name">${car.make||''} ${car.model||car.name||''}
         <small>${car.plate?car.plate+' · ':''} ${fmtNum(getMaxOdo(car.id))} km</small>
       </span>
-      <button class="row-btn" onclick="event.stopPropagation();openCarModal('${car.id}')" title="${state.lang==='cs'?'Upravit vozidlo':'Edit vehicle'}">✎</button>
+      <button class="row-btn" onclick="event.stopPropagation();openCarModal('${car.id}')" title="${state.lang==='cs'?'Upravit vozidlo':'Edit vehicle'}"><span class="edit-icon">✏</span></button>
     </div>`).join('')||`<div style="padding:8px 10px;color:var(--text3);font-size:.78rem;">${t('no_car')}</div>`;
 }
 
@@ -772,14 +801,18 @@ function showPage(page){
   state.currentPage=page;
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('nav-'+page)?.classList.add('active');
+  // Topbar akční tlačítka — skrýt na nastavení
+  const actionBtns = document.getElementById('add-fuel-btn');
+  if(actionBtns) actionBtns.style.display = page==='settings'?'none':'';
   renderPage();
 }
 
 function renderPage(){
   const car=getCar(state.currentCarId);
-  const titles={dashboard:t('dashboard'),records:t('records'),fuel:t('fuel'),analytics:t('analytics'),reminders:t('reminders')};
-  document.getElementById('page-title').innerHTML=titles[state.currentPage]+(car?` <span>— ${car.make||''} ${car.model||car.name||''} ${car.plate?'('+car.plate+')':''}</span>`:'');
-  const pages={dashboard:renderDashboard,records:renderRecords,fuel:renderFuelPage,analytics:renderAnalytics,reminders:renderRemindersPage};
+  const settingsLabel = state.lang==='cs'?'Nastavení':'Settings';
+  const titles={dashboard:t('dashboard'),records:t('records'),fuel:t('fuel'),analytics:t('analytics'),reminders:t('reminders'),settings:settingsLabel};
+  document.getElementById('page-title').innerHTML=titles[state.currentPage]+(car&&state.currentPage!=='settings'?` <span>— ${car.make||''} ${car.model||car.name||''} ${car.plate?'('+car.plate+')':''}</span>`:'');
+  const pages={dashboard:renderDashboard,records:renderRecords,fuel:renderFuelPage,analytics:renderAnalytics,reminders:renderRemindersPage,settings:renderSettings};
   document.getElementById('content').innerHTML='';
   pages[state.currentPage]?.();
 }
@@ -833,7 +866,7 @@ function renderDashboard(){
           <span class="status-badge ${car.status||'active'}" style="margin-left:8px;">${car.status==='inactive'?t('inactive'):t('active')}</span>
         </div>
       </div>
-      <button class="btn btn-ghost" onclick="openCarModal('${car.id}')" title="${state.lang==='cs'?'Upravit vozidlo':'Edit vehicle'}">✎</button>
+      <button class="btn btn-ghost" onclick="openCarModal('${car.id}')" title="${state.lang==='cs'?'Upravit vozidlo':'Edit vehicle'}"><span class="edit-icon">✏</span></button>
     </div>
 
     <div class="doc-row">
@@ -951,7 +984,7 @@ function renderRecords(){
       <td class="td-right td-mono">${fmtMoney(r.price)}</td>
       <td class="td-right td-mono">${fmtMoney((r.qty||1)*(r.price||0))}</td>
       <td><div class="row-actions">
-        <button class="row-btn" onclick="openRecordModal('${r.id}')" title="${state.lang==='cs'?'Upravit záznam':'Edit record'}">✎</button>
+        <button class="row-btn" onclick="openRecordModal('${r.id}')" title="${state.lang==='cs'?'Upravit záznam':'Edit record'}"><span class="edit-icon">✏</span></button>
         <button class="row-btn del" onclick="deleteRecord('${r.id}')" title="${state.lang==='cs'?'Smazat záznam':'Delete record'}">✕</button>
       </div></td>
     </tr>`).join(''):`<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:32px">${t('no_records')}</td></tr>`}
@@ -1037,7 +1070,7 @@ function renderFuelPage(){
           <td>${f.fullTank?'<span class="full-tank-dot"></span>':'<span class="partial-tank-dot"></span>'}</td>
           <td class="td-mono" style="color:${cons?'var(--text2)':'var(--text3)'}">${cons?fmtNum(cons.val,1)+' l/100km':'—'}</td>
           <td><div class="row-actions">
-            <button class="row-btn" onclick="openFuelModal('${f.id}')" title="${state.lang==='cs'?'Upravit tankování':'Edit fuel entry'}">✎</button>
+            <button class="row-btn" onclick="openFuelModal('${f.id}')" title="${state.lang==='cs'?'Upravit tankování':'Edit fuel entry'}"><span class="edit-icon">✏</span></button>
             <button class="row-btn del" onclick="deleteFuel('${f.id}')" title="${state.lang==='cs'?'Smazat tankování':'Delete fuel entry'}">✕</button>
           </div></td>
         </tr>`;}).join(''):`<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:32px">${t('no_records')}</td></tr>`}
@@ -1446,6 +1479,68 @@ function showToast(msg,type=''){
 }
 
 document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});});
+
+// ─── SETTINGS PAGE ───────────────────────────────────────────
+function renderSettings(){
+  const el=document.getElementById('content');
+  const cs=state.lang==='cs';
+  const totalRecords=state.records.length;
+  const totalFuels=state.fuels.length;
+  const totalCars=state.cars.length;
+
+  el.innerHTML=`
+    <div class="section-title">${cs?'Jazyk rozhraní':'Interface language'}</div>
+    <div class="settings-card" style="max-width:480px;margin-bottom:28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div style="flex:1;">
+        <div class="settings-card-title" style="margin-bottom:2px;">${cs?'Přepnout jazyk':'Switch language'}</div>
+        <div style="font-size:.8rem;color:var(--text2);">${cs?'Čeština / English':'Czech / English'}</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="lang-btn ${cs?'active':''}" onclick="setLang('cs')" title="Přepnout do češtiny">CS</button>
+        <button class="lang-btn ${!cs?'active':''}" onclick="setLang('en')" title="Switch to English">EN</button>
+      </div>
+    </div>
+
+    <div class="section-title">${cs?'Data a import':'Data & import'}</div>
+    <div class="settings-grid" style="margin-bottom:28px;">
+
+      <div class="settings-card">
+        <div class="settings-card-title">${cs?'Export dat (JSON)':'Export data (JSON)'}</div>
+        <div class="settings-card-desc">${cs?'Stáhne kompletní zálohu všech vozidel, záznamů, tankování a připomínek jako JSON soubor.':'Downloads a complete backup of all vehicles, records, fuel entries and reminders as a JSON file.'}</div>
+        <button class="btn btn-ghost" onclick="exportData()" style="width:100%;justify-content:center;margin-top:4px;">↑ ${cs?'Exportovat zálohu':'Export backup'}</button>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-title">${cs?'Import dat (JSON)':'Import data (JSON)'}</div>
+        <div class="settings-card-desc">${cs?'Načte zálohu z JSON souboru. Stávající data budou nahrazena.':'Loads a backup from a JSON file. Existing data will be replaced.'}</div>
+        <button class="btn btn-ghost" onclick="document.getElementById('import-file').click()" style="width:100%;justify-content:center;margin-top:4px;">↓ ${cs?'Importovat zálohu':'Import backup'}</button>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-title">${cs?'Import z CSV':'Import from CSV'}</div>
+        <div class="settings-card-desc">${cs?'Importuje servisní záznamy nebo tankování z CSV souboru. Podporuje formát exportu z Google Sheets.':'Imports service records or fuel entries from a CSV file. Supports Google Sheets export format.'}</div>
+        <button class="btn btn-fuel" onclick="openCsvImportModal()" style="width:100%;justify-content:center;margin-top:4px;">CSV ${cs?'import':'import'}</button>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-title" style="color:var(--red)">${cs?'Smazat veškerá data':'Delete all data'}</div>
+        <div class="settings-card-desc">${cs?'Nevratně smaže všechna vozidla, záznamy, tankování a připomínky. Tuto akci nelze vzít zpět.':'Permanently deletes all vehicles, records, fuel entries and reminders. This cannot be undone.'}</div>
+        <button class="btn btn-danger" onclick="if(confirm('${cs?'Opravdu smazat veškerá data? Tuto akci nelze vzít zpět.':'Delete all data? This cannot be undone.'}')){state.cars=[];state.records=[];state.fuels=[];state.reminders=[];state.currentCarId=null;saveData();renderAll();showToast('${cs?'Data smazána':'Data deleted'}','success');}" style="width:100%;justify-content:center;margin-top:4px;">${cs?'Smazat vše':'Delete all'}</button>
+      </div>
+
+    </div>
+
+    <div class="section-title">${cs?'O aplikaci':'About'}</div>
+    <div class="settings-card" style="max-width:480px;">
+      <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
+      <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.2</span></div>
+      <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
+      <div class="settings-info-row"><span>${cs?'Aktivních vozidel':'Active vehicles'}</span><span>${totalCars}</span></div>
+      <div class="settings-info-row"><span>${cs?'Servisních záznamů':'Service records'}</span><span>${totalRecords}</span></div>
+      <div class="settings-info-row"><span>${cs?'Záznamů tankování':'Fuel entries'}</span><span>${totalFuels}</span></div>
+      <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · autoservis_v3</span></div>
+    </div>`;
+}
 
 loadData();renderAll();
 
