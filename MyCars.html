@@ -204,6 +204,15 @@
   .toggle-slider::before{content:'';position:absolute;width:16px;height:16px;left:2px;bottom:2px;background:var(--text3);border-radius:50%;transition:.2s}
   .toggle input:checked+.toggle-slider{background:#0d2a1a;border-color:var(--green)}
   .toggle input:checked+.toggle-slider::before{transform:translateX(18px);background:var(--green)}
+  .date-triple{display:flex;align-items:center;gap:0;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);transition:border-color .15s;overflow:hidden}
+  .date-triple:focus-within{border-color:var(--accent)}
+  .date-triple.error{border-color:var(--red)}
+  .date-triple input{background:none;border:none;color:var(--text);font-family:var(--font-mono);font-size:.85rem;padding:8px 0;text-align:center;outline:none;-moz-appearance:textfield}
+  .date-triple input::-webkit-outer-spin-button,.date-triple input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .date-triple input.dt-d{width:36px}
+  .date-triple input.dt-m{width:36px}
+  .date-triple input.dt-y{width:52px;padding-right:8px}
+  .date-triple .dt-sep{color:var(--text3);font-size:.85rem;padding:0 1px;user-select:none}
   .toggle-label{font-size:.85rem;color:var(--text2)}
 </style>
 </head>
@@ -234,7 +243,9 @@
     <div class="sidebar-bottom">
       <button onclick="exportData()" title="Exportovat data do JSON souboru"><span style="font-size:1.1rem;line-height:1;">↑</span> Export</button>
       <button onclick="document.getElementById('import-file').click()" title="Importovat data z JSON souboru"><span style="font-size:1.1rem;line-height:1;">↓</span> Import</button>
+      <button onclick="openCsvImportModal()" title="Importovat záznamy nebo tankování z CSV souboru" style="color:var(--green);border-color:var(--green);">CSV</button>
       <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+      <input type="file" id="import-csv-file" accept=".csv" style="display:none" onchange="handleCsvFile(event)">
     </div>
   </aside>
 
@@ -259,7 +270,7 @@
     </div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="form-group"><label class="form-label required">Datum</label><input type="date" class="form-input" id="r-date"></div>
+        <div class="form-group"><label class="form-label required">Datum</label><div class="date-triple" id="r-date-wrap"><input type="number" class="dt-d" id="r-date-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="r-date-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="r-date-y" placeholder="RRRR" min="1900" max="2099"></div></div>
         <div class="form-group"><label class="form-label required">Tachometr (km)</label><input type="number" class="form-input" id="r-odo" placeholder="245448"></div>
         <div class="form-group full"><label class="form-label required">Popis</label><input type="text" class="form-input" id="r-desc"></div>
         <div class="form-group"><label class="form-label required">Kategorie</label><select class="form-select" id="r-cat"></select></div>
@@ -286,7 +297,7 @@
     </div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="form-group"><label class="form-label required">Datum</label><input type="date" class="form-input" id="f-date"></div>
+        <div class="form-group"><label class="form-label required">Datum</label><div class="date-triple" id="f-date-wrap"><input type="number" class="dt-d" id="f-date-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="f-date-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="f-date-y" placeholder="RRRR" min="1900" max="2099"></div></div>
         <div class="form-group"><label class="form-label required">Tachometr (km)</label><input type="number" class="form-input" id="f-odo" placeholder="250000"></div>
         <div class="form-group"><label class="form-label">Vozidlo</label><select class="form-select" id="f-car"></select></div>
         <div class="form-group"><label class="form-label required">Typ paliva</label><select class="form-select" id="f-fueltype"></select></div>
@@ -370,19 +381,19 @@
       <div class="modal-tab-content" id="car-tab-docs">
         <div class="form-grid">
           <div class="form-section-label" data-cs="STK – Technická prohlídka" data-en="STK – Technical Inspection">STK – Technická prohlídka</div>
-          <div class="form-group"><label class="form-label" data-cs="Platnost do" data-en="Valid until">Platnost do</label><input type="date" class="form-input" id="c-stk"></div>
+          <div class="form-group"><label class="form-label" data-cs="Platnost do" data-en="Valid until">Platnost do</label><div class="date-triple" id="c-stk-wrap"><input type="number" class="dt-d" id="c-stk-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="c-stk-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="c-stk-y" placeholder="RRRR" min="1900" max="2099"></div></div>
           <div class="form-group"><label class="form-label" data-cs="Varovat (dní předem)" data-en="Warn (days before)">Varovat (dní předem)</label><input type="number" class="form-input" id="c-stk-warn" value="30" placeholder="30"></div>
 
           <div class="form-section-label" data-cs="Emise – Měření emisí" data-en="Emission Check">Emise – Měření emisí</div>
-          <div class="form-group"><label class="form-label" data-cs="Platnost do" data-en="Valid until">Platnost do</label><input type="date" class="form-input" id="c-emission"></div>
+          <div class="form-group"><label class="form-label" data-cs="Platnost do" data-en="Valid until">Platnost do</label><div class="date-triple" id="c-emission-wrap"><input type="number" class="dt-d" id="c-emission-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="c-emission-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="c-emission-y" placeholder="RRRR" min="1900" max="2099"></div></div>
           <div class="form-group"><label class="form-label" data-cs="Varovat (dní předem)" data-en="Warn (days before)">Varovat (dní předem)</label><input type="number" class="form-input" id="c-emission-warn" value="30" placeholder="30"></div>
 
           <div class="form-section-label" data-cs="POV – Povinné ručení" data-en="Compulsory Vehicle Liability">POV – Povinné ručení</div>
-          <div class="form-group"><label class="form-label" data-cs="Platnost do" data-en="Valid until">Platnost do</label><input type="date" class="form-input" id="c-pov"></div>
+          <div class="form-group"><label class="form-label" data-cs="Platnost do" data-en="Valid until">Platnost do</label><div class="date-triple" id="c-pov-wrap"><input type="number" class="dt-d" id="c-pov-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="c-pov-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="c-pov-y" placeholder="RRRR" min="1900" max="2099"></div></div>
           <div class="form-group"><label class="form-label" data-cs="Varovat (dní předem)" data-en="Warn (days before)">Varovat (dní předem)</label><input type="number" class="form-input" id="c-pov-warn" value="30" placeholder="30"></div>
 
           <div class="form-section-label" data-cs="Havarijní pojištění (volitelné)" data-en="Comprehensive Insurance (optional)">Havarijní pojištění (volitelné)</div>
-          <div class="form-group"><label class="form-label" data-cs="Platnost do" data-en="Valid until">Platnost do</label><input type="date" class="form-input" id="c-ins"></div>
+          <div class="form-group"><label class="form-label" data-cs="Platnost do" data-en="Valid until">Platnost do</label><div class="date-triple" id="c-ins-wrap"><input type="number" class="dt-d" id="c-ins-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="c-ins-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="c-ins-y" placeholder="RRRR" min="1900" max="2099"></div></div>
           <div class="form-group"><label class="form-label" data-cs="Varovat (dní předem)" data-en="Warn (days before)">Varovat (dní předem)</label><input type="number" class="form-input" id="c-ins-warn" value="30" placeholder="30"></div>
         </div>
       </div>
@@ -426,13 +437,68 @@
         <div class="form-group full"><label class="form-label required">Název</label><input type="text" class="form-input" id="rem-name" placeholder="Výměna oleje"></div>
         <div class="form-group" id="rem-km-group"><label class="form-label">Interval (km)</label><input type="number" class="form-input" id="rem-interval" placeholder="10000"></div>
         <div class="form-group" id="rem-lastdone-group"><label class="form-label">Naposledy při (km)</label><input type="number" class="form-input" id="rem-lastdone"></div>
-        <div class="form-group" id="rem-date-group" style="display:none"><label class="form-label">Datum</label><input type="date" class="form-input" id="rem-date"></div>
+        <div class="form-group" id="rem-date-group" style="display:none"><label class="form-label">Datum</label><div class="date-triple" id="rem-date-wrap"><input type="number" class="dt-d" id="rem-date-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="rem-date-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="rem-date-y" placeholder="RRRR" min="1900" max="2099"></div></div>
         <div class="form-group" id="rem-warn-group"><label class="form-label">Varovat (km zbývá)</label><input type="number" class="form-input" id="rem-warn" placeholder="1000"></div>
       </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('reminder-modal')">Zrušit</button>
       <button class="btn btn-primary" onclick="saveReminder()">Uložit</button>
+    </div>
+  </div>
+</div>
+
+<!-- CSV IMPORT MODAL -->
+<div class="modal-overlay" id="csv-modal">
+  <div class="modal wide">
+    <div class="modal-head">
+      <h2 id="csv-modal-title">Import CSV</h2>
+      <button class="modal-close" onclick="closeModal('csv-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Krok 1: volba typu + soubor -->
+      <div id="csv-step-1">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label required">Vozidlo</label>
+            <select class="form-select" id="csv-car"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Typ importu</label>
+            <select class="form-select" id="csv-type" onchange="csvTypeChanged()">
+              <option value="records">Servisní záznamy</option>
+              <option value="fuel">Tankování</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label class="form-label required">CSV soubor</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="btn btn-ghost" onclick="document.getElementById('import-csv-file').click()">Vybrat soubor…</button>
+              <span id="csv-filename" style="font-size:.8rem;color:var(--text2);">Žádný soubor nevybrán</span>
+            </div>
+          </div>
+          <div class="form-group full" id="csv-format-hint" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-size:.78rem;color:var(--text2);line-height:1.6;">
+            <strong style="color:var(--text);display:block;margin-bottom:4px;">Očekávaný formát sloupců — Servisní záznamy:</strong>
+            <code style="color:var(--accent);">Datum, Stav tachometru, Popis, Součástky, Jednotková cena, Celková cena, Kategorie</code><br>
+            Datum ve formátu DD.MM.RRRR · Ceny v Kč · Kategorie nepovinná
+          </div>
+        </div>
+      </div>
+      <!-- Krok 2: náhled a potvrzení -->
+      <div id="csv-step-2" style="display:none;">
+        <div id="csv-preview-info" style="margin-bottom:12px;font-size:.82rem;color:var(--text2);"></div>
+        <div id="csv-preview-errors" style="margin-bottom:10px;"></div>
+        <div class="table-wrap" style="max-height:320px;overflow-y:auto;">
+          <table id="csv-preview-table" style="font-size:.78rem;">
+            <thead id="csv-preview-head"></thead>
+            <tbody id="csv-preview-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('csv-modal')">Zrušit</button>
+      <button class="btn btn-primary" id="csv-import-btn" onclick="confirmCsvImport()" style="display:none;">Importovat</button>
     </div>
   </div>
 </div>
@@ -547,6 +613,37 @@ function fmtDate(d){
   // cs-CZ locale adds spaces around dots — we remove them: "5. 9. 2024" → "5.9.2024"
   return dt.toLocaleDateString('cs-CZ').replace(/\s/g,'');
 }
+
+
+// ─── DATE TRIPLE INPUT HELPERS ───────────────────────────────
+// Zapíše ISO datum (YYYY-MM-DD) do trojice inputů s prefixem
+function setDateTriple(prefix, iso){
+  const m=iso?iso.match(/^(\d{4})-(\d{2})-(\d{2})$/):null;
+  document.getElementById(prefix+'-d').value=m?parseInt(m[3]):'';
+  document.getElementById(prefix+'-m').value=m?parseInt(m[2]):'';
+  document.getElementById(prefix+'-y').value=m?m[1]:'';
+}
+// Přečte trojici inputů a vrátí ISO datum nebo ''
+function getDateTriple(prefix){
+  const d=document.getElementById(prefix+'-d').value;
+  const m=document.getElementById(prefix+'-m').value;
+  const y=document.getElementById(prefix+'-y').value;
+  if(!d&&!m&&!y)return'';
+  if(!d||!m||!y)return null; // neúplné
+  const iso=`${y.padStart(4,'0')}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const dt=new Date(iso+'T12:00:00');
+  return isNaN(dt.getTime())?null:iso;
+}
+// Auto-focus: po vyplnění dne skočí na měsíc, po měsíci na rok
+function initDateTripleNav(prefix){
+  const dEl=document.getElementById(prefix+'-d');
+  const mEl=document.getElementById(prefix+'-m');
+  const yEl=document.getElementById(prefix+'-y');
+  dEl.addEventListener('input',()=>{if(dEl.value.length>=2)mEl.focus();});
+  mEl.addEventListener('input',()=>{if(mEl.value.length>=2)yEl.focus();});
+}
+
+
 function fmtNum(n,dec=0){return new Intl.NumberFormat('cs-CZ',{minimumFractionDigits:dec,maximumFractionDigits:dec}).format(n||0)}
 function uid(){return'_'+Math.random().toString(36).substr(2,9)+Date.now().toString(36)}
 function getCar(id){return state.cars.find(c=>c.id===id)}
@@ -1050,7 +1147,14 @@ function renderRemindersPage(){
 }
 
 // ─── MODALS ──────────────────────────────────────────────────
-function openModal(id){document.getElementById(id).classList.add('open')}
+function openModal(id){
+  document.getElementById(id).classList.add('open');
+  // Auto-focus navigace pro triple date inputy
+  document.getElementById(id).querySelectorAll('.date-triple').forEach(wrap=>{
+    const prefix=wrap.id.replace('-wrap','');
+    initDateTripleNav(prefix);
+  });
+}
 function closeModal(id){document.getElementById(id).classList.remove('open')}
 
 function openRecordModal(recordId){
@@ -1061,7 +1165,8 @@ function openRecordModal(recordId){
   carSel.innerHTML=state.cars.map(c=>`<option value="${c.id}" ${(rec?rec.carId:state.currentCarId)===c.id?'selected':''}>${c.make||''} ${c.model||c.name||''} ${c.plate?'('+c.plate+')':''}</option>`).join('');
   const catSel=document.getElementById('r-cat');
   catSel.innerHTML=CATEGORIES[state.lang].map((c,i)=>`<option value="${CATEGORIES.cs[i]}" ${rec&&rec.cat===CATEGORIES.cs[i]?'selected':''}>${c}</option>`).join('');
-  document.getElementById('r-date').value=rec?.date||new Date().toISOString().slice(0,10);
+  const today=new Date().toISOString().slice(0,10);
+  setDateTriple('r-date', rec?.date||today);
   document.getElementById('r-odo').value=rec?.odo||getMaxOdo(state.currentCarId)||'';
   document.getElementById('r-desc').value=rec?.desc||'';
   document.getElementById('r-qty').value=rec?.qty??1;
@@ -1073,7 +1178,7 @@ function openRecordModal(recordId){
 
 function saveRecord(){
   const errors=[];
-  const date=document.getElementById('r-date').value;
+  const date=getDateTriple('r-date');
   const odo=parseFloat(document.getElementById('r-odo').value);
   const desc=document.getElementById('r-desc').value.trim();
   const cat=document.getElementById('r-cat').value;
@@ -1081,7 +1186,7 @@ function saveRecord(){
   const qty=parseFloat(document.getElementById('r-qty').value);
   const price=parseFloat(document.getElementById('r-price').value)||0;
   const note=document.getElementById('r-note').value.trim();
-  if(!date)errors.push(t('date')+': '+t('required_field'));
+  if(!date)errors.push(t('date')+': neplatné nebo neúplné datum');
   if(!desc)errors.push(t('desc')+': '+t('required_field'));
   if(!cat)errors.push(t('cat')+': '+t('required_field'));
   if(isNaN(qty)||qty<=0)errors.push(t('qty')+': '+t('required_field'));
@@ -1108,7 +1213,8 @@ function openFuelModal(fuelId){
   const carSel=document.getElementById('f-car');
   carSel.innerHTML=state.cars.map(c=>`<option value="${c.id}" ${(f?f.carId:state.currentCarId)===c.id?'selected':''}>${c.make||''} ${c.model||c.name||''} ${c.plate?'('+c.plate+')':''}</option>`).join('');
   populateFuelTypes(f?f.carId:state.currentCarId, f?.fuelTypeId);
-  document.getElementById('f-date').value=f?.date||new Date().toISOString().slice(0,10);
+  const todayF=new Date().toISOString().slice(0,10);
+  setDateTriple('f-date', f?.date||todayF);
   document.getElementById('f-odo').value=f?.odo||getMaxOdo(state.currentCarId)||'';
   document.getElementById('f-liters').value=f?.liters||'';
   document.getElementById('f-cost').value=f?.cost||'';
@@ -1142,7 +1248,7 @@ function updateFuelCalc(){
 
 function saveFuel(){
   const errors=[];
-  const date=document.getElementById('f-date').value;
+  const date=getDateTriple('f-date');
   const odo=parseFloat(document.getElementById('f-odo').value)||0;
   const carId=document.getElementById('f-car').value;
   const fuelTypeId=document.getElementById('f-fueltype').value;
@@ -1150,7 +1256,7 @@ function saveFuel(){
   const cost=parseFloat(document.getElementById('f-cost').value)||0;
   const fullTank=document.getElementById('f-full').checked;
   const note=document.getElementById('f-note').value.trim();
-  if(!date)errors.push(t('date')+': '+t('required_field'));
+  if(!date)errors.push(t('date')+': neplatné nebo neúplné datum');
   if(!liters)errors.push(t('liters')+': '+t('required_field'));
   if(!cost)errors.push(t('total_price')+': '+t('required_field'));
   if(errors.length){document.getElementById('fuel-errors').innerHTML=errors.map(e=>`<div class="form-error">⚠ ${e}</div>`).join('');return;}
@@ -1199,13 +1305,13 @@ function openCarModal(carId){
   tog.onchange=()=>updateStatusToggleLabel(tog.checked);
   document.getElementById('c-startodo').value=car?.startOdo||'';
   // Fill docs
-  document.getElementById('c-stk').value=car?.stk||'';
+  setDateTriple('c-stk', car?.stk||'');
   document.getElementById('c-stk-warn').value=car?.stkWarn??30;
-  document.getElementById('c-emission').value=car?.emission||'';
+  setDateTriple('c-emission', car?.emission||'');
   document.getElementById('c-emission-warn').value=car?.emissionWarn??30;
-  document.getElementById('c-pov').value=car?.pov||'';
+  setDateTriple('c-pov', car?.pov||'');
   document.getElementById('c-pov-warn').value=car?.povWarn??30;
-  document.getElementById('c-ins').value=car?.insurance||'';
+  setDateTriple('c-ins', car?.insurance||'');
   document.getElementById('c-ins-warn').value=car?.insuranceWarn??30;
   // Fill service
   document.getElementById('c-oil-interval').value=car?.oilInterval||'';
@@ -1240,13 +1346,13 @@ function saveCar(){
     status:document.getElementById('c-status-toggle').checked?'active':'inactive',
     startOdo:parseInt(document.getElementById('c-startodo').value)||0,
     color:state.selectedColor,
-    stk:document.getElementById('c-stk').value||null,
+    stk:getDateTriple('c-stk')||null,
     stkWarn:parseInt(document.getElementById('c-stk-warn').value)||30,
-    emission:document.getElementById('c-emission').value||null,
+    emission:getDateTriple('c-emission')||null,
     emissionWarn:parseInt(document.getElementById('c-emission-warn').value)||30,
-    pov:document.getElementById('c-pov').value||null,
+    pov:getDateTriple('c-pov')||null,
     povWarn:parseInt(document.getElementById('c-pov-warn').value)||30,
-    insurance:document.getElementById('c-ins').value||null,
+    insurance:getDateTriple('c-ins')||null,
     insuranceWarn:parseInt(document.getElementById('c-ins-warn').value)||30,
     oilInterval:parseInt(document.getElementById('c-oil-interval').value)||null,
     oilLastKm:parseInt(document.getElementById('c-oil-last').value)||null,
@@ -1280,7 +1386,7 @@ function openReminderModal(){
   document.getElementById('rem-name').value='';
   document.getElementById('rem-interval').value='';
   document.getElementById('rem-lastdone').value=getMaxOdo(state.currentCarId)||'';
-  document.getElementById('rem-date').value='';
+  setDateTriple('rem-date','');
   document.getElementById('rem-warn').value='1000';
   document.getElementById('rem-type').value='km';
   toggleReminderType();
@@ -1300,7 +1406,7 @@ function saveReminder(){
     type:document.getElementById('rem-type').value,
     interval:parseInt(document.getElementById('rem-interval').value)||null,
     lastDone:parseInt(document.getElementById('rem-lastdone').value)||null,
-    date:document.getElementById('rem-date').value||null,
+    date:getDateTriple('rem-date')||null,
     warnAt:parseInt(document.getElementById('rem-warn').value)||1000});
   saveData();closeModal('reminder-modal');renderAll();
 }
@@ -1342,6 +1448,292 @@ function showToast(msg,type=''){
 document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});});
 
 loadData();renderAll();
+
+// ─── CSV IMPORT ───────────────────────────────────────────────
+
+let csvParsedRows = []; // výsledek parsování, čeká na potvrzení
+
+function openCsvImportModal(){
+  if(!state.cars.length){showToast('Nejprve přidej vozidlo','error');return;}
+  // Naplnit select vozidel
+  const sel = document.getElementById('csv-car');
+  sel.innerHTML = state.cars.map(c=>`<option value="${c.id}" ${c.id===state.currentCarId?'selected':''}>${c.make||''} ${c.model||''} ${c.plate?'('+c.plate+')':''}</option>`).join('');
+  // Reset do kroku 1
+  document.getElementById('csv-step-1').style.display = '';
+  document.getElementById('csv-step-2').style.display = 'none';
+  document.getElementById('csv-import-btn').style.display = 'none';
+  document.getElementById('csv-filename').textContent = 'Žádný soubor nevybrán';
+  csvTypeChanged();
+  csvParsedRows = [];
+  openModal('csv-modal');
+}
+
+function csvTypeChanged(){
+  const type = document.getElementById('csv-type').value;
+  const hint = document.getElementById('csv-format-hint');
+  if(type === 'records'){
+    hint.innerHTML = `<strong style="color:var(--text);display:block;margin-bottom:4px;">Očekávaný formát sloupců — Servisní záznamy:</strong>
+      <code style="color:var(--accent);">Datum, Stav tachometru, Popis, Součástky, Jednotková cena, Celková cena, Kategorie</code><br>
+      Datum DD.MM.RRRR · Ceny v Kč · Kategorie nepovinná → doplní se "Ostatní"`;
+  } else {
+    hint.innerHTML = `<strong style="color:var(--text);display:block;margin-bottom:4px;">Očekávaný formát sloupců — Tankování:</strong>
+      <code style="color:var(--accent);">Datum, Typ paliva, Tankováno litrů, Cena za litr, Celková cena, Stav tachometru, …, Plná nádrž, Poznámka</code><br>
+      Datum DD.MM.RRRR · Čísla s čárkou jako desetinným oddělovačem · Plná nádrž: Ano/Ne`;
+  }
+}
+
+function handleCsvFile(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  document.getElementById('csv-filename').textContent = file.name;
+  // Reset file input so same file can be re-selected
+  event.target.value = '';
+  const reader = new FileReader();
+  reader.onload = e => parseCsvPreview(e.target.result);
+  reader.readAsText(file, 'UTF-8');
+}
+
+// ── Parsovací utility ────────────────────────────────────────
+
+// Odstraní mezery (včetně \xa0) a "Kč", převede českou čárku na tečku → číslo
+function parseCzNum(s){
+  if(!s) return 0;
+  const clean = s.replace(/\xa0/g,'').replace(/\s/g,'').replace('Kč','').replace(',','.').trim();
+  const n = parseFloat(clean);
+  return isNaN(n) ? 0 : n;
+}
+
+// Odstraní \xa0 z tachometru a převede na int
+function parseOdo(s){
+  if(!s) return null;
+  const clean = s.replace(/\xa0/g,'').replace(/\s/g,'').replace(',','.');
+  const n = parseInt(clean);
+  return isNaN(n) ? null : n;
+}
+
+// DD.MM.RRRR → YYYY-MM-DD
+function csvDateToISO(s){
+  if(!s || !s.trim()) return null;
+  const m = s.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if(!m) return null;
+  return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+}
+
+// Mapování textového typu paliva na interní id
+function csvFuelTypeToId(s){
+  const v = (s||'').trim().toLowerCase();
+  if(v.includes('diesel premium')) return 'dp';
+  if(v.includes('diesel'))         return 'd';
+  if(v.includes('lpg'))            return 'lpg';
+  if(v.includes('elektr'))         return 'elec';
+  if(v.includes('super 98'))       return 'p98';
+  if(v.includes('natural 95') || v.includes('95')) return 'p95';
+  if(v.includes('e10'))            return 'e10';
+  return 'd'; // fallback pro diesel auto
+}
+
+// Jednoduché CSV parsování (zvládne quoted fields s čárkou uvnitř)
+function parseCSV(text){
+  const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
+  const result = [];
+  for(const line of lines){
+    const row = [];
+    let cur = '', inQ = false;
+    for(let i=0; i<line.length; i++){
+      const ch = line[i];
+      if(ch==='"'){ inQ=!inQ; continue; }
+      if(ch===',' && !inQ){ row.push(cur.trim()); cur=''; continue; }
+      cur += ch;
+    }
+    row.push(cur.trim());
+    result.push(row);
+  }
+  return result;
+}
+
+// ── Parsování a náhled ───────────────────────────────────────
+
+function parseCsvPreview(text){
+  const type = document.getElementById('csv-type').value;
+  const rows = parseCSV(text);
+  if(rows.length < 2){ showToast('CSV soubor je prázdný nebo nečitelný','error'); return; }
+
+  const headers = rows[0].map(h=>h.replace(/\xa0/g,' ').trim());
+  const dataRows = rows.slice(1).filter(r=>r.some(c=>c.trim()));
+
+  csvParsedRows = [];
+  const errors = [];
+
+  if(type === 'records'){
+    parseCsvRecords(headers, dataRows, csvParsedRows, errors);
+  } else {
+    parseCsvFuel(headers, dataRows, csvParsedRows, errors);
+  }
+
+  renderCsvPreview(type, csvParsedRows, errors);
+}
+
+function parseCsvRecords(headers, dataRows, out, errors){
+  // Flexibilní mapování sloupců podle názvu hlavičky
+  const hi = name => headers.findIndex(h=>h.toLowerCase().includes(name.toLowerCase()));
+  const iDatum    = hi('datum');
+  const iTacho    = hi('tachom');
+  const iPopis    = hi('popis');
+  const iSouc     = hi('součástky');
+  const iJedCena  = hi('jednotková');
+  const iCelCena  = hi('celková');
+  const iKat      = hi('kategorie');
+
+  dataRows.forEach((row, i) => {
+    const dateISO = csvDateToISO(row[iDatum]);
+    const popis   = (iSouc>=0 ? row[iPopis] : row[iPopis]||'').trim();
+    if(!popis){ errors.push(`Řádek ${i+2}: chybí popis — přeskočen`); return; }
+
+    // Qty a cena: zkusíme jednotkovou cenu, fallback na celkovou/qty
+    const qty    = parseCzNum(row[iSouc]);
+    const jedCena= parseCzNum(row[iJedCena]);
+    const celCena= parseCzNum(row[iCelCena]);
+    const finalQty   = qty || 1;
+    const finalPrice = jedCena || (finalQty>0 ? celCena/finalQty : celCena);
+
+    const kat = (iKat>=0 && row[iKat]?.trim()) ? row[iKat].trim() : 'Ostatní';
+
+    out.push({
+      _ok: !!dateISO,
+      _warn: !dateISO ? 'Datum chybí nebo je neplatné' : '',
+      date:  dateISO || '',
+      odo:   parseOdo(row[iTacho]),
+      desc:  popis,
+      cat:   kat,
+      qty:   finalQty,
+      price: finalPrice,
+      note:  '',
+    });
+  });
+}
+
+function parseCsvFuel(headers, dataRows, out, errors){
+  const hi = name => headers.findIndex(h=>h.toLowerCase().includes(name.toLowerCase()));
+  const iDatum  = hi('datum');
+  const iTyp    = hi('typ');
+  const iLitry  = hi('litrů');
+  const iCena   = hi('celková');
+  const iTacho  = hi('tachom');
+  const iPlna   = hi('plná');
+  const iPozmn  = hi('poznámka');
+
+  dataRows.forEach((row, i) => {
+    const dateISO = csvDateToISO(row[iDatum]);
+    const liters  = parseCzNum(row[iLitry]);
+    const cost    = parseCzNum(row[iCena]);
+    if(!liters && !cost){ errors.push(`Řádek ${i+2}: chybí data — přeskočen`); return; }
+
+    const plna = (row[iPlna]||'').trim().toLowerCase();
+
+    out.push({
+      _ok:    !!dateISO,
+      _warn:  !dateISO ? 'Datum chybí nebo je neplatné' : '',
+      date:   dateISO || '',
+      fuelTypeId: csvFuelTypeToId(row[iTyp]),
+      liters,
+      cost,
+      odo:    parseOdo(row[iTacho]),
+      fullTank: plna==='ano' || plna==='yes' || plna==='1',
+      note:   (iPozmn>=0 ? row[iPozmn] : '').trim(),
+    });
+  });
+}
+
+// ── Render náhledu ───────────────────────────────────────────
+
+function renderCsvPreview(type, rows, errors){
+  document.getElementById('csv-step-1').style.display = 'none';
+  document.getElementById('csv-step-2').style.display = '';
+
+  const okCount  = rows.filter(r=>r._ok).length;
+  const warnCount= rows.filter(r=>!r._ok).length;
+
+  document.getElementById('csv-preview-info').innerHTML =
+    `Nalezeno <strong>${rows.length}</strong> řádků — ` +
+    `<span style="color:var(--green)">${okCount} OK</span>` +
+    (warnCount ? ` · <span style="color:var(--accent)">${warnCount} s varováním</span>` : '');
+
+  const errEl = document.getElementById('csv-preview-errors');
+  errEl.innerHTML = errors.map(e=>`<div class="form-error" style="margin-bottom:3px;">⚠ ${e}</div>`).join('');
+
+  const thead = document.getElementById('csv-preview-head');
+  const tbody = document.getElementById('csv-preview-body');
+
+  if(type === 'records'){
+    thead.innerHTML = `<tr><th>Datum</th><th>Tachometr</th><th>Popis</th><th>Ks</th><th class="td-right">Jedn. cena</th><th class="td-right">Celkem</th><th>Kategorie</th><th></th></tr>`;
+    tbody.innerHTML = rows.map(r=>`
+      <tr style="${!r._ok?'opacity:.5':''}">
+        <td class="td-mono">${r.date?fmtDate(r.date):'<span style="color:var(--accent)">—</span>'}</td>
+        <td class="td-mono td-muted">${r.odo!=null?fmtNum(r.odo):'—'}</td>
+        <td>${r.desc}</td>
+        <td>${r.qty}</td>
+        <td class="td-right td-mono">${fmtMoney(r.price)}</td>
+        <td class="td-right td-mono">${fmtMoney(r.qty*r.price)}</td>
+        <td><span class="cat-badge" style="background:${CAT_COLORS[r.cat]||'#555'}22;color:${CAT_COLORS[r.cat]||'#aaa'}">${r.cat}</span></td>
+        <td>${r._warn?`<span style="color:var(--accent);font-size:.7rem;">⚠ ${r._warn}</span>`:''}</td>
+      </tr>`).join('');
+  } else {
+    thead.innerHTML = `<tr><th>Datum</th><th>Tachometr</th><th>Palivo</th><th class="td-right">Litry</th><th class="td-right">Celkem</th><th>Plná</th><th>Poznámka</th><th></th></tr>`;
+    tbody.innerHTML = rows.map(r=>`
+      <tr style="${!r._ok?'opacity:.5':''}">
+        <td class="td-mono">${r.date?fmtDate(r.date):'<span style="color:var(--accent)">—</span>'}</td>
+        <td class="td-mono td-muted">${r.odo!=null?fmtNum(r.odo):'—'}</td>
+        <td><span class="fuel-badge">${fuelTypeLabel(r.fuelTypeId)}</span></td>
+        <td class="td-right td-mono">${fmtNum(r.liters,2)} l</td>
+        <td class="td-right td-mono">${fmtMoney(r.cost)}</td>
+        <td>${r.fullTank?'<span style="color:var(--green)">✔</span>':'—'}</td>
+        <td class="td-muted">${r.note||''}</td>
+        <td>${r._warn?`<span style="color:var(--accent);font-size:.7rem;">⚠ ${r._warn}</span>`:''}</td>
+      </tr>`).join('');
+  }
+
+  document.getElementById('csv-import-btn').style.display = okCount > 0 ? '' : 'none';
+  if(okCount === 0) showToast('Žádné platné řádky k importu','error');
+}
+
+// ── Potvrzení importu ────────────────────────────────────────
+
+function confirmCsvImport(){
+  const type  = document.getElementById('csv-type').value;
+  const carId = document.getElementById('csv-car').value;
+  const validRows = csvParsedRows.filter(r=>r._ok);
+  if(!validRows.length){ showToast('Žádné platné řádky','error'); return; }
+
+  if(type === 'records'){
+    validRows.forEach(r=>{
+      state.records.push({
+        id: uid(), carId,
+        date: r.date, odo: r.odo||0,
+        desc: r.desc, cat: r.cat,
+        qty: r.qty, price: r.price,
+        note: r.note,
+        createdAt: new Date().toISOString(),
+      });
+    });
+    showToast(`Importováno ${validRows.length} záznamů`, 'success');
+  } else {
+    validRows.forEach(r=>{
+      state.fuels.push({
+        id: uid(), carId,
+        date: r.date, odo: r.odo||0,
+        fuelTypeId: r.fuelTypeId,
+        liters: r.liters, cost: r.cost,
+        fullTank: r.fullTank, note: r.note,
+        createdAt: new Date().toISOString(),
+      });
+    });
+    showToast(`Importováno ${validRows.length} tankování`, 'success');
+  }
+
+  saveData();
+  closeModal('csv-modal');
+  renderAll();
+}
 </script>
 </body>
 </html>
