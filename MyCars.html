@@ -172,9 +172,11 @@
   /* ── Charts ─────────────────────────────────── */
   .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px }
   .bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 140px }
-  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end }
-  .bar { width: 100%; border-radius: 4px 4px 0 0; min-height: 2px; transition: height .4s ease; position: relative; cursor: pointer }
-  .bar:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--surface3); border: 1px solid var(--border2); padding: 5px 10px; border-radius: 5px; font-size: .72rem; white-space: nowrap; z-index: 10; pointer-events: none }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; position: relative }
+  .bar-stack { width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 4px 4px 0 0; overflow: hidden; cursor: pointer; position: relative }
+  .bar-stack:hover .bar-tooltip { display: block }
+  .bar-segment { width: 100%; min-height: 1px; transition: height .4s ease }
+  .bar-tooltip { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--surface3); border: 1px solid var(--border2); padding: 7px 10px; border-radius: 6px; font-size: .72rem; white-space: nowrap; z-index: 20; pointer-events: none; min-width: 160px; line-height: 1.7 }
   .bar-label { font-size: .72rem; color: var(--text2); text-align: center; margin-top: 3px }
   .cat-chart { display: flex; flex-direction: column; gap: 10px }
   .cat-row { display: flex; align-items: center; gap: 12px }
@@ -302,7 +304,7 @@
   <aside id="sidebar">
     <div class="sidebar-logo">
       <h1>My<span>Cars</span></h1>
-      <p id="sidebar-subtitle">Evidence vozidel · v3.2</p>
+      <p id="sidebar-subtitle">Evidence vozidel · v3.4</p>
     </div>
 
     <div class="sidebar-section">
@@ -509,7 +511,7 @@
     </div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="form-group"><label class="form-label required">Vozidlo</label><select class="form-select" id="rem-car"></select></div>
+        <div class="form-group"><label class="form-label required">Vozidlo</label><select class="form-select" id="rem-car" onchange="prefillReminderFromCar(this.value)"></select></div>
         <div class="form-group"><label class="form-label required">Typ</label>
           <select class="form-select" id="rem-type" onchange="toggleReminderType()">
             <option value="km">Interval km</option>
@@ -518,7 +520,11 @@
         </div>
         <div class="form-group full"><label class="form-label required">Název</label><input type="text" class="form-input" id="rem-name" placeholder="Výměna oleje"></div>
         <div class="form-group" id="rem-km-group"><label class="form-label">Interval (km)</label><input type="number" class="form-input" id="rem-interval" placeholder="10000"></div>
-        <div class="form-group" id="rem-lastdone-group"><label class="form-label">Naposledy při (km)</label><input type="number" class="form-input" id="rem-lastdone"></div>
+        <div class="form-group" id="rem-lastdone-group">
+          <label class="form-label">Naposledy při (km)</label>
+          <input type="number" class="form-input" id="rem-lastdone">
+          <span id="rem-odo-hint" style="font-size:.72rem;color:var(--text3);margin-top:3px;"></span>
+        </div>
         <div class="form-group" id="rem-date-group" style="display:none"><label class="form-label">Datum</label><div class="date-triple" id="rem-date-wrap"><input type="number" class="dt-d" id="rem-date-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="rem-date-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="rem-date-y" placeholder="RRRR" min="1900" max="2099"></div></div>
         <div class="form-group" id="rem-warn-group"><label class="form-label">Varovat (km zbývá)</label><input type="number" class="form-input" id="rem-warn" placeholder="1000"></div>
       </div>
@@ -591,9 +597,10 @@
 // ─── FUEL TYPES ──────────────────────────────────────────────
 const FUEL_TYPES = {
   petrol: [
-    {id:'e10',  cs:'Benzín E10',       en:'Petrol E10'},
-    {id:'p95',  cs:'Natural 95',        en:'Premium 95'},
-    {id:'p98',  cs:'Super 98',          en:'Super 98'},
+    {id:'p95',   cs:'Natural 95',    en:'Regular 95'},
+    {id:'p95p',  cs:'Natural 95+',   en:'Premium 95+'},
+    {id:'p98',   cs:'Natural 98',    en:'Super 98'},
+    {id:'p100',  cs:'Natural 100',   en:'Super 100'},
   ],
   diesel: [
     {id:'d',    cs:'Diesel',            en:'Diesel'},
@@ -601,8 +608,8 @@ const FUEL_TYPES = {
   ],
   lpg:      [{id:'lpg', cs:'LPG',       en:'LPG'}],
   electric: [{id:'elec',cs:'Elektřina', en:'Electric (kWh)'}],
-  hybrid:   [{id:'e10', cs:'Natural 95',en:'Petrol E10'},{id:'elec',cs:'Elektřina',en:'Electric'}],
-  phev:     [{id:'p95', cs:'Natural 95',en:'Petrol E10'},{id:'elec',cs:'Elektřina',en:'Electric'}],
+  hybrid:   [{id:'p95', cs:'Natural 95',en:'Regular 95'},{id:'elec',cs:'Elektřina',en:'Electric'}],
+  phev:     [{id:'p95', cs:'Natural 95',en:'Regular 95'},{id:'elec',cs:'Elektřina',en:'Electric'}],
 };
 
 function getFuelOptions(carId) {
@@ -625,16 +632,16 @@ let state = {
 };
 
 const CATEGORIES = {
-  cs:['Nákup vozidla','Pojištění','Poplatky','Vybavení','Olej','Filtry','Pneumatiky','Brzdy','Nápravy','Ložiska','Světla','Stěrače','Elektroinstalace','Chladicí směs','Náplň do ostřikovačů','Práce','STK','Karoserie','Ostatní'],
-  en:['Vehicle purchase','Insurance','Fees','Equipment','Oil','Filters','Tyres','Brakes','Axles','Bearings','Lights','Wipers','Electrics','Coolant','Washer fluid','Labour','MOT/Inspection','Bodywork','Other']
+  cs:['Nákup vozidla','Administrativa','Provozní náplně','Servis a opravy','Pneumatiky a kola','Vybavení a vzhled'],
+  en:['Vehicle purchase','Administration','Fluids & consumables','Service & repairs','Tyres & wheels','Equipment & appearance']
 };
 const CAT_COLORS = {
-  'Nákup vozidla':'#e8c547','Vehicle purchase':'#e8c547','Pojištění':'#5b8dee','Insurance':'#5b8dee',
-  'Poplatky':'#888','Fees':'#888','Olej':'#e8a947','Oil':'#e8a947','Filtry':'#b0a030','Filters':'#b0a030',
-  'Pneumatiky':'#999','Tyres':'#999','Brzdy':'#e05c5c','Brakes':'#e05c5c','Nápravy':'#c06030','Axles':'#c06030',
-  'Ložiska':'#d07030','Bearings':'#d07030','Světla':'#f0e060','Lights':'#f0e060','Stěrače':'#70a0e0','Wipers':'#70a0e0',
-  'Elektroinstalace':'#a070e0','Electrics':'#a070e0','Práce':'#4caf82','Labour':'#4caf82',
-  'STK':'#ff6b35','MOT/Inspection':'#ff6b35',
+  'Nákup vozidla':       '#f59e0b', 'Vehicle purchase':          '#f59e0b',
+  'Administrativa':      '#6366f1', 'Administration':             '#6366f1',
+  'Provozní náplně':     '#22c55e', 'Fluids & consumables':       '#22c55e',
+  'Servis a opravy':     '#ef4444', 'Service & repairs':          '#ef4444',
+  'Pneumatiky a kola':   '#8b5cf6', 'Tyres & wheels':             '#8b5cf6',
+  'Vybavení a vzhled':   '#3b82f6', 'Equipment & appearance':     '#3b82f6',
 };
 
 const FUEL_TYPE_LABELS = {
@@ -731,6 +738,22 @@ function uid(){return'_'+Math.random().toString(36).substr(2,9)+Date.now().toStr
 function getCar(id){return state.cars.find(c=>c.id===id)}
 function getCarRecords(carId){return state.records.filter(r=>r.carId===carId)}
 function getCarFuels(carId){return state.fuels.filter(f=>f.carId===carId)}
+// Sdílená funkce — spotřeba metodou plné nádrže (použita v tankování i analytice)
+function calcConsumptions(carId){
+  const allFuels=getCarFuels(carId);
+  const fullFuels=[...allFuels].filter(f=>f.fullTank).sort((a,b)=>a.odo-b.odo);
+  const result=[];
+  for(let i=1;i<fullFuels.length;i++){
+    const kmDiff=fullFuels[i].odo-fullFuels[i-1].odo;
+    const liters=allFuels.filter(f=>f.odo>fullFuels[i-1].odo&&f.odo<=fullFuels[i].odo).reduce((s,f)=>s+(f.liters||0),0);
+    if(kmDiff>0&&liters>0) result.push({odo:fullFuels[i].odo,val:liters/kmDiff*100});
+  }
+  return result;
+}
+function avgConsumptionVal(carId){
+  const c=calcConsumptions(carId);
+  return c.length?c.reduce((s,x)=>s+x.val,0)/c.length:0;
+}
 function getMaxOdo(carId){
   const recs=getCarRecords(carId); const fuels=getCarFuels(carId);
   const all=[...(getCar(carId)?[getCar(carId).startOdo||0]:[]),...recs.map(r=>r.odo||0),...fuels.map(f=>f.odo||0)];
@@ -745,6 +768,27 @@ function getCatDisplay(cat){
   else{if(en>=0)return cat; if(li>=0)return CATEGORIES.en[li]; return cat;}
 }
 function normalizeCat(cat){const i=CATEGORIES.en.indexOf(cat);return i>=0?CATEGORIES.cs[i]:cat}
+
+// Mapování starých/CSV kategorií na nové
+function mapCatToNew(cat){
+  if(!cat) return 'Servis a opravy';
+  const v = cat.trim().toLowerCase();
+  // Nákup vozidla
+  if(v.includes('nákup') || v.includes('vehicle purchase') || v.includes('purchase')) return 'Nákup vozidla';
+  // Administrativa
+  if(['pojištění','insurance','pov','stk','mot','inspection','poplatky','fees',
+      'přepis','evidenč','pokuta','fine','administrative','administrativa'].some(k=>v.includes(k))) return 'Administrativa';
+  // Provozní náplně
+  if(['olej','oil','chladič','coolant','ostřikovač','washer','brzdová kapalina','brake fluid',
+      'náplň','fluid','provozní'].some(k=>v.includes(k))) return 'Provozní náplně';
+  // Pneumatiky a kola
+  if(['pneumatik','tyre','tire','kolo','wheel','disk','přezutí','vyvážení','geometrie','alignment'].some(k=>v.includes(k))) return 'Pneumatiky a kola';
+  // Vybavení a vzhled
+  if(['vybavení','equipment','koberec','carpet','roletka','autokosmetika','lak','paint',
+      'interiér','interior','doplněk','accessory','karoserie','bodywork'].some(k=>v.includes(k))) return 'Vybavení a vzhled';
+  // Servis a opravy — vše ostatní
+  return 'Servis a opravy';
+}
 
 function fuelTypeLabel(id){
   for(const group of Object.values(FUEL_TYPES)){
@@ -769,7 +813,7 @@ function saveData(){
 // ─── LANG ────────────────────────────────────────────────────
 function setLang(l){
   state.lang=l;
-  document.getElementById('sidebar-subtitle').textContent=l==='cs'?'Evidence vozidel · v3.2':'Vehicle tracker · v3.2';
+  document.getElementById('sidebar-subtitle').textContent=l==='cs'?'Evidence vozidel · v3.4':'Vehicle tracker · v3.4';
   document.title=l==='cs'?'MyCars — Evidence vozidel':'MyCars — Vehicle tracker';
   document.querySelectorAll('[data-cs]').forEach(el=>{
     const val=el.getAttribute('data-'+l);
@@ -787,7 +831,12 @@ function renderAll(){renderCarsList();renderPage();}
 
 function renderCarsList(){
   const el=document.getElementById('cars-list');
-  el.innerHTML=state.cars.map(car=>`
+  const sorted=[...state.cars].sort((a,b)=>{
+    const aActive=a.status!=='inactive';const bActive=b.status!=='inactive';
+    if(aActive!==bActive) return aActive?-1:1;
+    return `${a.make||''} ${a.model||''}`.localeCompare(`${b.make||''} ${b.model||''}`,'cs');
+  });
+  el.innerHTML=sorted.map(car=>`
     <div class="car-item ${car.id===state.currentCarId?'active':''} ${car.status==='inactive'?'inactive-car':''}" onclick="selectCar('${car.id}')">
       <span class="car-dot" style="background:${car.color||'#888'}"></span>
       <span class="car-name">${car.make||''} ${car.model||car.name||''}
@@ -944,7 +993,8 @@ function renderRecords(){
   const el=document.getElementById('content');
   const car=getCar(state.currentCarId);
   if(!car){el.innerHTML=`<div class="empty"><div class="empty-icon">🚗</div><p>${t('no_car')}</p></div>`;return;}
-  let recs=getCarRecords(car.id);
+  const allRecs=getCarRecords(car.id);
+  let recs=allRecs;
   if(state.filterCat)recs=recs.filter(r=>r.cat===state.filterCat);
   if(state.search){const q=state.search.toLowerCase();recs=recs.filter(r=>r.desc.toLowerCase().includes(q)||getCatDisplay(r.cat).toLowerCase().includes(q)||(r.note||'').toLowerCase().includes(q));}
   recs=[...recs].sort((a,b)=>{
@@ -955,10 +1005,47 @@ function renderRecords(){
   const total=recs.length;const pages=Math.ceil(total/state.pageSize)||1;
   state.page=Math.min(state.page,pages);
   const paged=recs.slice((state.page-1)*state.pageSize,state.page*state.pageSize);
-  const cats=[...new Set(getCarRecords(car.id).map(r=>r.cat))];
+  const cats=[...new Set(allRecs.map(r=>r.cat))];
   const sa=f=>state.sortField===f?(state.sortDir>0?'↑':'↓'):'';
+  const cs=state.lang==='cs';
 
-  el.innerHTML=`<div class="table-wrap">
+  // Stat karty — počítáme ze VŠECH záznamů (bez filtru)
+  const totalCost=allRecs.reduce((s,r)=>s+(r.qty||1)*(r.price||0),0);
+  const maxRec=allRecs.filter(r=>r.cat!=='Nákup vozidla').reduce((m,r)=>{const v=(r.qty||1)*(r.price||0);return v>m.v?{v,r}:m},{v:0,r:null});
+  const lastRec=[...allRecs].sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
+  const topCatMap={};allRecs.forEach(r=>{const v=(r.qty||1)*(r.price||0);topCatMap[r.cat]=(topCatMap[r.cat]||0)+v;});
+  const topCat=Object.entries(topCatMap).sort((a,b)=>b[1]-a[1])[0];
+
+  el.innerHTML=`
+    <div class="stats-grid" style="margin-bottom:18px;">
+      <div class="stat-card yellow" title="${cs?'Součet všech servisních výdajů (bez paliva)':'Sum of all service expenses (excl. fuel)'}">
+        <div class="stat-label">${cs?'Celkem za záznamy':'Total (records)'}</div>
+        <div class="stat-value small">${fmtMoney(totalCost)}</div>
+        <div class="stat-sub">${cs?'bez paliva':'excl. fuel'}</div>
+      </div>
+      <div class="stat-card blue" title="${cs?'Celkový počet servisních záznamů pro toto vozidlo':'Total number of service records for this vehicle'}">
+        <div class="stat-label">${cs?'Počet záznamů':'Record count'}</div>
+        <div class="stat-value">${allRecs.length}</div>
+        <div class="stat-sub">${cs?'celkem položek':'total items'}</div>
+      </div>
+      <div class="stat-card red" title="${cs?'Nejvyšší jednorázový výdaj v historii záznamů':'Highest single expense in records history'}">
+        <div class="stat-label">${cs?'Nejvyšší výdaj':'Highest expense'}</div>
+        <div class="stat-value small">${maxRec.r?fmtMoney(maxRec.v):'—'}</div>
+        <div class="stat-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;">${maxRec.r?maxRec.r.desc:''}</div>
+      </div>
+      <div class="stat-card" style="border-top:2px solid var(--blue)" title="${cs?'Datum a stav tachometru posledního servisního záznamu':'Date and odometer of the most recent service record'}">
+        <div class="stat-label">${cs?'Poslední záznam':'Last record'}</div>
+        <div class="stat-value small">${lastRec?fmtDate(lastRec.date):'—'}</div>
+        <div class="stat-sub">${lastRec&&lastRec.odo?fmtNum(lastRec.odo)+' km':''}</div>
+      </div>
+      <div class="stat-card" style="border-top:2px solid var(--accent)" title="${cs?'Kategorie s nejvyššími celkovými výdaji':'Category with the highest total spend'}">
+        <div class="stat-label">${cs?'Nejčastější kategorie':'Top category'}</div>
+        <div class="stat-value small" style="font-size:.9rem;">${topCat?getCatDisplay(topCat[0]):'—'}</div>
+        <div class="stat-sub">${topCat?fmtMoney(topCat[1]):''}</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
     <div class="table-header">
       <span class="table-header-title">${t('records')} <span style="color:var(--text3);font-size:.8rem;">(${total})</span></span>
       <input class="search-input" placeholder="${t('search_placeholder')}" value="${state.search||''}" oninput="state.search=this.value;state.page=1;renderRecords()">
@@ -1015,17 +1102,9 @@ function renderFuelPage(){
     if(av<bv)return-state.fuelSortDir;if(av>bv)return state.fuelSortDir;return 0;
   });
 
-  // Consumption calc between full tanks
-  const fullFuels=[...getCarFuels(car.id)].filter(f=>f.fullTank).sort((a,b)=>a.odo-b.odo);
-  const consumptions=[];
-  for(let i=1;i<fullFuels.length;i++){
-    const kmDiff=fullFuels[i].odo-fullFuels[i-1].odo;
-    // sum all fuels between the two full tanks (exclusive of first, inclusive of second)
-    const between=getCarFuels(car.id).filter(f=>f.odo>fullFuels[i-1].odo&&f.odo<=fullFuels[i].odo);
-    const liters=between.reduce((s,f)=>s+(f.liters||0),0);
-    if(kmDiff>0&&liters>0)consumptions.push({odo:fullFuels[i].odo,val:liters/kmDiff*100});
-  }
-  const avgC=consumptions.length?consumptions.reduce((s,c)=>s+c.val,0)/consumptions.length:0;
+  // Consumption — sdílená funkce (stejný výpočet jako v analytice)
+  const consumptions=calcConsumptions(car.id);
+  const avgC=avgConsumptionVal(car.id);
   const totalLiters=getCarFuels(car.id).reduce((s,f)=>s+(f.liters||0),0);
   const totalFuelCost=getTotalFuelCost(car.id);
   const ppl=totalLiters>0?totalFuelCost/totalLiters:0;
@@ -1110,7 +1189,8 @@ function renderAnalytics(){
   const kmDriven=maxOdo-(car.startOdo||0);
 
   const totalLiters=fuels.reduce((s,f)=>s+(f.liters||0),0);
-  const avgC=kmDriven>0&&totalLiters>0?(totalLiters/kmDriven*100):0;
+  const consumptions=calcConsumptions(car.id);
+  const avgC=avgConsumptionVal(car.id);
 
   // Měsíční data
   const byMonthAll={};
@@ -1154,12 +1234,36 @@ function renderAnalytics(){
       </div>
       <div>
         <div class="section-title">${t('monthly_spending')}</div>
-        <div class="chart-wrap"><div class="bar-chart">
-          ${months.map(m=>`<div class="bar-col">
-            <div class="bar" style="height:${(byMonthAll[m]/maxMonth*100).toFixed(1)}%;background:var(--accent);opacity:.85;" data-tip="${m}: ${fmtMoney(byMonthAll[m])}"></div>
-            <span class="bar-label">${m.slice(5,7)}/${m.slice(2,4)}</span>
-          </div>`).join('')}
-        </div></div>
+        <div class="chart-wrap">
+          <div style="display:flex;gap:16px;margin-bottom:10px;font-size:.72rem;">
+            <span style="display:flex;align-items:center;gap:5px;color:var(--text2)"><span style="width:10px;height:10px;border-radius:2px;background:var(--red);display:inline-block"></span>${cs?'Servis':'Service'}</span>
+            <span style="display:flex;align-items:center;gap:5px;color:var(--text2)"><span style="width:10px;height:10px;border-radius:2px;background:var(--accent);display:inline-block"></span>${cs?'Palivo':'Fuel'}</span>
+          </div>
+          <div class="bar-chart">
+          ${months.map(m=>{
+            const sv=byMonthService[m]||0;
+            const fv=byMonthFuel[m]||0;
+            const tot=byMonthAll[m]||0;
+            const sH=tot>0?(sv/maxMonth*100).toFixed(1):0;
+            const fH=tot>0?(fv/maxMonth*100).toFixed(1):0;
+            // Tooltip: celkem + servis + palivo + top 3 položky toho měsíce
+            const monthRecs=recs.filter(r=>r.date?.slice(0,7)===m&&r.cat!=='Nákup vozidla');
+            const topItems=monthRecs.sort((a,b)=>(b.qty||1)*(b.price||0)-(a.qty||1)*(a.price||0)).slice(0,3);
+            const itemLines=topItems.map(r=>`&nbsp;· ${r.desc.length>22?r.desc.slice(0,22)+'…':r.desc}: ${fmtMoney((r.qty||1)*(r.price||0))}`).join('<br>');
+            const tooltipHtml='<strong>'+m.slice(5,7)+'/'+m.slice(0,4)+': '+fmtMoney(tot)+'</strong><br>'+
+              (sv>0?'<span style="color:var(--red)">'+(cs?'Servis':'Service')+': '+fmtMoney(sv)+'</span><br>'+(itemLines?itemLines+'<br>':''):'') +
+              (fv>0?'<span style="color:var(--accent)">'+(cs?'Palivo':'Fuel')+': '+fmtMoney(fv)+'</span>':'');
+            return`<div class="bar-col">
+              <div class="bar-stack" style="height:${(tot/maxMonth*100).toFixed(1)}%;width:100%">
+                <div class="bar-tooltip">${tooltipHtml}</div>
+                ${sv>0?`<div class="bar-segment" style="height:${tot>0?(sv/tot*100).toFixed(1):0}%;background:var(--red);opacity:.8;"></div>`:''}
+                ${fv>0?`<div class="bar-segment" style="height:${tot>0?(fv/tot*100).toFixed(1):0}%;background:var(--accent);opacity:.85;"></div>`:''}
+              </div>
+              <span class="bar-label">${m.slice(5,7)}/${m.slice(2,4)}</span>
+            </div>`;
+          }).join('')}
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1486,13 +1590,23 @@ function openReminderModal(){
   const carSel=document.getElementById('rem-car');
   carSel.innerHTML=state.cars.map(c=>`<option value="${c.id}" ${c.id===state.currentCarId?'selected':''}>${c.make||''} ${c.model||c.name||''}</option>`).join('');
   document.getElementById('rem-name').value='';
-  document.getElementById('rem-interval').value='';
-  document.getElementById('rem-lastdone').value=getMaxOdo(state.currentCarId)||'';
-  setDateTriple('rem-date','');
-  document.getElementById('rem-warn').value='1000';
   document.getElementById('rem-type').value='km';
   toggleReminderType();
+  prefillReminderFromCar(state.currentCarId);
   openModal('reminder-modal');
+}
+function prefillReminderFromCar(carId){
+  const car=getCar(carId);
+  const maxOdo=getMaxOdo(carId)||0;
+  // Interval km — předvyplnit z profilu vozidla pokud existuje
+  document.getElementById('rem-interval').value=car?.oilInterval||'';
+  // Naposledy při — předvyplnit poslední výměnu oleje z profilu, fallback na max odo
+  document.getElementById('rem-lastdone').value=car?.oilLastKm||maxOdo||'';
+  document.getElementById('rem-warn').value=car?.oilWarn||'1000';
+  setDateTriple('rem-date','');
+  // Hint pod polem — zobrazit aktuální km vozidla
+  const hint=document.getElementById('rem-odo-hint');
+  if(hint) hint.textContent=maxOdo>0?(state.lang==='cs'?`Aktuální stav: ${fmtNum(maxOdo)} km`:`Current odometer: ${fmtNum(maxOdo)} km`):'';
 }
 function toggleReminderType(){
   const v=document.getElementById('rem-type').value;
@@ -1590,6 +1704,12 @@ function renderSettings(){
         <button class="btn btn-fuel" onclick="openCsvImportModal()" style="width:100%;justify-content:center;margin-top:4px;">CSV ${cs?'import':'import'}</button>
       </div>
       <div class="settings-card">
+        <div class="settings-card-title" style="color:var(--amber)">${cs?'Smazat provozní data':'Delete operational data'}</div>
+        <div class="settings-card-desc">${cs?'Smaže záznamy servisu a tankování. Vozidla a jejich nastavení zůstanou zachována.':'Deletes service records and fuel entries. Vehicles and their settings will be kept.'}</div>
+        <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:4px;border-color:var(--amber);color:var(--amber);" onclick="if(confirm('${cs?'Smazat všechny záznamy servisu a tankování? Vozidla zůstanou.':'Delete all service records and fuel entries? Vehicles will be kept.'}')){state.records=[];state.fuels=[];state.reminders=[];saveData();renderAll();showToast('${cs?'Provozní data smazána':'Operational data deleted'}','success');}">${cs?'Smazat záznamy a tankování':'Delete records & fuel'}</button>
+      </div>
+
+      <div class="settings-card">
         <div class="settings-card-title" style="color:var(--red)">${cs?'Smazat veškerá data':'Delete all data'}</div>
         <div class="settings-card-desc">${cs?'Nevratně smaže všechna vozidla, záznamy, tankování a připomínky. Tuto akci nelze vzít zpět.':'Permanently deletes all vehicles, records, fuel entries and reminders. This cannot be undone.'}</div>
         <button class="btn btn-danger" onclick="if(confirm('${cs?'Opravdu smazat veškerá data? Tuto akci nelze vzít zpět.':'Delete all data? This cannot be undone.'}')){state.cars=[];state.records=[];state.fuels=[];state.reminders=[];state.currentCarId=null;saveData();renderAll();showToast('${cs?'Data smazána':'Data deleted'}','success');}" style="width:100%;justify-content:center;margin-top:4px;">${cs?'Smazat vše':'Delete all'}</button>
@@ -1607,7 +1727,7 @@ function renderSettings(){
     <div class="section-title">${cs?'O aplikaci':'About'}</div>
     <div class="settings-card" style="max-width:480px;">
       <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-      <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.2</span></div>
+      <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.4</span></div>
       <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
       <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
       <div class="settings-info-row"><span>${cs?'Dokumentace':'Documentation'}</span><span><a href="README.md" target="_blank" style="color:var(--accent);text-decoration:none;">README.md ↗</a></span></div>
@@ -1641,7 +1761,7 @@ function csvTypeChanged(){
   if(type === 'records'){
     hint.innerHTML = `<strong style="color:var(--text);display:block;margin-bottom:4px;">Očekávaný formát sloupců — Servisní záznamy:</strong>
       <code style="color:var(--accent);">Datum, Stav tachometru, Popis, Součástky, Jednotková cena, Celková cena, Kategorie</code><br>
-      Datum DD.MM.RRRR · Ceny v Kč · Kategorie nepovinná → doplní se "Ostatní"`;
+      Datum DD.MM.RRRR · Ceny v Kč · Kategorie nepovinná → automaticky zařazena do nové kategorie`;
   } else {
     hint.innerHTML = `<strong style="color:var(--text);display:block;margin-bottom:4px;">Očekávaný formát sloupců — Tankování:</strong>
       <code style="color:var(--accent);">Datum, Typ paliva, Tankováno litrů, Cena za litr, Celková cena, Stav tachometru, …, Plná nádrž, Poznámka</code><br>
@@ -1693,10 +1813,11 @@ function csvFuelTypeToId(s){
   if(v.includes('diesel'))         return 'd';
   if(v.includes('lpg'))            return 'lpg';
   if(v.includes('elektr'))         return 'elec';
-  if(v.includes('super 98'))       return 'p98';
-  if(v.includes('natural 95') || v.includes('95')) return 'p95';
-  if(v.includes('e10'))            return 'e10';
-  return 'd'; // fallback pro diesel auto
+  if(v.includes('100'))            return 'p100';
+  if(v.includes('98'))             return 'p98';
+  if(v.includes('95+') || v.includes('95 +')) return 'p95p';
+  if(v.includes('95') || v.includes('natural') || v.includes('e10')) return 'p95';
+  return 'p95'; // fallback
 }
 
 // Jednoduché CSV parsování (zvládne quoted fields s čárkou uvnitř)
@@ -1763,7 +1884,7 @@ function parseCsvRecords(headers, dataRows, out, errors){
     const finalQty   = qty || 1;
     const finalPrice = jedCena || (finalQty>0 ? celCena/finalQty : celCena);
 
-    const kat = (iKat>=0 && row[iKat]?.trim()) ? row[iKat].trim() : 'Ostatní';
+    const kat = mapCatToNew((iKat>=0 && row[iKat]?.trim()) ? row[iKat].trim() : '');
 
     out.push({
       _ok: !!dateISO,
