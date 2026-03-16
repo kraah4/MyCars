@@ -1,182 +1,252 @@
-# MyCars — Evidence vozidel
+# MyCars — Vehicle Maintenance Tracker
 
-**Verze:** 3.2  
-**Autor:** kraah  
-**Typ:** Jednoduchá offline webová aplikace (single HTML file)
-
----
-
-## O aplikaci
-
-MyCars je offline nástroj pro evidenci vozidel, servisních záznamů a tankování. Vše běží přímo v prohlížeči — žádný server, žádná registrace, žádná data nikam neodesílaná. Data jsou uložena v `localStorage` prohlížeče pod klíčem `mycars_v3`.
-
-Aplikace je dostupná jako jediný soubor `MyCars.html`, který lze otevřít přímo v prohlížeči přes `file://`.
+**Version:** 3.5 · **Build:** 20260316-004  
+**Author:** kraah  
+**Type:** Single-file offline web application
 
 ---
 
-## Funkce
+## Overview
 
-| Stránka | Popis |
-|---|---|
-| **Přehled** | Aktuální stav vozidla, upozornění na expirace dokladů, poslední tankování |
-| **Záznamy** | Servisní záznamy s přehledem statistik — datum, km, kategorie, cena, poznámka |
-| **Tankování** | Evidence paliva — litry, cena, typ paliva, plná nádrž, spotřeba |
-| **Analytika** | Grafy výdajů dle kategorie a měsíce, statistické karty |
-| **Připomínky** | Opakované události podle km nebo data |
-| **Nastavení** | Export/Import JSON zálohy, CSV import, přepnutí jazyka, správa dat |
+MyCars is a privacy-first, offline vehicle maintenance and expense tracker. Everything runs directly in the browser — no server, no account, no data ever leaves your device. Data is stored in browser `localStorage` under the key `mycars_v3`.
+
+The entire application is a single `MyCars.html` file that works over `file://` as well as any HTTP server.
 
 ---
 
-## Datový model
+## Quick Start
 
-### Vozidlo
-- Základní údaje: značka, model, rok, SPZ, VIN, typ paliva, barva
-- Doklady: STK, Emise, POV, Havarijní pojištění — datum + počet dní pro varování
-- Servis: interval oleje, poslední výměna (km), upozornění (km zbývá)
+1. Open `MyCars.html` in any modern browser (Chrome, Firefox, Safari, Edge, Vivaldi)
+2. Click **Add vehicle** in the left sidebar
+3. Fill in make, model, and fuel type — all other fields are optional
+4. Start adding service records (**New record**) and fuel entries (**New fuel entry**)
 
-### Kategorie výdajů
+The app supports both **Czech** and **English** — switch via Settings → Interface language.
 
-| Kategorie | Příklady položek |
+---
+
+## Pages
+
+| Page | Description |
 |---|---|
-| **Nákup vozidla** | Pořizovací cena vozidla |
-| **Administrativa** | Pojištění/POV, STK, Přepis, Evidenční kontrola, Poplatky, Pokuty |
-| **Provozní náplně** | Olej, Kapalina do ostřikovačů, Chladící směs, Brzdová kapalina |
-| **Servis a opravy** | Mechanické práce, Filtry, Brzdy, Nápravy, Výfuk, Motor, Rozvody, Diagnostika, Baterie, Světla/Žárovky |
-| **Pneumatiky a kola** | Nákup pneu, Přezutí, Vyvážení, Disky, Geometrie |
-| **Vybavení a vzhled** | Koberce, Roletka, Autokosmetika, Oprava laku, Interiér, Doplňky |
+| **Dashboard** | Vehicle status, document expiry alerts, last refuel, key statistics |
+| **Records** | Service records with 5 summary stat cards, full-text search, category filter |
+| **Fuel log** | Fuel entries with per-tank consumption, average price/litre |
+| **Analytics** | Category expense chart, monthly stacked bar chart, 10 stat cards |
+| **Reminders** | Km-based and date-based reminders with status indicators |
+| **Settings** | Language, JSON backup, CSV import, data management, app info |
 
-> ⚠️ **Poznámka:** Kategorie `Nákup vozidla` je v analytice vyčleněna do samostatné bubliny a nezapočítává se do ceny za km.
+---
 
-### Typy paliva
+## Vehicle Profile Fields
 
-| Typ vozidla | Dostupné typy paliva |
+| Field | Required | Notes |
+|---|---|---|
+| Make | yes | e.g. Škoda, VW, Audi |
+| Model | yes | e.g. Octavia, Golf |
+| Year | no | Manufacturing year |
+| Plate | no | Displayed in sidebar |
+| VIN | no | |
+| Fuel type | yes | Petrol / Diesel / LPG / Electric / Hybrid / PHEV |
+| Status | yes | Active / Inactive — inactive vehicles sorted to the bottom of sidebar |
+| Starting odometer | no | Baseline km for driven distance calculations |
+| Acquisition date | no | Date the vehicle was purchased |
+| Decommission date | no | Date the vehicle was retired |
+| Colour | no | Visual identifier dot in the sidebar |
+| Documents | no | STK, Emissions, Liability insurance, Comprehensive insurance — each with expiry date + warning threshold (days) |
+| Oil service | no | Interval (km), last done at (km), warning threshold (km remaining) |
+| Notes | no | Free text |
+
+---
+
+## Expense Categories
+
+| Category | Typical items |
 |---|---|
-| Benzín | Natural 95, Natural 95+, Natural 98, Natural 100 |
+| **Vehicle purchase** | Acquisition cost — excluded from cost/km and monthly chart |
+| **Administration** | Insurance/liability, MOT/STK, registration transfer, fees, fines |
+| **Fluids & consumables** | Oil, washer fluid, coolant, brake fluid |
+| **Service & repairs** | Labour, filters, brakes, axles, exhaust, engine, timing, diagnostics, bulbs |
+| **Tyres & wheels** | Tyre purchase, fitting, balancing, rims, alignment |
+| **Equipment & appearance** | Floor mats, cosmetics, paint repair, interior accessories |
+
+> Vehicle purchase is intentionally isolated from all cost-per-km and monthly trend calculations so it does not distort running-cost analysis.
+
+---
+
+## Fuel Types
+
+| Vehicle type | Available fuel types |
+|---|---|
+| Petrol | Natural 95, Natural 95+, Natural 98, Natural 100 |
 | Diesel | Diesel, Diesel Premium |
 | LPG | LPG |
-| Elektro | Elektřina |
-| Hybrid / PHEV | Natural 95 + Elektřina |
+| Electric | Electric (kWh) |
+| Hybrid / PHEV | Natural 95 + Electric |
 
 ---
 
-## Stránky — přehled
+## How Calculations Work
 
-### Záznamy
-Nad tabulkou záznamů se zobrazuje 5 statistických karet:
+All calculations are centralised in shared helper functions so every page (Dashboard, Fuel log, Analytics) always shows identical numbers.
 
-| Karta | Co zobrazuje |
-|---|---|
-| **Celkem za záznamy** | Součet všech servisních výdajů bez paliva |
-| **Počet záznamů** | Celkový počet položek v historii |
-| **Nejvyšší výdaj** | Nejvyšší jednorázová platba + název položky |
-| **Poslední záznam** | Datum a km posledního servisního záznamu |
-| **Nejčastější kategorie** | Kategorie s nejvyšší celkovou utratou |
+### Average fuel consumption — full-tank method
 
-Záznamy lze filtrovat podle kategorie a fulltextově prohledávat (popis, kategorie, poznámka). Řazení kliknutím na záhlaví sloupce.
+The app uses the **full-tank method** rather than a simple total-litres ÷ total-km ratio.
 
-### Tankování
-Tabulka tankování zobrazuje spotřebu počítanou **metodou plné nádrže** — stejnou metodou jako analytika, takže čísla jsou vždy konzistentní.
+**Algorithm:**
+1. Filter fuel entries where `fullTank = true`, sorted by odometer.
+2. For each consecutive pair of full-tank entries `[A, B]`:
+   - `kmDiff = B.odo − A.odo`
+   - `liters = sum of all fuel entries with odo > A.odo AND odo ≤ B.odo`
+   - `consumption = liters / kmDiff × 100` (l/100 km)
+3. Average consumption = arithmetic mean of all valid segments.
 
-Indikace plné nádrže: modrá tečka = plná nádrž, šedá tečka = doplnění.
+This correctly handles partial top-ups between full fills.
 
-### Analytika
-Statistické karty s tooltipem (hover) vysvětlujícím výpočet:
+### Cost per km
 
-| Karta | Co se počítá |
-|---|---|
-| **Celkové výdaje** | Servis + palivo + nákup vozidla |
-| **Nákup vozidla** | Záznamy kategorie `Nákup vozidla` (zobrazí se jen pokud existuje) |
-| **Cena za km** | (Servis + palivo) ÷ ujetých km — bez nákupu vozidla |
-| **Průměrná spotřeba** | Metoda plné nádrže — průměr spotřeb mezi plnými tankováními |
-| **Průměr / měsíc** | Celkové výdaje ÷ počet měsíců s aktivitou |
-| **Servis / měsíc** | Servisní náklady (bez paliva a nákupu) ÷ počet měsíců |
-| **Palivo / měsíc** | Náklady na palivo ÷ počet měsíců s tankováním |
+```
+costPerKm = (serviceCost + fuelCost) ÷ kmDriven
+```
 
-### Připomínky
-Dva typy připomínek:
-- **Interval km** — při přidání se automaticky předvyplní interval oleje, poslední výměna a varování z profilu vozidla. Pod polem tachometru se zobrazí aktuální stav km.
-- **Datum** — jednorázové nebo opakující se termíny (STK, pojištění…)
+- `serviceCost` excludes the **Vehicle purchase** category
+- `kmDriven = maxOdometer − startingOdometer`
+- Vehicle purchase is shown as a separate stat card and never included in running-cost metrics
 
-Stavy: ✅ V pořádku · ⚠️ Brzy · 🔴 Prošlé
+### Fuel-only cost per km
+
+```
+fuelCostPerKm = totalFuelCost ÷ kmDriven
+```
+
+### Average price per litre
+
+```
+avgPricePerLitre = totalFuelCost ÷ totalLitres
+```
+
+### Monthly averages
+
+`monthCount` = number of calendar months that contain at least one record or fuel entry.
+
+```
+avgPerMonth      = totalCost ÷ monthCount         (incl. vehicle purchase)
+servicePerMonth  = serviceCost ÷ monthCount
+fuelPerMonth     = fuelCost ÷ monthCount
+avgKmPerYear     = kmDriven ÷ (monthCount ÷ 12)
+```
+
+### Monthly chart (Analytics)
+
+- Y-axis scales to the highest **service + fuel** month (vehicle purchase excluded)
+- Red bars = service expenses · Blue bars = fuel expenses
+- Dashed line = monthly average (service + fuel)
+- "Service+fuel (12m)" total in the chart header = rolling 12-month sum, no vehicle purchase
+- Hover (desktop) or tap (mobile) a bar to see the monthly breakdown including top 3 service items
 
 ---
 
-## Export a import
+## Reminders
 
-### JSON záloha
-- **Export:** Nastavení → Exportovat zálohu → stáhne soubor `mycars_YYYY-MM-DD-HHMMSS.json`
-- **Import:** Nastavení → Importovat zálohu → načte JSON soubor (**přepíše stávající data**)
+Two reminder types:
 
-### Správa dat
+**Km-based** (e.g. oil change every 10 000 km)
+- Fields: name, interval (km), last done at (km), warn when X km remaining
+- When creating a km reminder, the app pre-fills interval and last-done from the vehicle oil service profile
 
-| Akce | Co smaže | Co zachová |
+**Date-based** (e.g. MOT expiry)
+- Fields: name, date
+
+Status: `OK` · `Due soon` (within warning threshold) · `Overdue`
+
+---
+
+## Sidebar Vehicle Order
+
+Active vehicles first (alphabetical A→Z), then inactive vehicles (alphabetical A→Z).
+
+---
+
+## Data Backup
+
+### JSON export / import
+
+- **Export:** Settings → Export backup → downloads `mycars_YYYY-MM-DD-HHMMSS.json`
+- **Import:** Settings → Import backup → replaces all existing data
+
+> ⚠️ Import is destructive — it overwrites everything. Always export a backup first.
+
+### Data management options
+
+| Action | Deletes | Keeps |
 |---|---|---|
-| **Smazat provozní data** | Záznamy servisu, tankování, připomínky | Vozidla a jejich nastavení |
-| **Smazat vše** | Vše — vozidla, záznamy, tankování, připomínky | — |
+| Delete operational data | All records, fuel entries, reminders | Vehicles and their profiles |
+| Delete everything | All data | — |
 
 ---
 
-## Formát CSV souborů
+## CSV Import
 
-Import historických dat ze souborů CSV (např. export z Google Sheets).
+Import historical data exported from spreadsheets (e.g. Google Sheets).
 
-### Servisní záznamy
+### Service records CSV
 
-**Kódování:** UTF-8 · **Oddělovač:** čárka (`,`)
+**Encoding:** UTF-8 · **Delimiter:** comma (`,`)
 
-| Sloupec | Povinný | Formát | Poznámka |
+| Column | Required | Format | Notes |
 |---|---|---|---|
-| `Datum` | doporučený | `DD.MM.RRRR` | Prázdné datum → řádek importován s varováním |
-| `Stav tachometru` | ne | číslo (může mít `\xa0` jako oddělovač tisíců) | |
-| `Popis` | ano | text | |
-| `Součástky` | ne | číslo | Počet kusů (výchozí: 1) |
-| `Jednotková cena` | ne | číslo s čárkou jako des. oddělovačem, může obsahovat `Kč` a `\xa0` | |
-| `Celková cena` | ano | číslo s čárkou jako des. oddělovačem, může obsahovat `Kč` a `\xa0` | |
-| `Kategorie` | ne | text | Automaticky mapováno na nové kategorie (viz tabulka níže) |
+| `Datum` | recommended | `DD.MM.YYYY` | Empty date → row imported with warning flag |
+| `Stav tachometru` | no | number, `\xa0` thousands separator accepted | |
+| `Popis` | **yes** | text | Description / item name |
+| `Součástky` | no | number | Quantity, default 1 |
+| `Jednotková cena` | no | decimal with comma, may contain `Kč` / `\xa0` | Unit price |
+| `Celková cena` | **yes** | decimal with comma | Total price |
+| `Kategorie` | no | text | Auto-mapped to current categories (see below) |
 
-#### Mapování kategorií při importu
+**Automatic category mapping**
 
-Aplikace automaticky zařadí staré i neznámé kategorie do nového systému:
+Old or unknown category names are mapped at import time:
 
-| Klíčová slova v názvu kategorie | Nová kategorie |
+| Keywords in category name | Target category |
 |---|---|
-| nákup, vehicle purchase | Nákup vozidla |
-| pojištění, insurance, pov, stk, mot, poplatky, fees, přepis, pokuta | Administrativa |
-| olej, oil, chladič, coolant, ostřikovač, washer, brzdová kapalina, náplň | Provozní náplně |
-| pneumatik, tyre, tire, kolo, wheel, disk, přezutí, vyvážení, geometrie | Pneumatiky a kola |
-| vybavení, equipment, koberec, roletka, autokosmetika, lak, interiér, karoserie | Vybavení a vzhled |
-| *(vše ostatní)* | Servis a opravy |
+| nákup, vehicle purchase | Vehicle purchase |
+| pojištění, insurance, pov, stk, mot, poplatky, fees, přepis, pokuta | Administration |
+| olej, oil, chladič, coolant, ostřikovač, washer, brzdová kapalina | Fluids & consumables |
+| pneumatik, tyre, tire, kol, wheel, disk, přezutí, vyvážení, geometrie | Tyres & wheels |
+| vybavení, equipment, koberec, roletka, autokosmetika, lak, interiér, karoserie | Equipment & appearance |
+| *(anything else)* | Service & repairs |
 
-**Příklad:**
-```
+**Example:**
+```csv
 Datum,Stav tachometru,Popis,Součástky,Jednotková cena,Celková cena,Kategorie
-5.9.2022,245 448,Výměna oleje Castrol,7,"231,43","1 620,01",Olej
-5.9.2022,245 448,Olejový filtr MANN,1,"315,00","315,00",Filtry
-5.9.2022,245 448,STK,1,"3 500,00","3 500,00",STK
+5.9.2022,245 448,Oil change Castrol,7,"231,43","1 620,01",Olej
+5.9.2022,245 448,Oil filter MANN,1,"315,00","315,00",Filtry
+5.9.2022,245 448,MOT,1,"3 500,00","3 500,00",STK
 ```
 
 ---
 
-### Tankování
+### Fuel entries CSV
 
-**Kódování:** UTF-8 · **Oddělovač:** čárka (`,`)
+**Encoding:** UTF-8 · **Delimiter:** comma (`,`)
 
-| Sloupec | Povinný | Formát | Poznámka |
+| Column | Required | Format | Notes |
 |---|---|---|---|
-| `Datum` | doporučený | `DD.MM.RRRR` | |
-| `Typ paliva` | ne | text | viz tabulka mapování níže |
-| `Tankováno litrů` | ano | číslo s čárkou | |
-| `Cena za litr` | ne | číslo s čárkou, může obsahovat `Kč` a `\xa0` | |
-| `Celková cena` | ano | číslo s čárkou, může obsahovat `Kč` a `\xa0` | |
-| `Stav tachometru` | ne | číslo, může mít `\xa0` jako oddělovač tisíců | |
-| `Km/tankování` | ne | ignorováno | |
-| `Prům. spotřeba` | ne | ignorováno; `Nelze spočítat` akceptováno | |
-| `Plná nádrž` | ne | `Ano` / `Ne` | |
-| `Poznámka` | ne | text | |
+| `Datum` | recommended | `DD.MM.YYYY` | |
+| `Typ paliva` | no | text | See mapping below |
+| `Tankováno litrů` | **yes** | decimal with comma | |
+| `Cena za litr` | no | decimal with comma, `Kč`/`\xa0` accepted | |
+| `Celková cena` | **yes** | decimal with comma | |
+| `Stav tachometru` | no | number, `\xa0` thousands separator accepted | |
+| `Km/tankování` | no | ignored | |
+| `Prům. spotřeba` | no | ignored; `Nelze spočítat` accepted | |
+| `Plná nádrž` | no | `Ano` / `Ne` | Whether tank was completely filled |
+| `Poznámka` | no | text | |
 
-#### Mapování typů paliva
+**Fuel type mapping**
 
-| Hodnota v CSV | Interní typ |
+| CSV value | Internal type |
 |---|---|
 | `Natural 95`, `E10`, `95` | Natural 95 |
 | `Natural 95+`, `95+` | Natural 95+ |
@@ -185,23 +255,95 @@ Datum,Stav tachometru,Popis,Součástky,Jednotková cena,Celková cena,Kategorie
 | `Diesel` | Diesel |
 | `Diesel Premium` | Diesel Premium |
 | `LPG` | LPG |
-| `Elektřina`, `Electricity` | Elektřina |
-| *(prázdné nebo neznámé)* | Natural 95 (výchozí) |
+| `Elektřina`, `Electricity` | Electric |
+| *(unknown or empty)* | Natural 95 (default) |
 
-**Příklad:**
-```
+> **Important for consumption accuracy:** Mark entries as full tank (`Plná nádrž: Ano`) wherever possible. The app's full-tank method only creates consumption segments between full fills — entries without this flag are included in litre totals but do not anchor new segments.
+
+**Example:**
+```csv
 Datum,Typ paliva,Tankováno litrů,Cena za litr,Celková cena,Stav tachometru,Km/tankování,Prům. spotřeba,Plná nádrž,Poznámka
 4.7.2022,Natural 95,"42,00","45,00","1 890,00",245 448,—,—,Ano,
 8.11.2022,Natural 95,"44,00","47,00","2 068,00",247 127,1 679,"7,8",Ano,
+12.12.2022,Natural 95,"10,00","48,50","485,00",247 220,—,—,Ne,Top-up
 ```
 
 ---
 
-## Technické informace
+## Analytics — All Stat Cards
 
-- **Technologie:** čistý HTML/CSS/JavaScript, žádné frameworky
-- **Úložiště:** `localStorage` — klíč `mycars_v3`
-- **Fonty:** Outfit + JetBrains Mono (Google Fonts)
-- **Protokol:** funguje i přes `file://` (bez serveru)
-- **Jazyky:** čeština / angličtina (přepínač v Nastavení)
-- **Výpočet spotřeby:** metoda plné nádrže — konzistentní napříč Tankováním i Analytikou
+| Card | Formula | Notes |
+|---|---|---|
+| Total expenses | service + fuel + vehicle purchase | All-time |
+| Vehicle purchase | Records in "Vehicle purchase" category | Hidden if zero |
+| Cost per km | (service + fuel) ÷ km driven | Excludes purchase |
+| Fuel cost per km | fuel cost ÷ km driven | |
+| Avg consumption | Full-tank method | l/100 km |
+| Avg / month | total ÷ active months | Incl. purchase |
+| Service / month | service ÷ active months | |
+| Fuel / month | fuel ÷ active months | |
+| Total driven | maxOdometer − startingOdometer | km |
+| Avg km / year | km driven ÷ (active months ÷ 12) | |
+
+---
+
+## Technical Details
+
+| | |
+|---|---|
+| **Stack** | Plain HTML + CSS + JavaScript, zero dependencies |
+| **Storage** | `localStorage` — key `mycars_v3` |
+| **Fonts** | Outfit + JetBrains Mono (Google Fonts CDN) |
+| **Protocol** | Works over `file://` and HTTP |
+| **Languages** | Czech / English |
+| **Mobile** | Responsive — sidebar becomes slide-in drawer on screens ≤ 768px |
+| **Touch targets** | Minimum 44 × 44 px on all interactive elements |
+| **WCAG** | Text contrast ratios ≥ 4.5:1 |
+| **Codebase** | ~2 250 lines, single file |
+
+### localStorage data structure
+
+```json
+{
+  "cars": [
+    {
+      "id": "uid",
+      "make": "Škoda", "model": "Octavia", "year": 2008,
+      "plate": "1Z3 4567", "vin": "...", "fuelType": "petrol",
+      "status": "active", "startOdo": 243927, "color": "#e8c547",
+      "stk": "2026-09-05", "stkWarn": 30,
+      "emission": null, "emissionWarn": 30,
+      "pov": "2026-03-14", "povWarn": 30,
+      "insurance": null, "insuranceWarn": 30,
+      "oilInterval": 10000, "oilLastKm": 270000, "oilWarn": 1000,
+      "acquired": "2022-03-11", "decommissioned": null,
+      "note": ""
+    }
+  ],
+  "records": [
+    {
+      "id": "uid", "carId": "...", "date": "2022-09-05",
+      "odo": 245448, "desc": "Oil change", "cat": "Provozní náplně",
+      "qty": 7, "price": 231.43, "note": "",
+      "createdAt": "...", "updatedAt": "..."
+    }
+  ],
+  "fuels": [
+    {
+      "id": "uid", "carId": "...", "date": "2022-11-08",
+      "odo": 247127, "fuelTypeId": "p95", "liters": 44,
+      "cost": 2068, "fullTank": true, "note": "",
+      "createdAt": "..."
+    }
+  ],
+  "reminders": [
+    {
+      "id": "uid", "carId": "...", "name": "Oil change",
+      "type": "km", "interval": 10000, "lastDone": 270000, "warnAt": 1000
+    }
+  ],
+  "savedAt": "2026-03-16T12:00:00.000Z"
+}
+```
+
+> Data persists in the browser profile. Clearing browser data or using private/incognito mode will erase it. Use **Settings → Export backup** regularly.

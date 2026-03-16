@@ -50,12 +50,12 @@
   #topbar { height: 56px; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 10px; flex-shrink: 0; background: var(--surface) }
   #content { flex: 1; overflow-y: auto; padding: 24px 22px }
   #sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 99; backdrop-filter: blur(2px) }
+  #sidebar-overlay.active { display: block }
 
   /* Mobile: sidebar jako drawer */
   @media (max-width: 768px) {
     #sidebar { position: fixed; top: 0; left: 0; height: 100vh; transform: translateX(-100%); box-shadow: 4px 0 24px rgba(0,0,0,.5) }
     #sidebar.open { transform: translateX(0) }
-    #sidebar.open ~ #sidebar-overlay { display: block }
     #content { padding: 16px 14px }
     #topbar { padding: 0 14px }
     .stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px }
@@ -68,10 +68,28 @@
     #menu-toggle { display: flex !important }
     #topbar-vehicle { display: none }
   }
+  @media (max-width: 600px) {
+    .bar-chart-yaxis { width: 32px }
+    .bar-chart-inner { margin-left: 36px }
+    .bar-chart-ylabel { font-size: .58rem; padding-right: 4px }
+    .bar-chart { height: 120px }
+    .bar-label { font-size: .6rem }
+    .bar-chart-header { flex-direction: column; align-items: flex-start; gap: 6px }
+    /* Cat chart: compress on small screens */
+    .cat-row-name { width: 90px; font-size: .72rem }
+    .cat-row-val { min-width: 70px; font-size: .68rem }
+    /* Car header: single line meta */
+    .car-header-dot { display: none }
+    .car-header { padding: 12px 14px; gap: 10px }
+  }
   @media (max-width: 480px) {
     .stats-grid { grid-template-columns: 1fr 1fr !important }
     .doc-row { grid-template-columns: 1fr !important }
-    .btn span[data-cs] { display: none }
+    /* Buttons — hide text, show icon only */
+    .btn-fuel .btn-label { display: none }
+    .btn-fuel .btn-icon { display: inline !important }
+    .btn-primary .btn-label { display: none }
+    .btn-primary .btn-icon { display: inline !important }
   }
 
   /* Hamburger — visiblen only mobile */
@@ -113,6 +131,7 @@
   .btn-danger:hover { background: var(--red); color: #fff }
   .btn-fuel { background: none; color: var(--accent); border-color: var(--border2) }
   .btn-fuel:hover { background: var(--accent-dim); border-color: var(--accent); color: var(--accent) }
+  .btn-icon { display: none }
   .lang-btn { padding: 7px 11px; background: none; border: 1px solid var(--border2); color: var(--text2); font-family: var(--font); font-size: .78rem; font-weight: 500; cursor: pointer; border-radius: var(--radius-sm); transition: all .14s; min-height: 44px }
   .lang-btn.active { border-color: var(--accent); color: var(--accent) }
 
@@ -137,13 +156,14 @@
 
   /* ── Tables ─────────────────────────────────── */
   .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden }
-  .table-header { display: flex; align-items: center; gap: 8px; padding: 13px 16px; border-bottom: 1px solid var(--border); background: transparent; flex-wrap: wrap; gap: 8px }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch }
+  .table-header { display: flex; align-items: center; gap: 8px; padding: 13px 16px; border-bottom: 1px solid var(--border); background: transparent; flex-wrap: wrap }
   .table-header-title { font-size: .9rem; font-weight: 600; flex: 1; letter-spacing: -.01em }
   .search-input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: .82rem; padding: 8px 12px; border-radius: var(--radius-sm); width: 180px; transition: border-color .15s; min-height: 40px }
   .search-input:focus { outline: none; border-color: var(--accent) }
   .filter-select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: .82rem; padding: 8px 10px; border-radius: var(--radius-sm); cursor: pointer; min-height: 40px }
   .filter-select:focus { outline: none }
-  table { width: 100%; border-collapse: collapse }
+  table { width: 100%; border-collapse: collapse; min-width: 500px }
   thead tr { background: var(--surface2) }
   th { padding: 10px 14px; text-align: left; font-size: .72rem; font-weight: 600; color: var(--text2); letter-spacing: .04em; cursor: pointer; user-select: none; white-space: nowrap; border-bottom: 1px solid var(--border); text-transform: none }
   th:hover { color: var(--text) }
@@ -168,10 +188,10 @@
   /* ── Row actions ────────────────────────────── */
   .row-actions { display: flex; gap: 4px; opacity: 0; transition: opacity .15s }
   tbody tr:hover .row-actions { opacity: 1 }
-  .row-btn { width: 26px; height: 26px; border-radius: 4px; border: 1px solid var(--border2); background: none; color: var(--text2); cursor: pointer; font-size: .8rem; display: flex; align-items: center; justify-content: center; transition: all .12s }
+  .row-btn { width: 36px; height: 36px; border-radius: 6px; border: 1px solid var(--border2); background: none; color: var(--text2); cursor: pointer; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; transition: all .12s; flex-shrink: 0 }
   .row-btn:hover { background: var(--surface3); color: var(--text) }
   .row-btn.del:hover { border-color: var(--red); color: var(--red) }
-  .row-btn .edit-icon { display: inline-block; transform: rotate(-45deg); line-height: 1 }
+  .row-btn .edit-icon { display: inline-block; transform: rotate(90deg); line-height: 1 }
 
   /* ── Modals ─────────────────────────────────── */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(4px); opacity: 0; pointer-events: none; transition: opacity .2s }
@@ -206,19 +226,19 @@
   .form-section-label { font-size: .78rem; font-weight: 600; color: var(--text); grid-column: 1/-1; padding: 10px 0 4px; border-bottom: 1px solid var(--border); margin-top: 6px; padding-left: 10px; border-left: 3px solid var(--accent) }
 
   /* ── Charts ─────────────────────────────────── */
-  .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; overflow: visible }
+  .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; overflow: hidden }
   /* ── Bar chart — Option C ───────────────────── */
   .bar-chart-outer { position: relative; margin-top: 4px }
   .bar-chart-yaxis { position: absolute; left: 0; top: 0; bottom: 22px; width: 46px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none }
   .bar-chart-ylabel { font-size: .65rem; color: var(--text2); text-align: right; padding-right: 8px; line-height: 1; font-family: var(--font-mono) }
-  .bar-chart-inner { margin-left: 50px; position: relative; overflow: visible }
+  .bar-chart-inner { margin-left: 50px; position: relative; overflow: visible; min-width: 0 }
   .bar-chart-gridlines { position: absolute; inset: 0 0 22px 0; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; z-index: 0 }
   .bar-chart-gridline { width: 100%; border-top: 1px solid var(--border) }
   .bar-chart-avgline { position: absolute; left: 0; right: 0; border-top: 1.5px dashed var(--accent); opacity: .4; pointer-events: none; z-index: 2 }
   .bar-chart-avglabel { position: absolute; right: 0; font-size: .65rem; color: var(--accent); opacity: .7; font-family: var(--font-mono); transform: translateY(-110%); white-space: nowrap }
   .bar-chart-total { font-size: .72rem; color: var(--text2); display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0 }
   .bar-chart-total::before { content: ''; display: inline-block; width: 16px; border-top: 1.5px dashed var(--text3) }
-  .bar-chart { display: flex; align-items: flex-end; gap: 5px; height: 150px; position: relative; z-index: 1; overflow: visible }
+  .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 150px; position: relative; z-index: 1; overflow: visible; min-width: 0 }
   /* bar-col is the full-height column — tooltip anchored here so it overlays the chart */
   .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0; height: 100%; justify-content: flex-end; position: relative; cursor: pointer }
   .bar-col .bar-tooltip { display: none; position: absolute; top: 0; z-index: 100 }
@@ -240,10 +260,10 @@
   .bar-chart-leg { display: flex; align-items: center; gap: 5px; font-size: .72rem; color: var(--text2) }
   .cat-chart { display: flex; flex-direction: column; gap: 10px }
   .cat-row { display: flex; align-items: center; gap: 12px }
-  .cat-row-name { font-size: .8rem; color: var(--text2); width: 140px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  .cat-row-name { font-size: .8rem; color: var(--text2); width: 130px; min-width: 80px; flex-shrink: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
   .cat-bar-wrap { flex: 1; height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden }
   .cat-bar-fill { height: 100%; border-radius: 3px; transition: width .5s ease }
-  .cat-row-val { font-size: .75rem; color: var(--text); width: 100px; text-align: right; font-family: var(--font-mono); flex-shrink: 0 }
+  .cat-row-val { font-size: .75rem; color: var(--text); min-width: 80px; max-width: 110px; text-align: right; font-family: var(--font-mono); flex-shrink: 0 }
 
   /* ── Alerts ─────────────────────────────────── */
   .alerts-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px }
@@ -300,11 +320,11 @@
   .page-btn:disabled { opacity: .3; cursor: default }
 
   /* ── Car header ─────────────────────────────── */
-  .car-header { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 22px; margin-bottom: 22px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap }
+  .car-header { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; flex-wrap: nowrap }
   .car-header-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0 }
   .car-header-info { flex: 1; min-width: 0 }
   .car-header-name { font-size: 1.1rem; font-weight: 600; letter-spacing: -.02em }
-  .car-header-meta { font-size: .78rem; color: var(--text2); margin-top: 3px; font-family: var(--font-mono) }
+  .car-header-meta { font-size: .75rem; color: var(--text2); margin-top: 3px; font-family: var(--font-mono); white-space: normal; overflow-wrap: anywhere; word-break: break-all }
 
   /* ── Doc cards ──────────────────────────────── */
   .doc-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 22px }
@@ -365,7 +385,7 @@
   <aside id="sidebar">
     <div class="sidebar-logo">
       <h1>My<span>Cars</span></h1>
-      <p id="sidebar-subtitle">Evidence vozidel · v3.4</p>
+      <p id="sidebar-subtitle">Evidence vozidel</p>
     </div>
 
     <div class="sidebar-section">
@@ -396,14 +416,21 @@
     <input type="file" id="import-csv-file" accept=".csv" style="display:none" onchange="handleCsvFile(event)">
   </aside>
 
+  <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
   <main id="main">
     <div id="topbar">
       <button id="menu-toggle" onclick="toggleSidebar()" aria-label="Menu">☰</button>
       <div class="topbar-title" id="page-title">Přehled</div>
-      <button class="btn btn-fuel" id="add-fuel-btn" onclick="openFuelModal()" title="Přidat záznam tankování"><span data-cs="Nové tankování" data-en="New fuel entry">Nové tankování</span></button>
-      <button class="btn btn-primary" onclick="openRecordModal()" title="Přidat servisní záznam"><span data-cs="Nový záznam" data-en="New record">Nový záznam</span></button>
+      <button class="btn btn-fuel" id="add-fuel-btn" onclick="openFuelModal()" title="Přidat záznam tankování">
+        <span class="btn-icon" aria-hidden="true">⊟</span>
+        <span class="btn-label" data-cs="Nové tankování" data-en="New fuel entry">Nové tankování</span>
+      </button>
+      <button class="btn btn-primary" id="add-record-btn" onclick="openRecordModal()" title="Přidat servisní záznam">
+        <span class="btn-icon" aria-hidden="true">＋</span>
+        <span class="btn-label" data-cs="Nový záznam" data-en="New record">Nový záznam</span>
+      </button>
     </div>
-    <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div id="content"></div>
   </main>
 </div>
@@ -507,6 +534,8 @@
             </div>
           </div>
           <div class="form-group"><label class="form-label">Počáteční km</label><input type="number" class="form-input" id="c-startodo" placeholder="243927"></div>
+          <div class="form-group"><label class="form-label" data-cs="Datum pořízení" data-en="Acquisition date">Datum pořízení</label><div class="date-triple" id="c-acquired-wrap"><input type="number" class="dt-d" id="c-acquired-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="c-acquired-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="c-acquired-y" placeholder="RRRR" min="1900" max="2099"></div></div>
+          <div class="form-group"><label class="form-label" data-cs="Datum vyřazení" data-en="Decommission date">Datum vyřazení</label><div class="date-triple" id="c-decommissioned-wrap"><input type="number" class="dt-d" id="c-decommissioned-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="c-decommissioned-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="c-decommissioned-y" placeholder="RRRR" min="1900" max="2099"></div></div>
           <div class="form-group full"><label class="form-label">Barva</label>
             <div style="display:flex;gap:8px;flex-wrap:wrap;" id="color-picker">
               <span class="color-swatch" style="background:#e8c547" data-color="#e8c547"></span>
@@ -728,7 +757,7 @@ const T = {
     confirm_delete:'Opravdu smazat tento záznam?',confirm_delete_car:'Opravdu smazat toto vozidlo a všechny jeho záznamy?',
     required_field:'Povinné pole',all_cats:'Všechny kategorie',search_placeholder:'Hledat...',
     add_reminder:'Přidat připomínku',days:'dní',
-    fuel_log:'Deník tankování',liters:'Litry',price_per_liter:'Kč/l',full_tank:'Plná nádrž',
+    fuel_log:'Deník tankování',liters:'Litry',price_per_liter:'Průměrná cena/l',full_tank:'Plná nádrž',
     consumption:'Spotřeba',avg_consumption:'Průměrná spotřeba',total_fueled:'Celkem natankováno',
     total_fuel_cost:'Celkem za palivo',fuel_type:'Typ paliva',
     active:'Aktivní',inactive:'Neaktivní',
@@ -749,7 +778,7 @@ const T = {
     confirm_delete:'Really delete this record?',confirm_delete_car:'Really delete this vehicle and all its records?',
     required_field:'Required field',all_cats:'All categories',search_placeholder:'Search...',
     add_reminder:'Add reminder',days:'days',
-    fuel_log:'Fuel log',liters:'Litres',price_per_liter:'CZK/l',full_tank:'Full tank',
+    fuel_log:'Fuel log',liters:'Litres',price_per_liter:'Avg price/l',full_tank:'Full tank',
     consumption:'Consumption',avg_consumption:'Avg. consumption',total_fueled:'Total fuelled',
     total_fuel_cost:'Total fuel cost',fuel_type:'Fuel type',
     active:'Active',inactive:'Inactive',
@@ -824,6 +853,25 @@ function getMaxOdo(carId){
 }
 function getTotalCost(carId){return getCarRecords(carId).reduce((s,r)=>s+(r.qty||1)*(r.price||0),0)}
 function getTotalFuelCost(carId){return getCarFuels(carId).reduce((s,f)=>s+(f.cost||0),0)}
+function getTotalLiters(carId){return getCarFuels(carId).reduce((s,f)=>s+(f.liters||0),0)}
+function getServiceCost(carId){return getCarRecords(carId).filter(r=>r.cat!=='Nákup vozidla').reduce((s,r)=>s+(r.qty||1)*(r.price||0),0)}
+function getPurchaseCost(carId){return getCarRecords(carId).filter(r=>r.cat==='Nákup vozidla').reduce((s,r)=>s+(r.qty||1)*(r.price||0),0)}
+function getKmDriven(carId){const car=getCar(carId);return car?getMaxOdo(carId)-(car.startOdo||0):0}
+function getCostPerKm(carId){
+  const km=getKmDriven(carId);
+  if(km<=0) return 0;
+  return (getServiceCost(carId)+getTotalFuelCost(carId))/km;
+}
+function getFuelCostPerKm(carId){
+  const km=getKmDriven(carId);
+  if(km<=0) return 0;
+  return getTotalFuelCost(carId)/km;
+}
+function getAvgPricePerLiter(carId){
+  const liters=getTotalLiters(carId);
+  if(liters<=0) return 0;
+  return getTotalFuelCost(carId)/liters;
+}
 
 function getCatDisplay(cat){
   const li=CATEGORIES.cs.indexOf(cat); const en=CATEGORIES.en.indexOf(cat);
@@ -845,7 +893,7 @@ function mapCatToNew(cat){
   if(['olej','oil','chladič','coolant','ostřikovač','washer','brzdová kapalina','brake fluid',
       'náplň','fluid','provozní'].some(k=>v.includes(k))) return 'Provozní náplně';
   // Pneumatiky a kola
-  if(['pneumatik','tyre','tire','kolo','wheel','disk','přezutí','vyvážení','geometrie','alignment'].some(k=>v.includes(k))) return 'Pneumatiky a kola';
+  if(['pneumatik','tyre','tire','kol','wheel','disk','přezutí','vyvážení','geometrie','alignment'].some(k=>v.includes(k))) return 'Pneumatiky a kola';
   // Vybavení a vzhled
   if(['vybavení','equipment','koberec','carpet','roletka','autokosmetika','lak','paint',
       'interiér','interior','doplněk','accessory','karoserie','bodywork'].some(k=>v.includes(k))) return 'Vybavení a vzhled';
@@ -876,7 +924,7 @@ function saveData(){
 // ─── LANG ────────────────────────────────────────────────────
 function setLang(l){
   state.lang=l;
-  document.getElementById('sidebar-subtitle').textContent=l==='cs'?'Evidence vozidel · v3.4':'Vehicle tracker · v3.4';
+  document.getElementById('sidebar-subtitle').textContent=l==='cs'?'Evidence vozidel':'Vehicle tracker';
   document.title=l==='cs'?'MyCars — Evidence vozidel':'MyCars — Vehicle tracker';
   document.querySelectorAll('[data-cs]').forEach(el=>{
     const val=el.getAttribute('data-'+l);
@@ -909,22 +957,36 @@ function renderCarsList(){
     </div>`).join('')||`<div style="padding:8px 10px;color:var(--text3);font-size:.78rem;">${t('no_car')}</div>`;
 }
 
-function selectCar(id){state.currentCarId=id;state.page=1;state.fuelPage=1;renderAll();}
+function selectCar(id){
+  state.currentCarId=id;
+  state.page=1;state.fuelPage=1;
+  state.filterCat='';state.search='';state.fuelSearch='';
+  closeSidebarOnMobile();
+  renderAll();
+}
 
 function toggleSidebar(){
   const sb=document.getElementById('sidebar');
-  sb.classList.toggle('open');
+  const ov=document.getElementById('sidebar-overlay');
+  const isOpen=sb.classList.toggle('open');
+  ov.classList.toggle('active', isOpen);
 }
 function closeSidebarOnMobile(){
-  if(window.innerWidth<=768) document.getElementById('sidebar').classList.remove('open');
+  if(window.innerWidth<=768){
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('active');
+  }
 }
 
 function showPage(page){
   state.currentPage=page;
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('nav-'+page)?.classList.add('active');
-  const actionBtns = document.getElementById('add-fuel-btn');
-  if(actionBtns) actionBtns.style.display = page==='settings'?'none':'';
+  const onSettings = page==='settings';
+  const fuelBtn=document.getElementById('add-fuel-btn');
+  const recBtn=document.getElementById('add-record-btn');
+  if(fuelBtn) fuelBtn.style.display=onSettings?'none':'';
+  if(recBtn) recBtn.style.display=onSettings?'none':'';
   closeSidebarOnMobile();
   renderPage();
 }
@@ -947,12 +1009,13 @@ function renderDashboard(){
 
   const recs=getCarRecords(car.id);
   const fuels=getCarFuels(car.id);
-  const total=getTotalCost(car.id)+getTotalFuelCost(car.id);
+  const cs=state.lang==='cs';
+  // Výpočty — všechny přes sdílené helper funkce (stejná logika jako Analytics)
   const maxOdo=getMaxOdo(car.id);
-  const kmDriven=maxOdo-(car.startOdo||0);
-  const costPerKm=kmDriven>0?total/kmDriven:0;
-  const totalLiters=fuels.reduce((s,f)=>s+(f.liters||0),0);
-  const avgConsumption=kmDriven>0&&totalLiters>0?(totalLiters/kmDriven*100):0;
+  const kmDriven=getKmDriven(car.id);
+  const total=getServiceCost(car.id)+getTotalFuelCost(car.id)+getPurchaseCost(car.id);
+  const costPerKm=getCostPerKm(car.id);          // BEZ nákupu vozidla
+  const avgConsumption=avgConsumptionVal(car.id); // metoda plné nádrže
 
   const alerts=buildAlerts(car);
   const alertsHtml=alerts.length?`<div class="alerts-list">${alerts.map(a=>`
@@ -981,14 +1044,18 @@ function renderDashboard(){
       <div class="car-header-info">
         <div class="car-header-name">${car.make||''} ${car.model||''} ${car.year?'('+car.year+')':''}</div>
         <div class="car-header-meta">
-          ${car.plate?`<strong>${car.plate}</strong> · `:''}
-          ${car.vin?`VIN: ${car.vin} · `:''}
-          ${car.fuelType?`${FUEL_TYPE_LABELS[car.fuelType]?.[state.lang]||car.fuelType} · `:''}
-          ${fmtNum(maxOdo)} km
+          ${[
+            car.plate?`<strong>${car.plate}</strong>`:'',
+            car.vin?`VIN: ${car.vin}`:'',
+            car.fuelType?(FUEL_TYPE_LABELS[car.fuelType]?.[state.lang]||car.fuelType):'',
+            fmtNum(maxOdo)+' km',
+            car.acquired?(cs?'od':'since')+' '+fmtDate(car.acquired):'',
+            car.decommissioned?(cs?'vyřazeno':'decom.')+' '+fmtDate(car.decommissioned):'',
+          ].filter(Boolean).join(' · ')}
           <span class="status-badge ${car.status||'active'}" style="margin-left:8px;">${car.status==='inactive'?t('inactive'):t('active')}</span>
         </div>
       </div>
-      <button class="btn btn-ghost" onclick="openCarModal('${car.id}')" title="${state.lang==='cs'?'Upravit vozidlo':'Edit vehicle'}"><span class="edit-icon">✏</span></button>
+      <button class="row-btn" onclick="openCarModal('${car.id}')" style="width:36px;height:36px;flex-shrink:0;" title="${state.lang==='cs'?'Upravit vozidlo':'Edit vehicle'}"><span class="edit-icon">✏</span></button>
     </div>
 
     <div class="doc-row">
@@ -1013,7 +1080,7 @@ function renderDashboard(){
     </div>
 
     <div class="section-title">${t('recent')}</div>
-    <div class="table-wrap"><table>
+    <div class="table-wrap"><div class="table-scroll"><table>
       <thead><tr><th>${t('date')}</th><th>${t('odo')}</th><th>${t('desc')}</th><th>${t('cat')}</th><th class="td-right">${t('total_price')}</th></tr></thead>
       <tbody>${recent.length?recent.map(r=>`
         <tr>
@@ -1024,7 +1091,7 @@ function renderDashboard(){
           <td class="td-right td-mono">${fmtMoney((r.qty||1)*(r.price||0))}</td>
         </tr>`).join(''):`<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px">${t('no_records')}</td></tr>`}
       </tbody>
-    </table></div>`;
+    </table></div></div>`;
 }
 
 function buildAlerts(car){
@@ -1125,7 +1192,7 @@ function renderRecords(){
         ${cats.map(c=>`<option value="${c}" ${state.filterCat===c?'selected':''}>${getCatDisplay(c)}</option>`).join('')}
       </select>
     </div>
-    <table><thead><tr>
+    <div class="table-scroll"><table><thead><tr>
       <th onclick="sortBy('date')">${t('date')} ${sa('date')}</th>
       <th onclick="sortBy('odo')">${t('odo')} ${sa('odo')}</th>
       <th onclick="sortBy('desc')">${t('desc')} ${sa('desc')}</th>
@@ -1148,7 +1215,7 @@ function renderRecords(){
         <button class="row-btn del" onclick="deleteRecord('${r.id}')" title="${state.lang==='cs'?'Smazat záznam':'Delete record'}">✕</button>
       </div></td>
     </tr>`).join(''):`<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:32px">${t('no_records')}</td></tr>`}
-    </tbody></table>
+    </tbody></table></div>
     <div class="pagination"><span class="flex1">${t('total_records')}: ${total}</span>
       <button class="page-btn" onclick="changePage(-1)" ${state.page<=1?'disabled':''}>‹</button>
       <span>${state.page} / ${pages}</span>
@@ -1176,7 +1243,7 @@ function renderFuelPage(){
   // Consumption — sdílená funkce (stejný výpočet jako v analytice)
   const consumptions=calcConsumptions(car.id);
   const avgC=avgConsumptionVal(car.id);
-  const totalLiters=getCarFuels(car.id).reduce((s,f)=>s+(f.liters||0),0);
+  const totalLiters=getTotalLiters(car.id);
   const totalFuelCost=getTotalFuelCost(car.id);
   const ppl=totalLiters>0?totalFuelCost/totalLiters:0;
 
@@ -1198,7 +1265,7 @@ function renderFuelPage(){
         <input class="search-input" placeholder="${t('search_placeholder')}" value="${state.fuelSearch||''}" oninput="state.fuelSearch=this.value;state.fuelPage=1;renderFuelPage()">
         <button class="btn btn-fuel" onclick="openFuelModal()" style="padding:5px 12px;" title="${state.lang==='cs'?'Přidat nové tankování':'Add new fuel entry'}">${state.lang==='cs'?'Nové tankování':'New fuel entry'}</button>
       </div>
-      <table><thead><tr>
+      <div class="table-scroll"><table><thead><tr>
         <th onclick="fuelSortBy('date')">${t('date')} ${sa('date')}</th>
         <th onclick="fuelSortBy('odo')">${t('odo')} ${sa('odo')}</th>
         <th>${t('fuel_type')}</th>
@@ -1226,7 +1293,7 @@ function renderFuelPage(){
             <button class="row-btn del" onclick="deleteFuel('${f.id}')" title="${state.lang==='cs'?'Smazat tankování':'Delete fuel entry'}">✕</button>
           </div></td>
         </tr>`;}).join(''):`<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:32px">${t('no_records')}</td></tr>`}
-      </tbody></table>
+      </tbody></table></div>
       <div class="pagination"><span class="flex1">${total} ${state.lang==='cs'?'záznamů':'records'}</span>
         <button class="page-btn" onclick="changeFuelPage(-1)" ${state.fuelPage<=1?'disabled':''}>‹</button>
         <span>${state.fuelPage} / ${pages}</span>
@@ -1249,39 +1316,34 @@ function renderAnalytics(){
   const cs=state.lang==='cs';
 
   // Výpočty
-  const purchaseCat=cs?'Nákup vozidla':'Vehicle purchase';
-  const purchaseCost=recs.filter(r=>r.cat==='Nákup vozidla').reduce((s,r)=>s+(r.qty||1)*(r.price||0),0);
-  const serviceCost=recs.filter(r=>r.cat!=='Nákup vozidla').reduce((s,r)=>s+(r.qty||1)*(r.price||0),0);
-  const fuelCost=fuels.reduce((s,f)=>s+(f.cost||0),0);
-  const total=serviceCost+fuelCost+purchaseCost;
+  // Výpočty — sdílené helper funkce
+  const purchaseCost=getPurchaseCost(car.id);
+  const serviceCost=getServiceCost(car.id);
+  const fuelCost=getTotalFuelCost(car.id);
+  const total=purchaseCost+serviceCost+fuelCost;
   const totalWithoutPurchase=serviceCost+fuelCost;
-
   const maxOdo=getMaxOdo(car.id);
-  const kmDriven=maxOdo-(car.startOdo||0);
-
-  const totalLiters=fuels.reduce((s,f)=>s+(f.liters||0),0);
+  const kmDriven=getKmDriven(car.id);
+  const totalLiters=getTotalLiters(car.id);
   const consumptions=calcConsumptions(car.id);
   const avgC=avgConsumptionVal(car.id);
 
   // Měsíční data
-  const byMonthAll={};
-  recs.forEach(r=>{if(!r.date)return;const m=r.date.slice(0,7);byMonthAll[m]=(byMonthAll[m]||0)+(r.qty||1)*(r.price||0);});
-  fuels.forEach(f=>{if(!f.date)return;const m=f.date.slice(0,7);byMonthAll[m]=(byMonthAll[m]||0)+(f.cost||0);});
-
-  // Měsíční servis (bez nákupu)
+  // Měsíční servis (bez nákupu vozidla)
   const byMonthService={};
   recs.filter(r=>r.cat!=='Nákup vozidla').forEach(r=>{if(!r.date)return;const m=r.date.slice(0,7);byMonthService[m]=(byMonthService[m]||0)+(r.qty||1)*(r.price||0);});
   // Měsíční palivo
   const byMonthFuel={};
   fuels.forEach(f=>{if(!f.date)return;const m=f.date.slice(0,7);byMonthFuel[m]=(byMonthFuel[m]||0)+(f.cost||0);});
+  // Celkem za měsíc = servis + palivo (BEZ nákupu vozidla) — pro škálování grafu i viditelný součet
+  const byMonthAll={};
+  Object.keys({...byMonthService,...byMonthFuel}).forEach(m=>{
+    byMonthAll[m]=(byMonthService[m]||0)+(byMonthFuel[m]||0);
+  });
 
   const months=Object.keys(byMonthAll).sort().slice(-12);
   const maxMonth=Math.max(...months.map(m=>byMonthAll[m]),1);
-  // Total for displayed months — service + fuel only, no vehicle purchase
-  const byMonthServiceFuel={};
-  recs.filter(r=>r.cat!=='Nákup vozidla').forEach(r=>{if(!r.date)return;const m=r.date.slice(0,7);byMonthServiceFuel[m]=(byMonthServiceFuel[m]||0)+(r.qty||1)*(r.price||0);});
-  fuels.forEach(f=>{if(!f.date)return;const m=f.date.slice(0,7);byMonthServiceFuel[m]=(byMonthServiceFuel[m]||0)+(f.cost||0);});
-  const visibleTotal=months.reduce((s,m)=>s+(byMonthServiceFuel[m]||0),0);
+  const visibleTotal=months.reduce((s,m)=>s+(byMonthAll[m]||0),0);
 
   // Unikátní měsíce pro průměry
   const allMonths=new Set([...Object.keys(byMonthService),...Object.keys(byMonthFuel)]);
@@ -1355,7 +1417,7 @@ function renderAnalytics(){
               const tip='<strong>'+m.slice(5,7)+'/'+m.slice(0,4)+':&nbsp;'+fmtMoney(tot)+'</strong><br>'
                 +(sv>0?'<span style="color:var(--red)">'+(cs?'Servis':'Service')+': '+fmtMoney(sv)+'</span><br>'+(itemLines?itemLines+'<br>':''):'')
                 +(fv>0?'<span style="color:var(--accent)">'+(cs?'Palivo':'Fuel')+': '+fmtMoney(fv)+'</span>':'');
-              return '<div class="bar-col" onclick="this.classList.toggle(\'pinned\')">'
+              return '<div class="bar-col" onclick="toggleChartTooltip(this)">'
                 +'<div class="bar-tooltip">'+tip+'</div>'
                 +'<div class="bar-stack" style="height:'+barPct+'%;width:100%">'
                 +(sv>0?'<div class="bar-segment" style="height:'+sPct+'%;background:var(--red);opacity:.82"></div>':'')
@@ -1424,12 +1486,39 @@ function renderAnalytics(){
         <div class="stat-sub">${cs?'průměr za tankování':'avg fuel spend'}</div>
       </div>
 
+      <div class="stat-card" style="border-top:2px solid var(--green)" title="${cs?'Cena za km pouze z nákladů na palivo — palivo ÷ ujetých km':'Fuel-only cost per km — total fuel spend ÷ driven km'}">
+        <div class="stat-label">${cs?'Cena za km (palivo)':'Fuel cost/km'}</div>
+        <div class="stat-value small">${fmtMoney(kmDriven>0?fuelCost/kmDriven:0)}</div>
+        <div class="stat-sub">${cs?'pouze palivo':'fuel only'}</div>
+      </div>
+
+      <div class="stat-card" style="border-top:2px solid var(--blue)" title="${cs?'Celkový počet kilometrů ujetých s tímto vozidlem od počátečního stavu tachometru':'Total kilometres driven with this vehicle since starting odometer'}">
+        <div class="stat-label">${cs?'Celkem ujeto':'Total driven'}</div>
+        <div class="stat-value small">${fmtNum(kmDriven)}</div>
+        <div class="stat-sub">km</div>
+      </div>
+
+      <div class="stat-card" style="border-top:2px solid var(--amber)" title="${cs?'Průměrný roční nájezd: celkem ujeto ÷ počet let (aktivní měsíce ÷ 12)':'Average annual mileage: total km ÷ number of years (active months ÷ 12)'}">
+        <div class="stat-label">${cs?'Průměr km / rok':'Avg km / year'}</div>
+        <div class="stat-value small">${fmtNum(monthCount>0?Math.round(kmDriven/(monthCount/12)):0)}</div>
+        <div class="stat-sub">km</div>
+      </div>
+
     </div>`;
   // Smart tooltip positioning — runs after DOM is painted
   requestAnimationFrame(positionChartTooltips);
 }
 
 // Position bar tooltips so they never overflow the chart container
+function toggleChartTooltip(col){
+  const allCols=document.querySelectorAll('.bar-col');
+  const wasOpen=col.classList.contains('pinned');
+  // Close all
+  allCols.forEach(c=>c.classList.remove('pinned'));
+  // If it wasn't open, open just this one
+  if(!wasOpen) col.classList.add('pinned');
+}
+
 function positionChartTooltips(){
   const chartInner=document.querySelector('.bar-chart-inner');
   if(!chartInner) return;
@@ -1648,6 +1737,8 @@ function openCarModal(carId){
   updateStatusToggleLabel(isActive);
   tog.onchange=()=>updateStatusToggleLabel(tog.checked);
   document.getElementById('c-startodo').value=car?.startOdo||'';
+  setDateTriple('c-acquired', car?.acquired||'');
+  setDateTriple('c-decommissioned', car?.decommissioned||'');
   // Fill docs
   setDateTriple('c-stk', car?.stk||'');
   document.getElementById('c-stk-warn').value=car?.stkWarn??30;
@@ -1702,6 +1793,8 @@ function saveCar(){
     oilLastKm:parseInt(document.getElementById('c-oil-last').value)||null,
     oilWarn:parseInt(document.getElementById('c-oil-warn').value)||1000,
     note:document.getElementById('c-note').value.trim(),
+    acquired:getDateTriple('c-acquired')||null,
+    decommissioned:getDateTriple('c-decommissioned')||null,
   };
   if(state.editingCarId){
     const idx=state.cars.findIndex(c=>c.id===state.editingCarId);
@@ -1720,6 +1813,7 @@ function deleteCar(){
   state.reminders=state.reminders.filter(r=>r.carId!==state.editingCarId);
   state.cars=state.cars.filter(c=>c.id!==state.editingCarId);
   state.currentCarId=state.cars[0]?.id||null;
+  if(!state.currentCarId) state.currentPage='dashboard';
   saveData();closeModal('car-modal');renderAll();
 }
 
@@ -1786,6 +1880,7 @@ function importData(e){
       if(d.cars)state.cars=d.cars;if(d.records)state.records=d.records;
       if(d.fuels)state.fuels=d.fuels;if(d.reminders)state.reminders=d.reminders;
       if(state.cars.length)state.currentCarId=state.cars[0].id;
+      state.filterCat='';state.search='';state.fuelSearch='';
       saveData();renderAll();showToast(t('import_ok'),'success');
     }catch{showToast('Import failed','error');}
   };
@@ -1865,10 +1960,12 @@ function renderSettings(){
     <div class="section-title">${cs?'O aplikaci':'About'}</div>
     <div class="settings-card" style="max-width:480px;">
       <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-      <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.4</span></div>
+      <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.5</span></div>
+      <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260316-004</span></div>
       <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
       <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
       <div class="settings-info-row"><span>${cs?'Dokumentace':'Documentation'}</span><span><a href="README.md" target="_blank" style="color:var(--accent);text-decoration:none;">README.md ↗</a></span></div>
+      <div class="settings-info-row"><span>${cs?'Licence':'Licence'}</span><span><a href="https://www.gnu.org/licenses/gpl-3.0-standalone.html" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;">GNU GPL v3 ↗</a></span></div>
     </div>`;
 }
 
