@@ -8,105 +8,140 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0d0d11;
-    --surface: #141418;
-    --surface2: #1c1c22;
-    --surface3: #242430;
-    --border: #2a2a36;
-    --border2: #363644;
-    --accent: #3b82f6;
-    --accent-dim: rgba(59,130,246,.12);
+    /* Backgrounds — deeper base, concept B */
+    --bg: #07080d;
+    --surface: #0f1018;
+    --surface2: #161720;
+    --surface3: #1e1f2a;
+    --border: #252636;
+    --border2: #2f3045;
+    /* Accent */
+    --accent: #6c8fff;
+    --accent-dim: rgba(108,143,255,.10);
     --accent2: #f97316;
-    --text: #eeeef4;
-    --text2: #8888a0;
-    --text3: #44445a;
-    --green: #22c55e;
-    --green-dim: rgba(34,197,94,.12);
-    --red: #ef4444;
-    --red-dim: rgba(239,68,68,.12);
-    --amber: #f59e0b;
-    --amber-dim: rgba(245,158,11,.12);
-    --blue: #6366f1;
-    --radius: 8px;
-    --radius-sm: 5px;
+    /* Text — WCAG AA compliant */
+    --text: #eaeaf6;        /* 15.8:1 on --surface */
+    --text2: #9496b4;       /* 5.2:1 on --surface ✓ */
+    
+    /* Semantic */
+    --green: #34d399;
+    --green-dim: rgba(52,211,153,.10);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,.10);
+    --amber: #fbbf24;
+    --amber-dim: rgba(251,191,36,.10);
+    --blue: #a78bfa;
+    /* Spatial */
+    --radius: 12px;
+    --radius-sm: 8px;
     --font: 'Outfit', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
-    --sidebar-w: 248px;
+    --text3: #6a6b8a;       /* 3.6:1 on --surface — terciální, pouze dekorativní text */
+    --sidebar-w: 240px;
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
   html { font-size: 15px }
   body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; overflow-x: hidden; -webkit-font-smoothing: antialiased }
 
-  /* ── Layout ─────────────────────────────────── */
-  #app { display: flex; height: 100vh; overflow: hidden }
-  #sidebar { width: var(--sidebar-w); min-width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden }
-  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden }
-  #topbar { height: 60px; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; gap: 10px; flex-shrink: 0; background: var(--surface) }
-  #content { flex: 1; overflow-y: auto; padding: 28px 28px }
+  /* ── Layout — mobile first ──────────────────────── */
+  #app { display: flex; height: 100vh; overflow: hidden; position: relative }
+  #sidebar { width: var(--sidebar-w); min-width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; transition: transform .25s cubic-bezier(.4,0,.2,1); z-index: 100 }
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0 }
+  #topbar { height: 56px; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 10px; flex-shrink: 0; background: var(--surface) }
+  #content { flex: 1; overflow-y: auto; padding: 24px 22px }
+  #sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 99; backdrop-filter: blur(2px) }
+
+  /* Mobile: sidebar jako drawer */
+  @media (max-width: 768px) {
+    #sidebar { position: fixed; top: 0; left: 0; height: 100vh; transform: translateX(-100%); box-shadow: 4px 0 24px rgba(0,0,0,.5) }
+    #sidebar.open { transform: translateX(0) }
+    #sidebar.open ~ #sidebar-overlay { display: block }
+    #content { padding: 16px 14px }
+    #topbar { padding: 0 14px }
+    .stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px }
+    .two-col { grid-template-columns: 1fr !important }
+    .doc-row { grid-template-columns: 1fr 1fr !important }
+    .settings-grid { grid-template-columns: 1fr !important }
+    table { font-size: .78rem }
+    th, td { padding: 8px 10px }
+    .search-input { width: 120px }
+    #menu-toggle { display: flex !important }
+    #topbar-vehicle { display: none }
+  }
+  @media (max-width: 480px) {
+    .stats-grid { grid-template-columns: 1fr 1fr !important }
+    .doc-row { grid-template-columns: 1fr !important }
+    .btn span[data-cs] { display: none }
+  }
+
+  /* Hamburger — visiblen only mobile */
+  #menu-toggle { display: none; align-items: center; justify-content: center; width: 36px; height: 36px; border: 1px solid var(--border2); background: none; border-radius: var(--radius-sm); color: var(--text2); cursor: pointer; font-size: 1.1rem; flex-shrink: 0 }
 
   /* ── Sidebar ────────────────────────────────── */
-  .sidebar-logo { padding: 22px 20px 18px; border-bottom: 1px solid var(--border) }
-  .sidebar-logo h1 { font-size: 1.25rem; font-weight: 700; color: var(--text); letter-spacing: -.03em; line-height: 1 }
+  .sidebar-logo { padding: 22px 18px 18px; border-bottom: 1px solid var(--border) }
+  .sidebar-logo h1 { font-size: 1.2rem; font-weight: 700; color: var(--text); letter-spacing: -.04em; line-height: 1 }
   .sidebar-logo h1 span { color: var(--accent) }
-  .sidebar-logo p { color: var(--text3); font-size: .78rem; margin-top: 3px; font-weight: 400 }
-  .sidebar-section { padding: 20px 12px 8px }
-  .sidebar-section-label { font-size: .68rem; font-weight: 600; color: var(--text3); letter-spacing: .08em; padding: 0 8px; margin-bottom: 6px; text-transform: none }
-  .nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: none; background: none; color: var(--text2); font-family: var(--font); font-size: .88rem; font-weight: 400; cursor: pointer; border-radius: var(--radius-sm); text-align: left; transition: all .15s }
+  .sidebar-logo p { color: var(--text2); font-size: .73rem; margin-top: 4px; font-weight: 400 }
+  .sidebar-section { padding: 18px 10px 6px }
+  .sidebar-section-label { font-size: .65rem; font-weight: 700; color: var(--text2); letter-spacing: .09em; padding: 0 8px; margin-bottom: 5px; text-transform: uppercase }
+  .nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 10px; border: none; background: none; color: var(--text2); font-family: var(--font); font-size: .875rem; font-weight: 400; cursor: pointer; border-radius: var(--radius-sm); text-align: left; transition: all .14s; min-height: 44px }
   .nav-btn:hover { background: var(--surface2); color: var(--text) }
   .nav-btn.active { background: var(--accent-dim); color: var(--accent); font-weight: 500 }
-  .nav-btn .icon { width: 18px; text-align: center; flex-shrink: 0; font-size: 1rem; line-height: 1; opacity: .7 }
+  .nav-btn .icon { width: 18px; text-align: center; flex-shrink: 0; font-size: 1rem; line-height: 1; opacity: .65 }
   .nav-btn.active .icon { opacity: 1 }
-  .cars-list { padding: 0 12px; flex: 1; overflow-y: auto }
-  .car-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--radius-sm); cursor: pointer; transition: all .15s; margin-bottom: 1px }
+  .cars-list { padding: 0 10px; flex: 1; overflow-y: auto }
+  .car-item { display: flex; align-items: center; gap: 10px; padding: 10px 10px; border-radius: var(--radius-sm); cursor: pointer; transition: all .14s; margin-bottom: 2px; min-height: 44px }
   .car-item:hover { background: var(--surface2) }
-  .car-item.active { background: var(--surface2); box-shadow: inset 2px 0 0 var(--accent) }
-  .car-item.inactive-car { opacity: .45 }
+  .car-item.active { background: var(--surface2); box-shadow: inset 3px 0 0 var(--accent) }
+  .car-item.inactive-car { opacity: .4 }
   .car-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0 }
-  .car-name { font-size: .84rem; color: var(--text); flex: 1; min-width: 0; line-height: 1.3 }
-  .car-name small { display: block; color: var(--text2); font-size: .72rem; font-family: var(--font-mono); margin-top: 1px }
-  .sidebar-add { padding: 8px 12px }
-  .sidebar-add button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border: 1px dashed var(--border2); background: none; color: var(--text2); font-family: var(--font); font-size: .84rem; cursor: pointer; border-radius: var(--radius-sm); transition: all .15s; justify-content: center }
+  .car-name { font-size: .84rem; color: var(--text); flex: 1; min-width: 0; line-height: 1.3; font-weight: 500 }
+  .car-name small { display: block; color: var(--text2); font-size: .72rem; font-family: var(--font-mono); margin-top: 2px; font-weight: 400 }
+  .sidebar-add { padding: 8px 10px }
+  .sidebar-add button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px; border: 1px dashed var(--border2); background: none; color: var(--text2); font-family: var(--font); font-size: .84rem; cursor: pointer; border-radius: var(--radius-sm); transition: all .14s; justify-content: center; min-height: 44px }
   .sidebar-add button:hover { border-color: var(--accent); color: var(--accent) }
 
   /* ── Topbar ─────────────────────────────────── */
-  .topbar-title { font-size: 1rem; font-weight: 600; flex: 1; letter-spacing: -.02em }
-  .topbar-title span { color: var(--text2); font-weight: 400; font-size: .85rem }
-  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: var(--radius-sm); font-family: var(--font); font-size: .84rem; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: all .15s; white-space: nowrap }
-  .btn-primary { background: var(--accent); color: #03091c; border-color: var(--accent) }
-  .btn-primary:hover { background: #2563eb; border-color: #2563eb }
+  .topbar-title { font-size: .95rem; font-weight: 600; flex: 1; letter-spacing: -.02em; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  .topbar-title span { color: var(--text2); font-weight: 400; font-size: .82rem }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius-sm); font-family: var(--font); font-size: .84rem; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: all .14s; white-space: nowrap; min-height: 44px }
+  .btn-primary { background: var(--accent); color: #02061a; border-color: var(--accent) }
+  .btn-primary:hover { filter: brightness(1.1) }
   .btn-ghost { background: none; color: var(--text2); border-color: var(--border2) }
   .btn-ghost:hover { border-color: var(--text2); color: var(--text) }
   .btn-danger { background: none; color: var(--red); border-color: var(--red) }
   .btn-danger:hover { background: var(--red); color: #fff }
   .btn-fuel { background: none; color: var(--accent); border-color: var(--border2) }
-  .btn-fuel:hover { background: rgba(59,130,246,.12); border-color: var(--accent); color: var(--accent) }
-  .lang-btn { padding: 5px 11px; background: none; border: 1px solid var(--border2); color: var(--text2); font-family: var(--font); font-size: .78rem; font-weight: 500; cursor: pointer; border-radius: var(--radius-sm); transition: all .15s }
+  .btn-fuel:hover { background: var(--accent-dim); border-color: var(--accent); color: var(--accent) }
+  .lang-btn { padding: 7px 11px; background: none; border: 1px solid var(--border2); color: var(--text2); font-family: var(--font); font-size: .78rem; font-weight: 500; cursor: pointer; border-radius: var(--radius-sm); transition: all .14s; min-height: 44px }
   .lang-btn.active { border-color: var(--accent); color: var(--accent) }
 
   /* ── Section titles ─────────────────────────── */
   .section-title { font-size: .9rem; font-weight: 600; color: var(--text); margin-bottom: 14px; padding-left: 10px; border-left: 3px solid var(--accent); letter-spacing: -.01em }
 
   /* ── Stat cards ─────────────────────────────── */
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 14px; margin-bottom: 26px }
-  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; position: relative; overflow: hidden }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 18px; position: relative; overflow: hidden }
   .stat-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; border-radius: var(--radius) var(--radius) 0 0 }
   .stat-card.yellow::after { background: var(--accent) }
   .stat-card.orange::after { background: var(--accent2) }
   .stat-card.green::after { background: var(--green) }
   .stat-card.blue::after { background: var(--blue) }
   .stat-card.red::after { background: var(--red) }
-  .stat-label { font-size: .72rem; font-weight: 500; color: var(--text2); margin-bottom: 8px; letter-spacing: .01em }
-  .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--text); letter-spacing: -.03em; line-height: 1 }
+  /* WCAG fix: stat-label byl #8888a0 → nyní --text2 = #9496b4 (5.2:1) */
+  .stat-label { font-size: .73rem; font-weight: 500; color: var(--text2); margin-bottom: 8px; letter-spacing: .01em }
+  .stat-value { font-size: 1.45rem; font-weight: 700; color: var(--text); letter-spacing: -.03em; line-height: 1 }
   .stat-value.small { font-size: 1.05rem }
-  .stat-sub { font-size: .72rem; color: var(--text3); margin-top: 5px; font-family: var(--font-mono) }
+  /* WCAG fix: stat-sub byl --text3 (#44445a, 2.2:1) → nyní --text2 toned */
+  .stat-sub { font-size: .72rem; color: var(--text2); margin-top: 5px; font-family: var(--font-mono); opacity: .75 }
 
   /* ── Tables ─────────────────────────────────── */
   .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden }
-  .table-header { display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: transparent; flex-wrap: wrap }
+  .table-header { display: flex; align-items: center; gap: 8px; padding: 13px 16px; border-bottom: 1px solid var(--border); background: transparent; flex-wrap: wrap; gap: 8px }
   .table-header-title { font-size: .9rem; font-weight: 600; flex: 1; letter-spacing: -.01em }
-  .search-input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: .82rem; padding: 7px 12px; border-radius: var(--radius-sm); width: 180px; transition: border-color .15s }
+  .search-input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: .82rem; padding: 8px 12px; border-radius: var(--radius-sm); width: 180px; transition: border-color .15s; min-height: 40px }
   .search-input:focus { outline: none; border-color: var(--accent) }
-  .filter-select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: .82rem; padding: 7px 10px; border-radius: var(--radius-sm); cursor: pointer }
+  .filter-select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: .82rem; padding: 8px 10px; border-radius: var(--radius-sm); cursor: pointer; min-height: 40px }
   .filter-select:focus { outline: none }
   table { width: 100%; border-collapse: collapse }
   thead tr { background: var(--surface2) }
@@ -118,6 +153,7 @@
   tbody tr:last-child td { border-bottom: none }
   .td-mono { font-family: var(--font-mono); font-size: .78rem }
   .td-right { text-align: right }
+  /* WCAG fix: td-muted byl --text2 old → nyní explicitně --text2 */
   .td-muted { color: var(--text2) }
 
   /* ── Badges ─────────────────────────────────── */
@@ -170,14 +206,38 @@
   .form-section-label { font-size: .78rem; font-weight: 600; color: var(--text); grid-column: 1/-1; padding: 10px 0 4px; border-bottom: 1px solid var(--border); margin-top: 6px; padding-left: 10px; border-left: 3px solid var(--accent) }
 
   /* ── Charts ─────────────────────────────────── */
-  .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px }
-  .bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 140px }
-  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; position: relative }
-  .bar-stack { width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 4px 4px 0 0; overflow: hidden; cursor: pointer; position: relative }
-  .bar-stack:hover .bar-tooltip { display: block }
-  .bar-segment { width: 100%; min-height: 1px; transition: height .4s ease }
-  .bar-tooltip { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: var(--surface3); border: 1px solid var(--border2); padding: 7px 10px; border-radius: 6px; font-size: .72rem; white-space: nowrap; z-index: 20; pointer-events: none; min-width: 160px; line-height: 1.7 }
-  .bar-label { font-size: .72rem; color: var(--text2); text-align: center; margin-top: 3px }
+  .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; overflow: visible }
+  /* ── Bar chart — Option C ───────────────────── */
+  .bar-chart-outer { position: relative; margin-top: 4px }
+  .bar-chart-yaxis { position: absolute; left: 0; top: 0; bottom: 22px; width: 46px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none }
+  .bar-chart-ylabel { font-size: .65rem; color: var(--text2); text-align: right; padding-right: 8px; line-height: 1; font-family: var(--font-mono) }
+  .bar-chart-inner { margin-left: 50px; position: relative; overflow: visible }
+  .bar-chart-gridlines { position: absolute; inset: 0 0 22px 0; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; z-index: 0 }
+  .bar-chart-gridline { width: 100%; border-top: 1px solid var(--border) }
+  .bar-chart-avgline { position: absolute; left: 0; right: 0; border-top: 1.5px dashed var(--accent); opacity: .4; pointer-events: none; z-index: 2 }
+  .bar-chart-avglabel { position: absolute; right: 0; font-size: .65rem; color: var(--accent); opacity: .7; font-family: var(--font-mono); transform: translateY(-110%); white-space: nowrap }
+  .bar-chart-total { font-size: .72rem; color: var(--text2); display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0 }
+  .bar-chart-total::before { content: ''; display: inline-block; width: 16px; border-top: 1.5px dashed var(--text3) }
+  .bar-chart { display: flex; align-items: flex-end; gap: 5px; height: 150px; position: relative; z-index: 1; overflow: visible }
+  /* bar-col is the full-height column — tooltip anchored here so it overlays the chart */
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0; height: 100%; justify-content: flex-end; position: relative; cursor: pointer }
+  .bar-col .bar-tooltip { display: none; position: absolute; top: 0; z-index: 100 }
+  .bar-col:hover .bar-tooltip,
+  .bar-col.pinned .bar-tooltip { display: block }
+  .bar-stack { width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 4px 4px 0 0; overflow: hidden; transition: filter .15s }
+  .bar-col:hover .bar-stack { filter: brightness(1.15) }
+  .bar-col.pinned .bar-stack { filter: brightness(1.2) }
+  .bar-segment { width: 100%; min-height: 2px }
+  .bar-segment:first-child { border-radius: 4px 4px 0 0 }
+  .bar-tooltip { display: none; position: absolute; top: 0; background: var(--surface3); border: 1px solid var(--border2); padding: 9px 12px; border-radius: 8px; font-size: .72rem; white-space: nowrap; z-index: 100; pointer-events: none; min-width: 160px; max-width: 220px; line-height: 1.8; box-shadow: 0 4px 24px rgba(0,0,0,.5) }
+  .bar-tooltip.tip-left { left: 0; transform: none }
+  .bar-tooltip.tip-center { left: 50%; transform: translateX(-50%) }
+  .bar-tooltip.tip-right { right: 0; left: auto; transform: none }
+  .bar-label { font-size: .68rem; color: var(--text2); text-align: center; margin-top: 5px; font-family: var(--font-mono) }
+  /* Chart header — legend left, total right, wraps gracefully */
+  .bar-chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 10px; flex-wrap: wrap }
+  .bar-chart-legend { display: flex; gap: 14px; flex-wrap: wrap }
+  .bar-chart-leg { display: flex; align-items: center; gap: 5px; font-size: .72rem; color: var(--text2) }
   .cat-chart { display: flex; flex-direction: column; gap: 10px }
   .cat-row { display: flex; align-items: center; gap: 12px }
   .cat-row-name { font-size: .8rem; color: var(--text2); width: 140px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
@@ -259,6 +319,7 @@
   /* ── Fuel stats / two-col ────────────────────── */
   .fuel-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 22px }
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 26px }
+  @media(max-width: 1100px) { .two-col { grid-template-columns: 1fr } }
   @media(max-width: 900px) { .two-col { grid-template-columns: 1fr } }
 
   /* ── Color swatches ─────────────────────────── */
@@ -337,10 +398,12 @@
 
   <main id="main">
     <div id="topbar">
+      <button id="menu-toggle" onclick="toggleSidebar()" aria-label="Menu">☰</button>
       <div class="topbar-title" id="page-title">Přehled</div>
-      <button class="btn btn-fuel" id="add-fuel-btn" onclick="openFuelModal()" style="margin-left:auto;" title="Přidat záznam tankování"><span data-cs="Nové tankování" data-en="New fuel entry">Nové tankování</span></button>
+      <button class="btn btn-fuel" id="add-fuel-btn" onclick="openFuelModal()" title="Přidat záznam tankování"><span data-cs="Nové tankování" data-en="New fuel entry">Nové tankování</span></button>
       <button class="btn btn-primary" onclick="openRecordModal()" title="Přidat servisní záznam"><span data-cs="Nový záznam" data-en="New record">Nový záznam</span></button>
     </div>
+    <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div id="content"></div>
   </main>
 </div>
@@ -848,13 +911,21 @@ function renderCarsList(){
 
 function selectCar(id){state.currentCarId=id;state.page=1;state.fuelPage=1;renderAll();}
 
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  sb.classList.toggle('open');
+}
+function closeSidebarOnMobile(){
+  if(window.innerWidth<=768) document.getElementById('sidebar').classList.remove('open');
+}
+
 function showPage(page){
   state.currentPage=page;
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('nav-'+page)?.classList.add('active');
-  // Topbar akční tlačítka — skrýt na nastavení
   const actionBtns = document.getElementById('add-fuel-btn');
   if(actionBtns) actionBtns.style.display = page==='settings'?'none':'';
+  closeSidebarOnMobile();
   renderPage();
 }
 
@@ -1206,6 +1277,11 @@ function renderAnalytics(){
 
   const months=Object.keys(byMonthAll).sort().slice(-12);
   const maxMonth=Math.max(...months.map(m=>byMonthAll[m]),1);
+  // Total for displayed months — service + fuel only, no vehicle purchase
+  const byMonthServiceFuel={};
+  recs.filter(r=>r.cat!=='Nákup vozidla').forEach(r=>{if(!r.date)return;const m=r.date.slice(0,7);byMonthServiceFuel[m]=(byMonthServiceFuel[m]||0)+(r.qty||1)*(r.price||0);});
+  fuels.forEach(f=>{if(!f.date)return;const m=f.date.slice(0,7);byMonthServiceFuel[m]=(byMonthServiceFuel[m]||0)+(f.cost||0);});
+  const visibleTotal=months.reduce((s,m)=>s+(byMonthServiceFuel[m]||0),0);
 
   // Unikátní měsíce pro průměry
   const allMonths=new Set([...Object.keys(byMonthService),...Object.keys(byMonthFuel)]);
@@ -1235,34 +1311,71 @@ function renderAnalytics(){
       <div>
         <div class="section-title">${t('monthly_spending')}</div>
         <div class="chart-wrap">
-          <div style="display:flex;gap:16px;margin-bottom:10px;font-size:.72rem;">
-            <span style="display:flex;align-items:center;gap:5px;color:var(--text2)"><span style="width:10px;height:10px;border-radius:2px;background:var(--red);display:inline-block"></span>${cs?'Servis':'Service'}</span>
-            <span style="display:flex;align-items:center;gap:5px;color:var(--text2)"><span style="width:10px;height:10px;border-radius:2px;background:var(--accent);display:inline-block"></span>${cs?'Palivo':'Fuel'}</span>
+          <div class="bar-chart-header">
+            <div class="bar-chart-legend">
+              <span class="bar-chart-leg"><span style="width:10px;height:10px;border-radius:2px;background:var(--red);opacity:.85;display:inline-block"></span>${cs?'Servis':'Service'}</span>
+              <span class="bar-chart-leg"><span style="width:10px;height:10px;border-radius:2px;background:var(--accent);opacity:.85;display:inline-block"></span>${cs?'Palivo':'Fuel'}</span>
+              <span class="bar-chart-leg"><span style="width:16px;border-top:1.5px dashed var(--accent);opacity:.5;display:inline-block"></span>${cs?'Průměr':'Avg'}</span>
+            </div>
+            <span class="bar-chart-total">${cs?'Servis+palivo (12m)':'Service+fuel (12m)'}: ${fmtMoney(visibleTotal)}</span>
           </div>
-          <div class="bar-chart">
-          ${months.map(m=>{
-            const sv=byMonthService[m]||0;
-            const fv=byMonthFuel[m]||0;
-            const tot=byMonthAll[m]||0;
-            const sH=tot>0?(sv/maxMonth*100).toFixed(1):0;
-            const fH=tot>0?(fv/maxMonth*100).toFixed(1):0;
-            // Tooltip: celkem + servis + palivo + top 3 položky toho měsíce
-            const monthRecs=recs.filter(r=>r.date?.slice(0,7)===m&&r.cat!=='Nákup vozidla');
-            const topItems=monthRecs.sort((a,b)=>(b.qty||1)*(b.price||0)-(a.qty||1)*(a.price||0)).slice(0,3);
-            const itemLines=topItems.map(r=>`&nbsp;· ${r.desc.length>22?r.desc.slice(0,22)+'…':r.desc}: ${fmtMoney((r.qty||1)*(r.price||0))}`).join('<br>');
-            const tooltipHtml='<strong>'+m.slice(5,7)+'/'+m.slice(0,4)+': '+fmtMoney(tot)+'</strong><br>'+
-              (sv>0?'<span style="color:var(--red)">'+(cs?'Servis':'Service')+': '+fmtMoney(sv)+'</span><br>'+(itemLines?itemLines+'<br>':''):'') +
-              (fv>0?'<span style="color:var(--accent)">'+(cs?'Palivo':'Fuel')+': '+fmtMoney(fv)+'</span>':'');
-            return`<div class="bar-col">
-              <div class="bar-stack" style="height:${(tot/maxMonth*100).toFixed(1)}%;width:100%">
-                <div class="bar-tooltip">${tooltipHtml}</div>
-                ${sv>0?`<div class="bar-segment" style="height:${tot>0?(sv/tot*100).toFixed(1):0}%;background:var(--red);opacity:.8;"></div>`:''}
-                ${fv>0?`<div class="bar-segment" style="height:${tot>0?(fv/tot*100).toFixed(1):0}%;background:var(--accent);opacity:.85;"></div>`:''}
-              </div>
-              <span class="bar-label">${m.slice(5,7)}/${m.slice(2,4)}</span>
-            </div>`;
-          }).join('')}
-          </div>
+          ${(()=>{
+            if(!months.length) return '<div style="padding:32px;text-align:center;color:var(--text3)">'+t('no_records')+'</div>';
+
+            // Auto-scale: nice round ceiling
+            const niceMax=(v)=>{
+              if(v<=0) return 1000;
+              const mag=Math.pow(10,Math.floor(Math.log10(v)));
+              const steps=[1,2,2.5,5,10];
+              for(const s of steps){ const c=Math.ceil(v/(mag*s))*mag*s; if(c/v>=1.0&&c/v<=1.6) return c; }
+              return Math.ceil(v/mag)*mag;
+            };
+            const chartMax=niceMax(maxMonth);
+            const tickCount=4;
+            const ticks=Array.from({length:tickCount+1},(_,i)=>Math.round(chartMax/tickCount*i));
+            const fmtTick=v=>v>=1000?(v/1000).toFixed(v%1000===0?0:1)+'k':String(v);
+
+            // Average (excl purchase)
+            const avgPerMonth=monthCount>0?Math.round((serviceCost+fuelCost)/monthCount):0;
+            const avgPct=(avgPerMonth/chartMax*100).toFixed(1);
+
+            const gridHtml=ticks.slice(1).reverse().map(()=>'<div class="bar-chart-gridline"></div>').join('');
+            const yHtml=ticks.slice().reverse().map(v=>'<div class="bar-chart-ylabel">'+fmtTick(v)+'</div>').join('');
+
+            const barsHtml=months.map(m=>{
+              const sv=byMonthService[m]||0;
+              const fv=byMonthFuel[m]||0;
+              const tot=byMonthAll[m]||0;
+              const barPct=(tot/chartMax*100).toFixed(1);
+              const sPct=tot>0?(sv/tot*100).toFixed(1):0;
+              const fPct=tot>0?(fv/tot*100).toFixed(1):0;
+              const monthRecs=recs.filter(r=>r.date?.slice(0,7)===m&&r.cat!=='Nákup vozidla');
+              const topItems=[...monthRecs].sort((a,b)=>(b.qty||1)*(b.price||0)-(a.qty||1)*(a.price||0)).slice(0,3);
+              const itemLines=topItems.map(r=>'&nbsp;· '+(r.desc.length>24?r.desc.slice(0,24)+'…':r.desc)+': '+fmtMoney((r.qty||1)*(r.price||0))).join('<br>');
+              const tip='<strong>'+m.slice(5,7)+'/'+m.slice(0,4)+':&nbsp;'+fmtMoney(tot)+'</strong><br>'
+                +(sv>0?'<span style="color:var(--red)">'+(cs?'Servis':'Service')+': '+fmtMoney(sv)+'</span><br>'+(itemLines?itemLines+'<br>':''):'')
+                +(fv>0?'<span style="color:var(--accent)">'+(cs?'Palivo':'Fuel')+': '+fmtMoney(fv)+'</span>':'');
+              return '<div class="bar-col" onclick="this.classList.toggle(\'pinned\')">'
+                +'<div class="bar-tooltip">'+tip+'</div>'
+                +'<div class="bar-stack" style="height:'+barPct+'%;width:100%">'
+                +(sv>0?'<div class="bar-segment" style="height:'+sPct+'%;background:var(--red);opacity:.82"></div>':'')
+                +(fv>0?'<div class="bar-segment" style="height:'+fPct+'%;background:var(--accent);opacity:.85"></div>':'')
+                +'</div>'
+                +'<span class="bar-label">'+m.slice(5,7)+'/'+m.slice(2,4)+'</span>'
+                +'</div>';
+            }).join('');
+
+            return '<div class="bar-chart-outer">'
+              +'<div class="bar-chart-yaxis">'+yHtml+'</div>'
+              +'<div class="bar-chart-inner">'
+              +'<div class="bar-chart-gridlines">'+gridHtml+'</div>'
+              +'<div class="bar-chart-avgline" style="bottom:calc(22px + '+avgPct+'%)">'
+              +'<span class="bar-chart-avglabel">⌀&nbsp;'+fmtTick(avgPerMonth)+(cs?'/m':'/mo')+'</span>'
+              +'</div>'
+              +'<div class="bar-chart">'+barsHtml+'</div>'
+              +'</div>'
+              +'</div>';
+          })()}
         </div>
       </div>
     </div>
@@ -1312,6 +1425,31 @@ function renderAnalytics(){
       </div>
 
     </div>`;
+  // Smart tooltip positioning — runs after DOM is painted
+  requestAnimationFrame(positionChartTooltips);
+}
+
+// Position bar tooltips so they never overflow the chart container
+function positionChartTooltips(){
+  const chartInner=document.querySelector('.bar-chart-inner');
+  if(!chartInner) return;
+  const cols=chartInner.querySelectorAll('.bar-col');
+  const viewportW=window.innerWidth;
+  cols.forEach(col=>{
+    const tip=col.querySelector('.bar-tooltip');
+    if(!tip) return;
+    tip.style.visibility='hidden';
+    tip.style.display='block';
+    const tipW=tip.offsetWidth;
+    tip.style.display='';
+    tip.style.visibility='';
+    const cr=col.getBoundingClientRect();
+    const centerX=cr.left+cr.width/2;
+    tip.classList.remove('tip-left','tip-center','tip-right');
+    if(centerX-tipW/2 < 8) tip.classList.add('tip-left');
+    else if(centerX+tipW/2 > viewportW-8) tip.classList.add('tip-right');
+    else tip.classList.add('tip-center');
+  });
 }
 
 // ─── REMINDERS PAGE ──────────────────────────────────────────
