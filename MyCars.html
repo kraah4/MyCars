@@ -75,6 +75,8 @@
     .bar-chart { height: 120px }
     .bar-label { font-size: .6rem }
     .bar-chart-header { flex-direction: column; align-items: flex-start; gap: 6px }
+    /* Make chart container scroll horizontally on tiny screens so bars aren’t squashed */
+    .bar-chart-outer { min-width: 280px }
     /* Cat chart: compress on small screens */
     .cat-row-name { width: 90px; font-size: .72rem }
     .cat-row-val { min-width: 70px; font-size: .68rem }
@@ -85,11 +87,11 @@
   @media (max-width: 480px) {
     .stats-grid { grid-template-columns: 1fr 1fr !important }
     .doc-row { grid-template-columns: 1fr !important }
-    /* Buttons — hide text, show icon only */
+    /* Buttons — hide text, show icon only; bigger icon */
     .btn-fuel .btn-label { display: none }
-    .btn-fuel .btn-icon { display: inline !important }
+    .btn-fuel .btn-icon { display: inline !important; font-size: 1.25rem }
     .btn-primary .btn-label { display: none }
-    .btn-primary .btn-icon { display: inline !important }
+    .btn-primary .btn-icon { display: inline !important; font-size: 1.25rem }
   }
 
   /* Hamburger — visiblen only mobile */
@@ -226,7 +228,7 @@
   .form-section-label { font-size: .78rem; font-weight: 600; color: var(--text); grid-column: 1/-1; padding: 10px 0 4px; border-bottom: 1px solid var(--border); margin-top: 6px; padding-left: 10px; border-left: 3px solid var(--accent) }
 
   /* ── Charts ─────────────────────────────────── */
-  .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; overflow: hidden }
+  .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; overflow: visible }
   /* ── Bar chart — Option C ───────────────────── */
   .bar-chart-outer { position: relative; margin-top: 4px }
   .bar-chart-yaxis { position: absolute; left: 0; top: 0; bottom: 22px; width: 46px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none }
@@ -239,12 +241,13 @@
   .bar-chart-total { font-size: .72rem; color: var(--text2); display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0 }
   .bar-chart-total::before { content: ''; display: inline-block; width: 16px; border-top: 1.5px dashed var(--text3) }
   .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 150px; position: relative; z-index: 1; overflow: visible; min-width: 0 }
-  /* bar-col is the full-height column — tooltip anchored here so it overlays the chart */
-  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0; height: 100%; justify-content: flex-end; position: relative; cursor: pointer }
+  /* bar-col uses Grid to align stack (1fr) and label (22px) exactly */
+  .bar-col { flex: 1; display: grid; grid-template-rows: 1fr 22px; gap: 0; align-items: end; justify-items: center; height: 100%; position: relative; cursor: pointer }
   .bar-col .bar-tooltip { display: none; position: absolute; top: 0; z-index: 100 }
   .bar-col:hover .bar-tooltip,
   .bar-col.pinned .bar-tooltip { display: block }
-  .bar-stack { width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 4px 4px 0 0; overflow: hidden; transition: filter .15s }
+  /* Stack sits in the top track (1fr), aligned to bottom */
+  .bar-stack { width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 4px 4px 0 0; overflow: hidden; transition: filter .15s; grid-row: 1; align-self: end; z-index: 10 }
   .bar-col:hover .bar-stack { filter: brightness(1.15) }
   .bar-col.pinned .bar-stack { filter: brightness(1.2) }
   .bar-segment { width: 100%; min-height: 2px }
@@ -253,7 +256,8 @@
   .bar-tooltip.tip-left { left: 0; transform: none }
   .bar-tooltip.tip-center { left: 50%; transform: translateX(-50%) }
   .bar-tooltip.tip-right { right: 0; left: auto; transform: none }
-  .bar-label { font-size: .68rem; color: var(--text2); text-align: center; margin-top: 5px; font-family: var(--font-mono) }
+  /* Label sits in the bottom track (22px), aligned to top */
+  .bar-label { grid-row: 2; height: 22px; line-height: 22px; margin: 0; align-self: start; font-size: .68rem; color: var(--text2); text-align: center; font-family: var(--font-mono); overflow: hidden; width: 100% }
   /* Chart header — legend left, total right, wraps gracefully */
   .bar-chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 10px; flex-wrap: wrap }
   .bar-chart-legend { display: flex; gap: 14px; flex-wrap: wrap }
@@ -367,6 +371,62 @@
   .date-triple input.dt-y { width: 56px; padding-right: 10px }
   .date-triple .dt-sep { color: var(--text3); font-size: .9rem; padding: 0 2px; user-select: none }
 
+
+  /* ── Fleet dashboard ────────────────────────────── */
+  .fleet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px }
+  @media (max-width: 600px) { .fleet-grid { grid-template-columns: 1fr } }
+  .fleet-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: border-color .15s, box-shadow .15s }
+  .fleet-card:hover { border-color: var(--border2); box-shadow: 0 4px 20px rgba(0,0,0,.3) }
+  .fleet-card-header { padding: 16px 18px 12px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border) }
+  .fleet-card-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0 }
+  .fleet-card-title { flex: 1; min-width: 0 }
+  .fleet-card-name { font-size: .95rem; font-weight: 600; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+  .fleet-card-sub { font-size: .72rem; color: var(--text2); font-family: var(--font-mono); margin-top: 2px }
+  .fleet-card-km { font-size: .88rem; font-weight: 600; color: var(--text); font-family: var(--font-mono); flex-shrink: 0 }
+  .fleet-card-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px }
+  .fleet-doc-row { display: flex; gap: 8px; flex-wrap: wrap }
+  .fleet-doc-pill { display: flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 20px; font-size: .72rem; font-weight: 500; border: 1px solid }
+  .fleet-doc-pill.ok { background: var(--green-dim); color: var(--green); border-color: rgba(52,211,153,.2) }
+  .fleet-doc-pill.warn { background: var(--amber-dim); color: var(--amber); border-color: rgba(251,191,36,.2) }
+  .fleet-doc-pill.due { background: var(--red-dim); color: var(--red); border-color: rgba(248,113,113,.2) }
+  .fleet-doc-pill.none { background: var(--surface2); color: var(--text3); border-color: var(--border) }
+  .fleet-row { display: flex; justify-content: space-between; align-items: center; font-size: .82rem }
+  .fleet-row-label { color: var(--text2) }
+  .fleet-row-val { font-weight: 500; font-family: var(--font-mono); font-size: .78rem }
+  .fleet-row-val.ok { color: var(--green) }
+  .fleet-row-val.warn { color: var(--amber) }
+  .fleet-row-val.due { color: var(--red) }
+  .fleet-card-footer { padding: 10px 18px; background: var(--surface2); border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center }
+  .fleet-card-footer .status-badge { font-size: .68rem }
+
+
+  /* ── Car switcher dropdown ─────────────────────── */
+  #car-switcher { padding:6px 22px; border-bottom:1px solid var(--border); background:var(--surface); flex-shrink:0 }
+  .csw-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0 }
+  .csw-dropdown { position:relative; display:inline-block }
+  .csw-trigger { display:inline-flex; align-items:center; gap:8px; padding:5px 12px; border:1px solid var(--border2); background:var(--surface2); border-radius:var(--radius-sm); cursor:pointer; font-size:.84rem; color:var(--text); font-family:var(--font); transition:all .15s; min-height:34px; white-space:nowrap; max-width:340px }
+  .csw-trigger:hover { border-color:var(--accent) }
+  .csw-trigger.open { border-color:var(--accent) }
+  .csw-arrow { color:var(--text2); font-size:.7rem; margin-left:4px; transition:transform .15s; flex-shrink:0 }
+  .csw-trigger.open .csw-arrow { transform:rotate(180deg) }
+  .csw-menu { position:absolute; top:calc(100% + 4px); left:0; min-width:240px; max-width:360px; background:var(--surface3); border:1px solid var(--border2); border-radius:var(--radius); z-index:200; box-shadow:0 8px 24px rgba(0,0,0,.5); max-height:380px; overflow-y:auto }
+  .csw-menu-label { padding:7px 14px 3px; font-size:.63rem; font-weight:700; color:var(--text3); letter-spacing:.09em; text-transform:uppercase }
+  .csw-menu-item { display:flex; align-items:center; gap:9px; padding:9px 14px; cursor:pointer; font-size:.84rem; color:var(--text); transition:background .1s }
+  .csw-menu-item:hover { background:var(--surface2) }
+  .csw-menu-item.active { background:var(--accent-dim); color:var(--accent) }
+  .csw-menu-item.csw-inactive { opacity:.55 }
+  .csw-menu-sep { height:1px; background:var(--border); margin:4px 0 }
+  .csw-make { font-weight:500; flex:1; overflow:hidden; text-overflow:ellipsis }
+  .csw-plate { font-size:.7rem; color:var(--text2); font-family:var(--font-mono); flex-shrink:0 }
+  @media(max-width:768px) { #car-switcher { padding:6px 14px } }
+
+  /* ── Autocomplete ───────────────────────────────── */
+  .ac-wrap { position: relative; width: 100% }
+  .ac-dropdown { position: absolute; top: calc(100% + 3px); left: 0; right: 0; background: var(--surface3); border: 1px solid var(--border2); border-radius: var(--radius-sm); z-index: 200; max-height: 220px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.4) }
+  .ac-item { padding: 9px 12px; font-size: .85rem; cursor: pointer; color: var(--text); transition: background .1s }
+  .ac-item:hover, .ac-item.ac-selected { background: var(--accent-dim); color: var(--accent) }
+  .ac-item strong { color: var(--accent) }
+
   /* ── Settings page ──────────────────────────── */
   .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px }
   @media(max-width: 700px) { .settings-grid { grid-template-columns: 1fr } }
@@ -390,25 +450,15 @@
 
     <div class="sidebar-section">
       <div class="sidebar-section-label">Navigace</div>
-      <button class="nav-btn active" onclick="showPage('dashboard')" id="nav-dashboard" title="Přehled"><span class="icon">⊞</span><span data-cs="Přehled" data-en="Dashboard">Přehled</span></button>
+      <button class="nav-btn active" onclick="showPage('fleet')" id="nav-fleet" title="Přehled vozů"><span class="icon">⊞</span><span data-cs="Přehled vozů" data-en="Fleet">Přehled vozů</span></button>
+      <button class="nav-btn" onclick="showPage('dashboard')" id="nav-dashboard" title="Přehled"><span class="icon">◉</span><span data-cs="Detail vozu" data-en="Vehicle">Detail vozu</span></button>
       <button class="nav-btn" onclick="showPage('records')" id="nav-records" title="Záznamy"><span class="icon">☰</span><span data-cs="Záznamy" data-en="Records">Záznamy</span></button>
       <button class="nav-btn" onclick="showPage('fuel')" id="nav-fuel" title="Tankování"><span class="icon">⊟</span><span data-cs="Tankování" data-en="Fuel log">Tankování</span></button>
       <button class="nav-btn" onclick="showPage('analytics')" id="nav-analytics" title="Analytika"><span class="icon">◫</span><span data-cs="Analytika" data-en="Analytics">Analytika</span></button>
       <button class="nav-btn" onclick="showPage('reminders')" id="nav-reminders" title="Připomínky"><span class="icon">◷</span><span data-cs="Připomínky" data-en="Reminders">Připomínky</span></button>
     </div>
 
-    <div class="sidebar-section" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
-      <div class="sidebar-section-label">Vozidla</div>
-      <div class="cars-list" id="cars-list"></div>
-    </div>
-
-    <div class="sidebar-add">
-      <button onclick="openCarModal()" title="Přidat nové vozidlo">
-        <span data-cs="Přidat vozidlo" data-en="Add vehicle">Přidat vozidlo</span>
-      </button>
-    </div>
-
-    <div style="border-top:1px solid var(--border);padding:8px 12px;">
+    <div style="border-top:1px solid var(--border);padding:8px 12px;margin-top:auto;">
       <button class="nav-btn" onclick="showPage('settings')" id="nav-settings" title="Nastavení"><span class="icon">◎</span><span data-cs="Nastavení" data-en="Settings">Nastavení</span></button>
     </div>
 
@@ -431,6 +481,7 @@
         <span class="btn-label" data-cs="Nový záznam" data-en="New record">Nový záznam</span>
       </button>
     </div>
+    <div id="car-switcher" style="display:none"></div>
     <div id="content"></div>
   </main>
 </div>
@@ -511,8 +562,20 @@
       <!-- TAB: BASIC -->
       <div class="modal-tab-content active" id="car-tab-basic">
         <div class="form-grid">
-          <div class="form-group"><label class="form-label required">Značka</label><input type="text" class="form-input" id="c-make" placeholder="Škoda"></div>
-          <div class="form-group"><label class="form-label required">Model</label><input type="text" class="form-input" id="c-model" placeholder="Octavia"></div>
+          <div class="form-group">
+            <label class="form-label required">Značka</label>
+            <div class="ac-wrap" id="ac-make-wrap">
+              <input type="text" class="form-input" id="c-make" placeholder="Škoda" autocomplete="off" oninput="acFilter('make')" onfocus="acFilter('make')" onblur="setTimeout(()=>{const l=document.getElementById('ac-make-list');if(l)l.style.display='none';},150)" onkeydown="acKey(event,'make')">
+              <div class="ac-dropdown" id="ac-make-list" style="display:none"></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Model</label>
+            <div class="ac-wrap" id="ac-model-wrap">
+              <input type="text" class="form-input" id="c-model" placeholder="Octavia" autocomplete="off" oninput="acFilter('model')" onfocus="acFilter('model')" onblur="setTimeout(()=>{const l=document.getElementById('ac-model-list');if(l)l.style.display='none';},150)" onkeydown="acKey(event,'model')">
+              <div class="ac-dropdown" id="ac-model-list" style="display:none"></div>
+            </div>
+          </div>
           <div class="form-group"><label class="form-label">Rok výroby</label><input type="number" class="form-input" id="c-year" placeholder="2008" min="1900" max="2099"></div>
           <div class="form-group"><label class="form-label">SPZ</label><input type="text" class="form-input" id="c-plate" placeholder="1Z3 4567" style="text-transform:uppercase"></div>
           <div class="form-group full"><label class="form-label">VIN</label><input type="text" class="form-input" id="c-vin" placeholder="TMBBG61Z982..." style="text-transform:uppercase"></div>
@@ -714,12 +777,15 @@ function getFuelOptions(carId) {
 
 // ─── STATE ───────────────────────────────────────────────────
 let state = {
-  lang:'cs', currentPage:'dashboard', currentCarId:null,
+  lang:'cs', currentPage:'fleet', currentCarId:null,
   editingRecordId:null, editingCarId:null, editingFuelId:null,
   sortField:'date', sortDir:-1, fuelSortField:'date', fuelSortDir:-1,
   filterCat:'', search:'', fuelSearch:'',
   page:1, fuelPage:1, pageSize:25,
   selectedColor:'#e8c547',
+  settings:{ tireReminders:true },
+  analyticsCarId:null,  // null = all active | '__all__' = all incl. inactive | carId = single car
+  remindersCarId:null,   // null = all active | carId = single car
   cars:[], records:[], reminders:[], fuels:[]
 };
 
@@ -913,17 +979,18 @@ function fuelTypeLabel(id){
 function loadData(){
   try{
     const d=localStorage.getItem('mycars_v3');
-    if(d){const p=JSON.parse(d);state.cars=p.cars||[];state.records=p.records||[];state.reminders=p.reminders||[];state.fuels=p.fuels||[];}
+    if(d){const p=JSON.parse(d);state.cars=p.cars||[];state.records=p.records||[];state.reminders=p.reminders||[];state.fuels=p.fuels||[];if(p.settings)Object.assign(state.settings,p.settings);if(p.lang)state.lang=p.lang;}
     if(state.cars.length)state.currentCarId=state.cars[0].id;
   }catch(e){console.warn('Chyba při načítání dat',e);}
 }
 function saveData(){
-  localStorage.setItem('mycars_v3',JSON.stringify({cars:state.cars,records:state.records,reminders:state.reminders,fuels:state.fuels,savedAt:new Date().toISOString()}));
+  localStorage.setItem('mycars_v3',JSON.stringify({cars:state.cars,records:state.records,reminders:state.reminders,fuels:state.fuels,settings:state.settings,lang:state.lang,savedAt:new Date().toISOString()}));
 }
 
 // ─── LANG ────────────────────────────────────────────────────
 function setLang(l){
   state.lang=l;
+  saveData();
   document.getElementById('sidebar-subtitle').textContent=l==='cs'?'Evidence vozidel':'Vehicle tracker';
   document.title=l==='cs'?'MyCars — Evidence vozidel':'MyCars — Vehicle tracker';
   document.querySelectorAll('[data-cs]').forEach(el=>{
@@ -938,7 +1005,13 @@ function setLang(l){
 }
 
 // ─── RENDER ──────────────────────────────────────────────────
-function renderAll(){renderCarsList();renderPage();}
+function renderAll(){
+  // Sync nav highlight with current page
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('nav-'+state.currentPage)?.classList.add('active');
+  renderCarSwitcher();
+  renderPage();
+}
 
 function renderCarsList(){
   const el=document.getElementById('cars-list');
@@ -959,10 +1032,12 @@ function renderCarsList(){
 
 function selectCar(id){
   state.currentCarId=id;
+  state.analyticsCarId=id; // analytics defaultně na vybrané auto
   state.page=1;state.fuelPage=1;
   state.filterCat='';state.search='';state.fuelSearch='';
   closeSidebarOnMobile();
-  renderAll();
+  if(state.currentPage==='fleet') showPage('dashboard');
+  else renderAll();
 }
 
 function toggleSidebar(){
@@ -978,27 +1053,328 @@ function closeSidebarOnMobile(){
   }
 }
 
+
+// ─── CAR SWITCHER DROPDOWN ───────────────────────────────────
+function renderCarSwitcher(){
+  const bar=document.getElementById('car-switcher');
+  if(!bar) return;
+  const page=state.currentPage;
+  const hideOn=['fleet','settings'];
+  if(hideOn.includes(page)){bar.style.display='none';return;}
+
+  const cs=state.lang==='cs';
+  const sort=(arr)=>arr.sort((a,b)=>`${a.make} ${a.model}`.localeCompare(`${b.make} ${b.model}`,'cs'));
+  const activeCars=sort(state.cars.filter(c=>c.status!=='inactive'));
+  const inactiveCars=sort(state.cars.filter(c=>c.status==='inactive'));
+
+  const isCtx=['analytics','reminders'].includes(page);
+  const ctxVal=page==='analytics'?state.analyticsCarId:state.remindersCarId;
+  const selFn=page==='analytics'?'selectAnalyticsCar':'selectRemindersCar';
+
+  // Min cars to show on regular pages
+  if(!isCtx && state.cars.filter(c=>c.status!=='inactive').length<2){
+    bar.style.display='none';return;
+  }
+  if(!state.cars.length){bar.style.display='none';return;}
+
+  bar.style.display='block';
+
+  // Trigger label
+  let tDot,tName,tPlate='';
+  if(isCtx){
+    if(!ctxVal){
+      tDot='var(--accent)'; tName=cs?`Všechna aktivní (${activeCars.length})`:`All active (${activeCars.length})`;
+    } else if(ctxVal==='__all__'){
+      tDot='var(--text2)'; tName=cs?`Všechna vozidla (${state.cars.length})`:`All vehicles (${state.cars.length})`;
+    } else {
+      const c=getCar(ctxVal); tDot=c?.color||'#888'; tName=`${c?.make||''} ${c?.model||''}`.trim(); tPlate=c?.plate||'';
+    }
+  } else {
+    const c=getCar(state.currentCarId);
+    if(c){tDot=c.color||'#888'; tName=`${c.make||''} ${c.model||''}`.trim(); tPlate=c.plate||'';}
+    else{tDot='var(--text2)'; tName=cs?'Vybrat vozidlo':'Select vehicle';}
+  }
+  const triggerLabel=`<span class="csw-dot" style="background:${tDot}"></span><span class="csw-make">${tName}</span>${tPlate?`<span class="csw-plate">${tPlate}</span>`:''}` ;
+
+  // Menu items
+  const makeCar=(c,extraCls,onclick)=>{
+    const isAct=isCtx?(c.id===ctxVal):(c.id===state.currentCarId);
+    return `<div class="csw-menu-item ${extraCls} ${isAct?'active':''}" onclick="${onclick}">`
+      +`<span class="csw-dot" style="background:${c.color||'#888'}"></span>`
+      +`<span class="csw-make">${c.make||''} ${c.model||''}`.trim()+`</span>`
+      +(c.plate?`<span class="csw-plate">${c.plate}</span>`:'')
+      +`</div>`;
+  };
+
+  let menuHtml='';
+  if(isCtx){
+    // Aggregate options at top
+    const allActAct=!ctxVal;
+    const allAct=ctxVal==='__all__';
+    menuHtml+=`<div class="csw-menu-item ${allActAct?'active':''}" onclick="${selFn}('__all__active')">`
+      +`<span class="csw-dot" style="background:var(--accent)"></span>`
+      +`<span class="csw-make">${cs?`Všechna aktivní (${activeCars.length})`:`All active (${activeCars.length})`}</span></div>`;
+    if(inactiveCars.length){
+      menuHtml+=`<div class="csw-menu-item ${allAct?'active':''}" onclick="${selFn}('__all__')">`
+        +`<span class="csw-dot" style="background:var(--text2)"></span>`
+        +`<span class="csw-make">${cs?`Všechna vozidla (${state.cars.length})`:`All vehicles (${state.cars.length})`}</span></div>`;
+    }
+    menuHtml+='<div class="csw-menu-sep"></div>';
+    if(activeCars.length){
+      menuHtml+=`<div class="csw-menu-label">${cs?'Aktivní':'Active'}</div>`;
+      menuHtml+=activeCars.map(c=>makeCar(c,'',`${selFn}('${c.id}')`)).join('');
+    }
+    if(inactiveCars.length){
+      menuHtml+='<div class="csw-menu-sep"></div>';
+      menuHtml+=`<div class="csw-menu-label">${cs?'Neaktivní':'Inactive'}</div>`;
+      menuHtml+=inactiveCars.map(c=>makeCar(c,'csw-inactive',`${selFn}('${c.id}')`)).join('');
+    }
+  } else {
+    if(activeCars.length){
+      menuHtml+=`<div class="csw-menu-label">${cs?'Aktivní':'Active'}</div>`;
+      menuHtml+=activeCars.map(c=>makeCar(c,'',`switchCar('${c.id}')`)).join('');
+    }
+    if(inactiveCars.length){
+      menuHtml+='<div class="csw-menu-sep"></div>';
+      menuHtml+=`<div class="csw-menu-label">${cs?'Neaktivní':'Inactive'}</div>`;
+      menuHtml+=inactiveCars.map(c=>makeCar(c,'csw-inactive',`switchCar('${c.id}')`)).join('');
+    }
+  }
+
+  bar.innerHTML=`<div class="csw-dropdown" id="csw-dropdown">`
+    +`<button class="csw-trigger" id="csw-trigger" onclick="toggleCswMenu()" aria-haspopup="listbox" aria-expanded="false">`
+    +triggerLabel+`<span class="csw-arrow">▾</span></button>`
+    +`<div class="csw-menu" id="csw-menu" style="display:none" role="listbox">${menuHtml}</div>`
+    +`</div>`;
+}
+
+function toggleCswMenu(){
+  const menu=document.getElementById('csw-menu');
+  const trigger=document.getElementById('csw-trigger');
+  if(!menu||!trigger) return;
+  const isOpen=menu.style.display==='none';
+  menu.style.display=isOpen?'block':'none';
+  trigger.classList.toggle('open',isOpen);
+  trigger.setAttribute('aria-expanded',String(isOpen));
+}
+
+function selectAnalyticsCar(val){
+  state.analyticsCarId=val==='__all__active'?null:val;
+  // Also sync currentCarId when a real car is picked (helps navigation to other pages)
+  if(val&&val!=='__all__active'&&val!=='__all__') state.currentCarId=val;
+  const menu=document.getElementById('csw-menu');
+  const trigger=document.getElementById('csw-trigger');
+  if(menu) menu.style.display='none';
+  if(trigger){trigger.classList.remove('open');trigger.setAttribute('aria-expanded','false');}
+  renderCarSwitcher();
+  renderPage();
+}
+function selectRemindersCar(val){
+  state.remindersCarId=val==='__all__active'?null:val;
+  if(val&&val!=='__all__active'&&val!=='__all__') state.currentCarId=val;
+  const menu=document.getElementById('csw-menu');
+  const trigger=document.getElementById('csw-trigger');
+  if(menu) menu.style.display='none';
+  if(trigger){trigger.classList.remove('open');trigger.setAttribute('aria-expanded','false');}
+  renderCarSwitcher();
+  renderPage();
+}
+
+function switchCar(id){
+  // Close dropdown
+  const menu=document.getElementById('csw-menu');
+  const trigger=document.getElementById('csw-trigger');
+  if(menu) menu.style.display='none';
+  if(trigger){trigger.classList.remove('open');trigger.setAttribute('aria-expanded','false');}
+  state.currentCarId=id;
+  state.page=1;state.fuelPage=1;
+  state.filterCat='';state.search='';state.fuelSearch='';
+  renderCarSwitcher();
+  renderPage();
+}
+
 function showPage(page){
   state.currentPage=page;
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('nav-'+page)?.classList.add('active');
   const onSettings = page==='settings';
+  const onFleet = page==='fleet';
   const fuelBtn=document.getElementById('add-fuel-btn');
   const recBtn=document.getElementById('add-record-btn');
-  if(fuelBtn) fuelBtn.style.display=onSettings?'none':'';
-  if(recBtn) recBtn.style.display=onSettings?'none':'';
+  if(fuelBtn) fuelBtn.style.display=(onSettings||onFleet)?'none':'';
+  if(recBtn) recBtn.style.display=(onSettings||onFleet)?'none':'';
   closeSidebarOnMobile();
+  renderCarSwitcher();
   renderPage();
 }
 
 function renderPage(){
   const car=getCar(state.currentCarId);
-  const settingsLabel = state.lang==='cs'?'Nastavení':'Settings';
-  const titles={dashboard:t('dashboard'),records:t('records'),fuel:t('fuel'),analytics:t('analytics'),reminders:t('reminders'),settings:settingsLabel};
-  document.getElementById('page-title').innerHTML=titles[state.currentPage]+(car&&state.currentPage!=='settings'?` <span>— ${car.make||''} ${car.model||car.name||''} ${car.plate?'('+car.plate+')':''}</span>`:'');
-  const pages={dashboard:renderDashboard,records:renderRecords,fuel:renderFuelPage,analytics:renderAnalytics,reminders:renderRemindersPage,settings:renderSettings};
+  const cs=state.lang==='cs';
+  const page=state.currentPage;
+  const pageNames={
+    fleet:cs?'Přehled vozů':'Fleet',
+    dashboard:t('dashboard'),records:t('records'),fuel:t('fuel'),
+    analytics:t('analytics'),reminders:t('reminders'),
+    settings:cs?'Nastavení':'Settings'
+  };
+  const pageName=pageNames[page]||page;
+  const activeCars=state.cars.filter(c=>c.status!=='inactive');
+
+  let subtitle='';
+  if(page==='analytics'){
+    const v=state.analyticsCarId;
+    if(!v) subtitle=cs?`Všechna aktivní (${activeCars.length})`:`All active (${activeCars.length})`;
+    else if(v==='__all__') subtitle=cs?`Všechna vozidla (${state.cars.length})`:`All vehicles (${state.cars.length})`;
+    else{ const c=getCar(v); subtitle=c?`${c.make||''} ${c.model||''}`.trim():''; }
+  } else if(page==='reminders'){
+    const v=state.remindersCarId;
+    if(!v) subtitle=cs?`Všechna aktivní (${activeCars.length})`:`All active (${activeCars.length})`;
+    else{ const c=getCar(v); subtitle=c?`${c.make||''} ${c.model||''}`.trim():''; }
+  } else if(!['settings','fleet'].includes(page)&&car){
+    subtitle=`${car.make||''} ${car.model||car.name||''} ${car.plate?'('+car.plate+')':''}`.trim();
+  }
+
+  document.getElementById('page-title').innerHTML=
+    pageName+(subtitle?` <span>— ${subtitle}</span>`:'');
+
+  const pages={fleet:renderFleet,dashboard:renderDashboard,records:renderRecords,fuel:renderFuelPage,analytics:renderAnalytics,reminders:renderRemindersPage,settings:renderSettings};
   document.getElementById('content').innerHTML='';
-  pages[state.currentPage]?.();
+  pages[page]?.();
+}
+
+// ─── FLEET DASHBOARD ─────────────────────────────────────────
+function renderFleet(){
+  const el=document.getElementById('content');
+  const cs=state.lang==='cs';
+  const sortCars = arr => arr.sort((a,b)=>`${a.make} ${a.model}`.localeCompare(`${b.make} ${b.model}`,'cs'));
+  const activeCars=sortCars(state.cars.filter(c=>c.status!=='inactive'));
+  const inactiveCars=sortCars(state.cars.filter(c=>c.status==='inactive'));
+  const allFleetCars=[...activeCars,...inactiveCars];
+
+  if(!allFleetCars.length){
+    el.innerHTML=`<div class="empty"><div class="empty-icon">🚗</div>
+      <p>${cs?'Žádná aktivní vozidla. Přidejte první vozidlo.':'No active vehicles. Add your first vehicle.'}</p>
+      <button class="btn btn-primary" style="margin-top:16px;" onclick="openCarModal()">${cs?'Přidat vozidlo':'Add vehicle'}</button>
+    </div>`;
+    return;
+  }
+
+  const today=new Date();today.setHours(0,0,0,0);
+
+  function docStatus(date,warnDays){
+    if(!date) return 'none';
+    const diff=Math.round((new Date(date+'T12:00:00')-today)/86400000);
+    return diff<0?'due':diff<(warnDays||30)?'warn':'ok';
+  }
+  function docLabel(name,date,warnDays){
+    if(!date) return `<span class="fleet-doc-pill none">${name}</span>`;
+    const sc=docStatus(date,warnDays);
+    const diff=Math.round((new Date(date+'T12:00:00')-today)/86400000);
+    const detail=diff<0?`−${Math.abs(diff)}d`:`+${diff}d`;
+    return `<span class="fleet-doc-pill ${sc}">${name} <span style="opacity:.8">${detail}</span></span>`;
+  }
+
+  const cardsMap={};
+  allFleetCars.forEach(car=>{
+    cardsMap[car.id]=(car=>{
+    const isActive=car.status!=='inactive';
+    const maxOdo=getMaxOdo(car.id);
+    const fuels=getCarFuels(car.id);
+    const lastFuel=fuels.length?[...fuels].sort((a,b)=>b.date.localeCompare(a.date))[0]:null;
+    const avgC=avgConsumptionVal(car.id);
+
+    // Oil km remaining
+    let oilHtml='';
+    if(isActive&&car.oilInterval&&car.oilLastKm){
+      const left=(car.oilLastKm+car.oilInterval)-maxOdo;
+      const sc=left<=0?'due':left<=(car.oilWarn||1000)?'warn':'ok';
+      const label=left<=0
+        ?`${cs?'Prošlé o':'Overdue by'} ${fmtNum(Math.abs(left))} km`
+        :`${fmtNum(left)} km`;
+      oilHtml=`<div class="fleet-row">
+        <span class="fleet-row-label">${cs?'Olej':'Oil'}</span>
+        <span class="fleet-row-val ${sc}">${label}</span>
+      </div>`;
+    }
+
+    // Last fuel
+    let fuelHtml='';
+    if(isActive&&lastFuel){
+      const diff=Math.round((today-new Date(lastFuel.date+'T12:00:00'))/86400000);
+      const when=diff===0?(cs?'dnes':'today'):diff===1?(cs?'včera':'yesterday'):`${diff} ${cs?'dní':'days'}`;
+      fuelHtml=`<div class="fleet-row">
+        <span class="fleet-row-label">${cs?'Tankování':'Last refuel'}</span>
+        <span class="fleet-row-val">${when} · ${fmtNum(lastFuel.liters,1)} l</span>
+      </div>`;
+    }
+
+    // Doc pills — only show docs that have a date set
+    const docHtml=`<div class="fleet-doc-row">
+      ${car.stk?docLabel('STK',car.stk,car.stkWarn):''}
+      ${car.pov?docLabel('POV',car.pov,car.povWarn):''}
+      ${car.emission?docLabel(cs?'Emise':'Emiss.',car.emission,car.emissionWarn):''}
+      ${car.insurance?docLabel(cs?'Havár.':'Comp.',car.insurance,car.insuranceWarn):''}
+    </div>`;
+
+    // Overall alert level — only for active cars
+    const docStatuses=isActive?[
+      docStatus(car.stk,car.stkWarn),docStatus(car.pov,car.povWarn),
+      docStatus(car.emission,car.emissionWarn),docStatus(car.insurance,car.insuranceWarn)
+    ]:[];
+    const oilLeft=isActive&&car.oilInterval&&car.oilLastKm?(car.oilLastKm+car.oilInterval)-maxOdo:999999;
+    const oilSc=oilLeft<=0?'due':oilLeft<=(car.oilWarn||1000)?'warn':'ok';
+    const allStatuses=isActive?[...docStatuses,oilSc]:[];
+    const cardAccent=!isActive?'var(--border)':allStatuses.includes('due')?'var(--red)':allStatuses.includes('warn')?'var(--amber)':'var(--border)';
+
+    return `<div class="fleet-card" style="border-color:${cardAccent}" onclick="selectCar('${car.id}')">
+      <div class="fleet-card-header">
+        <span class="fleet-card-dot" style="background:${car.color||'#888'}"></span>
+        <div class="fleet-card-title">
+          <div class="fleet-card-name">${car.make||''} ${car.model||''} ${car.year?'('+car.year+')':''}</div>
+          <div class="fleet-card-sub">${car.plate||'—'}</div>
+        </div>
+        <span class="fleet-card-km">${fmtNum(maxOdo)} km</span>
+      </div>
+      <div class="fleet-card-body">
+        ${docHtml}
+        ${oilHtml}
+        ${fuelHtml}
+        ${isActive&&avgC>0?`<div class="fleet-row">
+          <span class="fleet-row-label">${cs?'Průměrná spotřeba':'Avg consumption'}</span>
+          <span class="fleet-row-val">${fmtNum(avgC,1)} l/100 km</span>
+        </div>`:''}
+      </div>
+      <div class="fleet-card-footer" style="${!isActive?'opacity:.6':''}">
+        <span class="status-badge ${car.status||'active'}">${car.status==='inactive'?(cs?'Neaktivní':'Inactive'):(cs?'Aktivní':'Active')}</span>
+        <span style="font-size:.72rem;color:var(--text2)">${cs?'Kliknutím zobrazit detail →':'Click for detail →'}</span>
+      </div>
+    </div>`;
+  })(car);
+  });
+
+  // ── Fleet highlight statistics ───────────────────
+  const allActive=state.cars.filter(c=>c.status!=='inactive');
+  const fleetTotalCost=allActive.reduce((s,c)=>s+getServiceCost(c.id)+getTotalFuelCost(c.id)+getPurchaseCost(c.id),0);
+  const fleetTotalKm=allActive.reduce((s,c)=>s+getKmDriven(c.id),0);
+  // Nejvýdajnější vůz (servis+palivo+nákup)
+  const costByCar=allActive.map(c=>({car:c,cost:getServiceCost(c.id)+getTotalFuelCost(c.id)+getPurchaseCost(c.id)}))
+    .sort((a,b)=>b.cost-a.cost);
+  const topCar=costByCar[0];
+  // Průměrná cena za km (vážená — celkové náklady / celkové km, bez nákupu)
+  const fleetRunCost=allActive.reduce((s,c)=>s+getServiceCost(c.id)+getTotalFuelCost(c.id),0);
+  const fleetCostPerKm=fleetTotalKm>0?fleetRunCost/fleetTotalKm:0;
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+      <div></div>
+      <button class="btn btn-ghost" onclick="openCarModal()" style="font-size:.82rem;">
+        + ${cs?'Přidat vozidlo':'Add vehicle'}
+      </button>
+    </div>
+    ${''}
+    ${activeCars.length?`<div class="section-title" style="margin-bottom:12px;">${cs?'Aktivní vozidla':'Active vehicles'}</div><div class="fleet-grid" style="margin-bottom:28px;">${activeCars.map(c=>cardsMap[c.id]).join('')}</div>`:''}
+    ${inactiveCars.length?`<div class="section-title" style="margin-bottom:12px;color:var(--text2)">${cs?'Neaktivní vozidla':'Inactive vehicles'}</div><div class="fleet-grid">${inactiveCars.map(c=>cardsMap[c.id]).join('')}</div>`:''}`;
 }
 
 // ─── DASHBOARD ───────────────────────────────────────────────
@@ -1018,6 +1394,10 @@ function renderDashboard(){
   const avgConsumption=avgConsumptionVal(car.id); // metoda plné nádrže
 
   const alerts=buildAlerts(car);
+  // Přidat automatické připomínky přezutí do alertů dashboardu
+  getAutoReminders(car).filter(r=>r.id.includes('tire')).forEach(r=>{
+    alerts.push({level:r.sc==='due'?'danger':'warn', title:r.name, detail:r.detail});
+  });
   const alertsHtml=alerts.length?`<div class="alerts-list">${alerts.map(a=>`
     <div class="alert-item ${a.level}">
       <span class="alert-icon">${a.level==='danger'?'⚠':'◎'}</span>
@@ -1059,9 +1439,11 @@ function renderDashboard(){
     </div>
 
     <div class="doc-row">
+      ${car.status==='inactive'?'':`
       ${docCard(t('stk'),car.stk,car.stkWarn)}
       ${docCard(t('emission'),car.emission,car.emissionWarn)}
       ${docCard(t('pov'),car.pov,car.povWarn)}
+      `}
     </div>
 
     <div class="stats-grid">
@@ -1307,26 +1689,43 @@ function changeFuelPage(d){state.fuelPage+=d;renderFuelPage();}
 // ─── ANALYTICS ───────────────────────────────────────────────
 function renderAnalytics(){
   const el=document.getElementById('content');
-  const car=getCar(state.currentCarId);
-  if(!car){el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><p>${t('no_car')}</p></div>`;return;}
-  const recs=getCarRecords(car.id);
-  const fuels=getCarFuels(car.id);
-  if(!recs.length&&!fuels.length){el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><p>${t('no_records')}</p></div>`;return;}
-
   const cs=state.lang==='cs';
 
-  // Výpočty
-  // Výpočty — sdílené helper funkce
-  const purchaseCost=getPurchaseCost(car.id);
-  const serviceCost=getServiceCost(car.id);
-  const fuelCost=getTotalFuelCost(car.id);
+  // Vehicle picker
+  const allActiveCars=state.cars.filter(c=>c.status!=='inactive');
+  if(!allActiveCars.length&&!state.cars.length){
+    el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><p>${t('no_car')}</p></div>`;return;
+  }
+  // Normalize analyticsCarId
+  if(state.analyticsCarId&&state.analyticsCarId!=='__all__'&&!getCar(state.analyticsCarId)) state.analyticsCarId=null;
+  const selectedCars=state.analyticsCarId==='__all__'
+    ?state.cars
+    :state.analyticsCarId?[getCar(state.analyticsCarId)].filter(Boolean):allActiveCars;
+
+  // Agregace dat přes vybraná vozidla
+  const recs=selectedCars.flatMap(c=>getCarRecords(c.id));
+  const fuels=selectedCars.flatMap(c=>getCarFuels(c.id));
+  if(!recs.length&&!fuels.length){
+    el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><p>${t('no_records')}</p></div>`;return;
+  }
+
+  // Výpočty — agregované přes vybraná vozidla
+  const purchaseCost=selectedCars.reduce((s,c)=>s+getPurchaseCost(c.id),0);
+  const serviceCost=selectedCars.reduce((s,c)=>s+getServiceCost(c.id),0);
+  const fuelCost=selectedCars.reduce((s,c)=>s+getTotalFuelCost(c.id),0);
   const total=purchaseCost+serviceCost+fuelCost;
   const totalWithoutPurchase=serviceCost+fuelCost;
-  const maxOdo=getMaxOdo(car.id);
-  const kmDriven=getKmDriven(car.id);
-  const totalLiters=getTotalLiters(car.id);
-  const consumptions=calcConsumptions(car.id);
-  const avgC=avgConsumptionVal(car.id);
+  // km — pro jedno auto přesně, pro více aut suma
+  const kmDriven=selectedCars.reduce((s,c)=>s+getKmDriven(c.id),0);
+  const totalLiters=selectedCars.reduce((s,c)=>s+getTotalLiters(c.id),0);
+  // Průměrná cena za litr
+  const avgPricePerLiter=totalLiters>0?fuelCost/totalLiters:0;
+  // Průměrná spotřeba — pro jedno auto přesnou metodou plné nádrže, pro více aut vážený průměr
+  const singleCarId=(state.analyticsCarId&&state.analyticsCarId!=='__all__')?state.analyticsCarId:null;
+  const avgC=singleCarId
+    ?avgConsumptionVal(singleCarId)
+    :(kmDriven>0&&totalLiters>0?totalLiters/kmDriven*100:0);
+  const consumptions=singleCarId?calcConsumptions(singleCarId):[];
 
   // Měsíční data
   // Měsíční servis (bez nákupu vozidla)
@@ -1399,7 +1798,8 @@ function renderAnalytics(){
 
             // Average (excl purchase)
             const avgPerMonth=monthCount>0?Math.round((serviceCost+fuelCost)/monthCount):0;
-            const avgPct=(avgPerMonth/chartMax*100).toFixed(1);
+            // Scale avgPct for absolute positioning in 150px container vs 128px grid area
+            const avgPct=(avgPerMonth/chartMax*(150-22)/150*100).toFixed(1);
 
             const gridHtml=ticks.slice(1).reverse().map(()=>'<div class="bar-chart-gridline"></div>').join('');
             const yHtml=ticks.slice().reverse().map(v=>'<div class="bar-chart-ylabel">'+fmtTick(v)+'</div>').join('');
@@ -1442,14 +1842,37 @@ function renderAnalytics(){
       </div>
     </div>
 
-    <div class="stats-grid" style="margin-bottom:0">
+    <div class="section-title" style="margin-top:26px">${singleCarId?(cs?'Vozidlo':'Vehicle'):(cs?'Vozidla':'Vehicles')}</div>
+    <div class="stats-grid" style="margin-bottom:26px">
+      ${singleCarId?`<div class="stat-card blue" title="${cs?'Aktuální stav tachometru':'Current odometer reading'}">
+        <div class="stat-label">${cs?'Stav tachometru':'Odometer'}</div>
+        <div class="stat-value small">${fmtNum(getMaxOdo(singleCarId))}</div>
+        <div class="stat-sub">km</div>
+      </div>`:``}
+      ${!singleCarId?`<div class="stat-card blue" title="${cs?'Počet vozidel zahrnutých do výpočtu':'Number of vehicles included in the calculation'}">
+        <div class="stat-label">${cs?'Vozidel':'Vehicles'}</div>
+        <div class="stat-value small">${selectedCars.length}</div>
+        <div class="stat-sub">${cs?'ve výběru':'selected'}</div>
+      </div>`:``}
+      <div class="stat-card" style="border-top:2px solid var(--blue)" title="${cs?'Celkový počet km ujetých od počátečního stavu tachometru':'Total km driven since starting odometer'}">
+        <div class="stat-label">${cs?'Celkem ujeto':'Total driven'}</div>
+        <div class="stat-value small">${fmtNum(kmDriven)}</div>
+        <div class="stat-sub">km${!singleCarId?` · ${cs?'suma':'sum'}`:''}</div>
+      </div>
+      <div class="stat-card" style="border-top:2px solid var(--amber)" title="${cs?'Průměrný roční nájezd: celkem ujeto ÷ počet let (aktivní měsíce ÷ 12)':'Average annual mileage: total km ÷ years (active months ÷ 12)'}">
+        <div class="stat-label">${cs?'Průměr km / rok':'Avg km / year'}</div>
+        <div class="stat-value small">${fmtNum(monthCount>0?Math.round(kmDriven/(monthCount/12)):0)}</div>
+        <div class="stat-sub">km</div>
+      </div>
+    </div>
 
+    <div class="section-title">${cs?'Náklady':'Costs'}</div>
+    <div class="stats-grid" style="margin-bottom:26px">
       <div class="stat-card yellow" title="${cs?'Součet všech výdajů: servis + palivo + nákup vozidla':'Sum of all expenses: service + fuel + vehicle purchase'}">
         <div class="stat-label">${t('total_spent')}</div>
         <div class="stat-value small">${fmtMoney(total)}</div>
         <div class="stat-sub">${cs?'vč. nákupu vozidla':'incl. vehicle purchase'}</div>
       </div>
-
       ${purchaseCost>0?`<div class="stat-card" style="border-top:2px solid var(--accent2)" title="${cs?'Pořizovací cena vozidla (kategorie Nákup vozidla)':'Vehicle purchase price (category Vehicle purchase)'}">
         <div class="stat-label">${cs?'Nákup vozidla':'Vehicle purchase'}</div>
         <div class="stat-value small">${fmtMoney(purchaseCost)}</div>
@@ -1459,51 +1882,61 @@ function renderAnalytics(){
       <div class="stat-card green" title="${cs?'Cena za ujetý km bez nákupu vozidla: (servis + palivo) ÷ km':'Cost per driven km excl. vehicle purchase: (service + fuel) ÷ km'}">
         <div class="stat-label">${t('cost_per_km')}</div>
         <div class="stat-value small">${fmtMoney(kmDriven>0?totalWithoutPurchase/kmDriven:0)}</div>
-        <div class="stat-sub">${fmtNum(kmDriven)} km · ${cs?'bez nákupu':'excl. purchase'}</div>
+        <div class="stat-sub">${fmtNum(kmDriven)} km${singleCarId?` · ${cs?'bez nákupu':'excl. purchase'}`:` · ${cs?'suma km':'total km'}`}</div>
       </div>
-
-      <div class="stat-card orange" title="${cs?'Průměrná spotřeba vypočtená z plných natankování (metoda plné nádrže)':'Average consumption calculated from full tank fill-ups (full tank method)'}">
-        <div class="stat-label">${t('avg_consumption')}</div>
-        <div class="stat-value small">${avgC>0?fmtNum(avgC,1)+' l/100km':'—'}</div>
-        <div class="stat-sub">${fuels.length} ${cs?'záznamů tankování':'fuel entries'}</div>
-      </div>
-
       <div class="stat-card blue" title="${cs?'Průměrné celkové výdaje (servis + palivo + nákup) za kalendářní měsíc':'Average total expenses (service + fuel + purchase) per calendar month'}">
         <div class="stat-label">${cs?'Průměr / měsíc':'Avg / month'}</div>
         <div class="stat-value small">${fmtMoney(monthCount?total/monthCount:0)}</div>
         <div class="stat-sub">${cs?'vč. nákupu vozidla':'incl. vehicle purchase'}</div>
       </div>
+    </div>
 
-      <div class="stat-card" style="border-top:2px solid var(--blue)" title="${cs?'Průměrné náklady na servis (bez nákupu vozidla a paliva) za kalendářní měsíc':'Average service costs (excl. vehicle purchase and fuel) per calendar month'}">
+    <div class="section-title">${cs?'Servis':'Service'}</div>
+    <div class="stats-grid" style="margin-bottom:26px">
+      <div class="stat-card" style="border-top:2px solid var(--red)" title="${cs?'Celkové náklady na servis a opravy (bez nákupu vozidla a paliva)':'Total service and repair costs (excl. vehicle purchase and fuel)'}">
+        <div class="stat-label">${cs?'Celkem servis':'Total service'}</div>
+        <div class="stat-value small">${fmtMoney(serviceCost)}</div>
+        <div class="stat-sub">${cs?'bez nákupu a paliva':'excl. purchase & fuel'}</div>
+      </div>
+      <div class="stat-card" style="border-top:2px solid var(--blue)" title="${cs?'Průměrné náklady na servis (bez nákupu vozidla a paliva) za kalendářní měsíc':'Average service costs per calendar month'}">
         <div class="stat-label">${cs?'Servis / měsíc':'Service / month'}</div>
         <div class="stat-value small">${fmtMoney(avgServicePerMonth)}</div>
         <div class="stat-sub">${cs?'průměr bez paliva':'avg excl. fuel'}</div>
       </div>
+      <div class="stat-card" style="border-top:2px solid var(--red)" title="${cs?'Náklady na servis vztažené na ujetý km: servis ÷ km':'Service cost per driven km: service ÷ km'}">
+        <div class="stat-label">${cs?'Servis za km':'Service cost/km'}</div>
+        <div class="stat-value small">${fmtMoney(kmDriven>0?serviceCost/kmDriven:0)}</div>
+        <div class="stat-sub">${cs?'servis ÷ km':'service ÷ km'}</div>
+      </div>
+    </div>
 
+    <div class="section-title">${cs?'Palivo':'Fuel'}</div>
+    <div class="stats-grid" style="margin-bottom:0">
+      <div class="stat-card" style="border-top:2px solid var(--accent)" title="${cs?'Celkové náklady na palivo':'Total fuel costs'}">
+        <div class="stat-label">${cs?'Celkem palivo':'Total fuel'}</div>
+        <div class="stat-value small">${fmtMoney(fuelCost)}</div>
+        <div class="stat-sub">${fmtNum(totalLiters,0)} l ${cs?'celkem':'total'}</div>
+      </div>
       <div class="stat-card" style="border-top:2px solid var(--accent)" title="${cs?'Průměrné náklady na palivo za kalendářní měsíc':'Average fuel costs per calendar month'}">
         <div class="stat-label">${cs?'Palivo / měsíc':'Fuel / month'}</div>
         <div class="stat-value small">${fmtMoney(avgFuelPerMonth)}</div>
         <div class="stat-sub">${cs?'průměr za tankování':'avg fuel spend'}</div>
       </div>
-
       <div class="stat-card" style="border-top:2px solid var(--green)" title="${cs?'Cena za km pouze z nákladů na palivo — palivo ÷ ujetých km':'Fuel-only cost per km — total fuel spend ÷ driven km'}">
         <div class="stat-label">${cs?'Cena za km (palivo)':'Fuel cost/km'}</div>
         <div class="stat-value small">${fmtMoney(kmDriven>0?fuelCost/kmDriven:0)}</div>
         <div class="stat-sub">${cs?'pouze palivo':'fuel only'}</div>
       </div>
-
-      <div class="stat-card" style="border-top:2px solid var(--blue)" title="${cs?'Celkový počet kilometrů ujetých s tímto vozidlem od počátečního stavu tachometru':'Total kilometres driven with this vehicle since starting odometer'}">
-        <div class="stat-label">${cs?'Celkem ujeto':'Total driven'}</div>
-        <div class="stat-value small">${fmtNum(kmDriven)}</div>
-        <div class="stat-sub">km</div>
+      <div class="stat-card orange" title="${singleCarId?(cs?'Průměrná spotřeba vypočtená z plných natankování (metoda plné nádrže)':'Average consumption calculated from full fill-ups (full tank method)'):(cs?'Vážený průměr spotřeby: celkem litrů ÷ celkem km přes vybraná vozidla':'Weighted avg consumption: total litres ÷ total km across selected vehicles')}">
+        <div class="stat-label">${t('avg_consumption')}</div>
+        <div class="stat-value small">${avgC>0?fmtNum(avgC,1)+' l/100km':'—'}</div>
+        <div class="stat-sub">${singleCarId?fuels.length+' '+(cs?'záznamů tankování':'fuel entries'):fmtNum(totalLiters,0)+' l / '+fmtNum(kmDriven)+' km'}</div>
       </div>
-
-      <div class="stat-card" style="border-top:2px solid var(--amber)" title="${cs?'Průměrný roční nájezd: celkem ujeto ÷ počet let (aktivní měsíce ÷ 12)':'Average annual mileage: total km ÷ number of years (active months ÷ 12)'}">
-        <div class="stat-label">${cs?'Průměr km / rok':'Avg km / year'}</div>
-        <div class="stat-value small">${fmtNum(monthCount>0?Math.round(kmDriven/(monthCount/12)):0)}</div>
-        <div class="stat-sub">km</div>
-      </div>
-
+      ${avgPricePerLiter>0?`<div class="stat-card" style="border-top:2px solid var(--green)" title="${cs?'Průměrná cena za litr: celkové náklady na palivo ÷ celkový počet litrů':'Average price per litre: total fuel spend ÷ total litres'}">
+        <div class="stat-label">${cs?'Cena za litr':'Price / litre'}</div>
+        <div class="stat-value small">${fmtNum(avgPricePerLiter,2)} Kč/l</div>
+        <div class="stat-sub">${fmtNum(totalLiters,0)} l ${cs?'celkem':'total'}</div>
+      </div>`:''}
     </div>`;
   // Smart tooltip positioning — runs after DOM is painted
   requestAnimationFrame(positionChartTooltips);
@@ -1542,41 +1975,125 @@ function positionChartTooltips(){
 }
 
 // ─── REMINDERS PAGE ──────────────────────────────────────────
+// ─── AUTO-GENERATED REMINDERS ────────────────────────────────
+// Dynamicky generované připomínky — nevyžadují ukládání do state
+function getAutoReminders(car){
+  const cs=state.lang==='cs';
+  const today=new Date();today.setHours(0,0,0,0);
+  const reminders=[];
+
+  function dateRem(name,isoDate,warnDays=30,icon='📋'){
+    if(!isoDate) return;
+    const d=new Date(isoDate+'T12:00:00');
+    const diff=Math.round((d-today)/86400000);
+    const sc=diff<0?'due':diff<warnDays?'warn':'ok';
+    const detail=diff<0
+      ?`${Math.abs(diff)} ${t('days')} ${cs?'prošlé':'overdue'}`
+      :`${diff} ${t('days')}`;
+    reminders.push({id:'auto_'+name+'_'+car.id, carId:car.id, name, icon,
+      sc, st:diff<0?t('overdue'):diff<warnDays?t('due_soon'):t('ok'),
+      detail, meta:fmtDate(isoDate), auto:true});
+  }
+
+  dateRem(cs?'STK':'MOT', car.stk, car.stkWarn||30, '🔧');
+  dateRem(cs?'Emise':'Emissions', car.emission, car.emissionWarn||30, '🌿');
+  dateRem(cs?'Pojištění POV':'Liability ins.', car.pov, car.povWarn||30, '🛡️');
+  dateRem(cs?'Havarijní pojištění':'Comprehensive ins.', car.insurance, car.insuranceWarn||30, '🛡️');
+
+  // Přezutí pneumatik — pouze pokud je zapnuto v nastavení a vozidlo je aktivní
+  if(state.settings.tireReminders && car.status!=='inactive'){
+    const year=today.getFullYear();
+    // Letní přezutí: upozornit 30 dní před 31.3.
+    const summerDeadline=new Date(year, 2, 31); // 31.3.
+    const winterDeadline=new Date(year, 10, 1); // 1.11.
+    // Pokud jsme v zimním období (1.11.–31.3.), upozornit na letní přezutí
+    const inWinter=today.getMonth()>=10||today.getMonth()<=2; // Nov–Mar
+    // Příští letní přezutí
+    let nextSummer=new Date(year, 2, 31);
+    if(today>nextSummer) nextSummer=new Date(year+1, 2, 31);
+    const diffSummer=Math.round((nextSummer-today)/86400000);
+    if(diffSummer<=30){
+      const sc=diffSummer<0?'due':diffSummer<7?'warn':'warn';
+      reminders.push({id:'auto_tire_summer_'+car.id, carId:car.id,
+        name:cs?'Přezutí na letní pneumatiky':'Switch to summer tyres', icon:'🔄',
+        sc, st:diffSummer<0?t('overdue'):t('due_soon'),
+        detail:diffSummer<0?`${Math.abs(diffSummer)} ${t('days')} ${cs?'prošlé':'overdue'}`:`${diffSummer} ${t('days')}`,
+        meta:cs?'Termín: 31. 3.':'Deadline: 31 Mar', auto:true});
+    }
+    // Příští zimní přezutí
+    let nextWinter=new Date(year, 10, 1);
+    if(today>nextWinter) nextWinter=new Date(year+1, 10, 1);
+    const diffWinter=Math.round((nextWinter-today)/86400000);
+    if(diffWinter<=30){
+      const sc=diffWinter<0?'due':'warn';
+      reminders.push({id:'auto_tire_winter_'+car.id, carId:car.id,
+        name:cs?'Přezutí na zimní pneumatiky':'Switch to winter tyres', icon:'❄️',
+        sc, st:diffWinter<0?t('overdue'):t('due_soon'),
+        detail:diffWinter<0?`${Math.abs(diffWinter)} ${t('days')} ${cs?'prošlé':'overdue'}`:`${diffWinter} ${t('days')}`,
+        meta:cs?'Termín: 1. 11.':'Deadline: 1 Nov', auto:true});
+    }
+  }
+
+  return reminders.filter(r=>r.sc!=='ok'); // Zobrazit pouze warn a due
+}
+
 function renderRemindersPage(){
   const el=document.getElementById('content');
-  const car=getCar(state.currentCarId);
-  const reminders=car?state.reminders.filter(r=>r.carId===car.id):state.reminders;
-  const maxOdo=car?getMaxOdo(car.id):0;
+  const cs=state.lang==='cs';
+
+  // No inline picker — uses title-bar picker injected by renderPage()
+  const pickedCar=state.remindersCarId?getCar(state.remindersCarId):null;
+  const allActiveCarsRem=state.cars.filter(c=>c.status!=='inactive');
+  const reminderCars=pickedCar?[pickedCar]:allActiveCarsRem;
+  const manualReminders=reminderCars.flatMap(c=>state.reminders.filter(r=>r.carId===c.id));
+  const maxOdo=pickedCar?getMaxOdo(pickedCar.id):0;
   const today=new Date();today.setHours(0,0,0,0);
+  const autoReminders=reminderCars.flatMap(c=>getAutoReminders(c));
+
+  function renderReminderCard(rem, isAuto=false){
+    let sc=rem.sc||'ok', st=rem.st||t('ok'), detail=rem.detail||'';
+    if(!isAuto){
+      const remCarOdo=rem.carId?getMaxOdo(rem.carId):maxOdo;
+      if(rem.type==='km'){
+        const left=(rem.lastDone||0)+(rem.interval||0)-remCarOdo;
+        if(left<=0){sc='due';st=t('overdue');}else if(left<=(rem.warnAt||1000)){sc='warn';st=t('due_soon');}else{sc='ok';st=t('ok');}
+        detail=left<=0?`${fmtNum(Math.abs(left))} km ${cs?'prošlé':'overdue'}`:
+               `${fmtNum(left)} km ${t('km_left')}`;
+      }else if(rem.type==='date'&&rem.date){
+        const d=new Date(rem.date+'T12:00:00');const diff=Math.round((d-today)/86400000);
+        if(diff<0){sc='due';st=t('overdue');}else if(diff<30){sc='warn';st=t('due_soon');}else{sc='ok';st=t('ok');}
+        detail=diff<0?`${Math.abs(diff)} ${t('days')} ${cs?'prošlé':'overdue'}`:`${diff} ${t('days')}`;
+      }
+    }
+    const carName=getCar(rem.carId);
+    const carLabel=carName?`${carName.make||''} ${carName.model||''}`.trim():'';
+    return`<div class="reminder-card ${sc}">
+      ${isAuto?`<div class="reminder-name" style="display:flex;align-items:center;gap:5px;"><span>${rem.icon||'📋'}</span>${carLabel}</div>`
+              :`<div class="reminder-name">${carLabel}</div>`}
+      <div class="reminder-val">${rem.name}</div>
+      <div class="reminder-meta">${isAuto?rem.meta:(rem.type==='km'?`${fmtNum(rem.lastDone||0)} + ${fmtNum(rem.interval||0)} km`:fmtDate(rem.date))}</div>
+      <div class="reminder-meta">${detail}</div>
+      <div class="reminder-status ${sc}">${st}</div>
+      ${!isAuto?`<button class="row-btn del" onclick="deleteReminder('${rem.id}')" style="opacity:1;margin-top:8px;" title="${cs?'Smazat připomínku':'Delete reminder'}">✕</button>`:''}
+    </div>`;
+  }
 
   el.innerHTML=`
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
       <span class="section-title" style="margin:0;flex:1;">${t('reminders_title')}</span>
       <button class="btn btn-primary" onclick="openReminderModal()">${t('add_reminder')}</button>
     </div>
-    ${!reminders.length?`<div class="empty"><div class="empty-icon">◎</div><p>${t('no_reminders')}</p></div>`:`
-    <div class="reminders-grid">
-      ${reminders.map(rem=>{
-        let sc='ok',st=t('ok'),detail='';
-        if(rem.type==='km'){
-          const left=(rem.lastDone||0)+(rem.interval||0)-maxOdo;
-          if(left<=0){sc='due';st=t('overdue');}else if(left<=(rem.warnAt||1000)){sc='warn';st=t('due_soon');}
-          detail=left<=0?`${fmtNum(Math.abs(left))} km ${state.lang==='cs'?'prošlé':'overdue'}`:`${fmtNum(left)} km ${t('km_left')}`;
-        }else if(rem.type==='date'&&rem.date){
-          const d=new Date(rem.date+'T12:00:00');const diff=Math.round((d-today)/86400000);
-          if(diff<0){sc='due';st=t('overdue');}else if(diff<30){sc='warn';st=t('due_soon');}
-          detail=diff<0?`${Math.abs(diff)} ${t('days')} ${state.lang==='cs'?'prošlé':'overdue'}`:`${diff} ${t('days')}`;
-        }
-        return`<div class="reminder-card ${sc}">
-          <div class="reminder-name">${getCar(rem.carId)?.make||''} ${getCar(rem.carId)?.model||''}</div>
-          <div class="reminder-val">${rem.name}</div>
-          <div class="reminder-meta">${rem.type==='km'?`${fmtNum(rem.lastDone||0)} + ${fmtNum(rem.interval||0)} km`:fmtDate(rem.date)}</div>
-          <div class="reminder-meta">${detail}</div>
-          <div class="reminder-status ${sc}">${st}</div>
-          <button class="row-btn del" onclick="deleteReminder('${rem.id}')" style="opacity:1;margin-top:8px;" title="${state.lang==='cs'?'Smazat připomínku':'Delete reminder'}">✕</button>
-        </div>`;
-      }).join('')}
-    </div>`}`;
+
+    ${autoReminders.length?`
+      <div class="section-title">${cs?'Automatické připomínky':'Automatic reminders'}</div>
+      <div class="reminders-grid" style="margin-bottom:24px;">
+        ${autoReminders.map(r=>renderReminderCard(r,true)).join('')}
+      </div>`:''}
+
+    <div class="section-title">${cs?'Vlastní připomínky':'Custom reminders'}</div>
+    ${!manualReminders.length
+      ?`<div class="empty" style="padding:28px 20px;"><div class="empty-icon">◎</div><p>${t('no_reminders')}</p></div>`
+      :`<div class="reminders-grid">${manualReminders.map(r=>renderReminderCard(r,false)).join('')}</div>`}`;
 }
 
 // ─── MODALS ──────────────────────────────────────────────────
@@ -1919,6 +2436,24 @@ function renderSettings(){
       </div>
     </div>
 
+    <div class="section-title">${cs?'Připomínky':'Reminders'}</div>
+    <div class="settings-card" style="max-width:480px;margin-bottom:28px;">
+      <div class="settings-card-title" style="margin-bottom:6px;">${cs?'Přezutí pneumatik':'Tyre change reminders'}</div>
+      <div class="settings-card-desc" style="margin-bottom:12px;">${cs
+        ?'Automaticky upozorní 30 dní před 1.\u00a011. (zimní) a před 31.\u00a03. (letní) pro každé aktivní vozidlo.'
+        :'Automatically alerts 30 days before 1 Nov (winter) and 31 Mar (summer) for each active vehicle.'}</div>
+      <div class="toggle-wrap">
+        <label class="toggle">
+          <input type="checkbox" id="setting-tire-reminders" ${state.settings.tireReminders?'checked':''}
+            onchange="state.settings.tireReminders=this.checked;saveData();renderPage();">
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label" style="color:${state.settings.tireReminders?'var(--green)':'var(--text2)'}">
+          ${state.settings.tireReminders?(cs?'Zapnuto':'Enabled'):(cs?'Vypnuto':'Disabled')}
+        </span>
+      </div>
+    </div>
+
     <div class="section-title">${cs?'Data a import':'Data & import'}</div>
     <div class="settings-grid" style="margin-bottom:28px;">
       <div class="settings-card">
@@ -1960,8 +2495,8 @@ function renderSettings(){
     <div class="section-title">${cs?'O aplikaci':'About'}</div>
     <div class="settings-card" style="max-width:480px;">
       <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-      <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.5</span></div>
-      <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260316-004</span></div>
+      <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.6.0</span></div>
+      <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260318-011</span></div>
       <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
       <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
       <div class="settings-info-row"><span>${cs?'Dokumentace':'Documentation'}</span><span><a href="README.md" target="_blank" style="color:var(--accent);text-decoration:none;">README.md ↗</a></span></div>
@@ -1969,7 +2504,89 @@ function renderSettings(){
     </div>`;
 }
 
-loadData();renderAll();
+// ─── AUTOCOMPLETE ────────────────────────────────────────────
+let acIndex = { make: -1, model: -1 };
+
+function acGetItems(field) {
+  if (field === 'make') return CAR_BRANDS;
+  const make = document.getElementById('c-make')?.value.trim();
+  return CAR_MODELS[make] || [];
+}
+
+function acFilter(field) {
+  const input = document.getElementById('c-' + field);
+  const list  = document.getElementById('ac-' + field + '-list');
+  if (!input || !list) return;
+  const q = input.value.trim().toLowerCase();
+  const items = acGetItems(field);
+  const matches = q
+    ? items.filter(i => i.toLowerCase().includes(q)).slice(0, 30)
+    : items.slice(0, 30);
+  acIndex[field] = -1;
+  if (!matches.length) { list.style.display = 'none'; return; }
+  list.innerHTML = matches.map((m, i) => {
+    const hi = q ? m.replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi'), '<strong>$1</strong>') : m;
+    return `<div class="ac-item" data-val="${m}" onmousedown="acPick('${field}','${m.replace(/'/g,"\\'")}')">` + hi + '</div>';
+  }).join('');
+  list.style.display = 'block';
+}
+
+function acPick(field, value) {
+  const input = document.getElementById('c-' + field);
+  const list  = document.getElementById('ac-' + field + '-list');
+  input.value = value;
+  list.style.display = 'none';
+  acIndex[field] = -1;
+  // When brand changes, reset and re-filter model
+  if (field === 'make') {
+    const modelInput = document.getElementById('c-model');
+    if (modelInput) modelInput.value = '';
+    acFilter('model');
+  }
+  input.dispatchEvent(new Event('change'));
+}
+
+function acKey(event, field) {
+  const list = document.getElementById('ac-' + field + '-list');
+  if (!list || list.style.display === 'none') return;
+  const items = list.querySelectorAll('.ac-item');
+  if (!items.length) return;
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    acIndex[field] = Math.min(acIndex[field] + 1, items.length - 1);
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    acIndex[field] = Math.max(acIndex[field] - 1, 0);
+  } else if (event.key === 'Enter' && acIndex[field] >= 0) {
+    event.preventDefault();
+    acPick(field, items[acIndex[field]].dataset.val);
+    return;
+  } else if (event.key === 'Escape') {
+    list.style.display = 'none'; return;
+  }
+  items.forEach((el, i) => el.classList.toggle('ac-selected', i === acIndex[field]));
+  if (acIndex[field] >= 0) items[acIndex[field]].scrollIntoView({ block: 'nearest' });
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', e => {
+  ['make','model'].forEach(f => {
+    const wrap = document.getElementById('ac-' + f + '-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+      const list = document.getElementById('ac-' + f + '-list');
+      if (list) list.style.display = 'none';
+    }
+  });
+  // Close car switcher dropdown
+  const dd=document.getElementById('csw-dropdown');
+  if(dd&&!dd.contains(e.target)){
+    const menu=document.getElementById('csw-menu');
+    const trigger=document.getElementById('csw-trigger');
+    if(menu&&menu.style.display!=='none'){menu.style.display='none';trigger?.classList.remove('open');trigger?.setAttribute('aria-expanded','false');}
+  }
+});
+
+loadData();setLang(state.lang);
 
 // ─── CSV IMPORT ───────────────────────────────────────────────
 
@@ -2257,6 +2874,87 @@ function confirmCsvImport(){
   closeModal('csv-modal');
   renderAll();
 }
+
+// ─── VEHICLE BRANDS & MODELS ─────────────────────────────────
+const CAR_BRANDS = [
+  // European mainstream
+  'Abarth','Alfa Romeo','Audi','BMW','Citroën','CUPRA','Dacia','DS',
+  'Ferrari','Fiat','Ford','Honda','Hyundai','Jaguar','Jeep','Kia',
+  'Lamborghini','Lancia','Land Rover','Lexus','Maserati','Mazda',
+  'Mercedes-Benz','MINI','Mitsubishi','Nissan','Opel','Peugeot',
+  'Porsche','Renault','SEAT','Škoda','Smart','Subaru','Suzuki',
+  'Tesla','Toyota','Volkswagen','Volvo',
+  // Premium & sports
+  'Aston Martin','Bentley','Bugatti','Ferrari','Koenigsegg','Lamborghini',
+  'Lotus','Maserati','McLaren','Morgan','Pagani','Rimac','Rolls-Royce',
+  'TVR','Wiesmann',
+  // American
+  'Buick','Cadillac','Chevrolet','Chrysler','Dodge','Ford','GMC',
+  'Hummer','Jeep','Lincoln','Mercury','Oldsmobile','Pontiac','RAM','Rivian',
+  // Asian — Japanese
+  'Daihatsu','Honda','Infiniti','Isuzu','Lexus','Mazda','Mitsubishi',
+  'Nissan','Subaru','Suzuki','Toyota',
+  // Asian — Korean
+  'Genesis','Hyundai','Kia','SsangYong',
+  // Asian — Chinese
+  'Aiways','BYD','Chery','GAC','Great Wall','Haval','Hongqi','JAC',
+  'Lynk & Co','MG','NIO','Ora','Xpeng','Zeekr',
+  // Asian — Other
+  'Proton','Tata',
+  // Eastern European & historical
+  'Datsun','FSO','Lada','Liaz','Praga','Rover','Saab','Skoda',
+  'Tatra','Trabant','Zastava','Škoda (historická)',
+  // New brands & EV
+  'Alpine','Fisker','Genesis','Polestar',
+  // Vans & commercial (common in records)
+  'Iveco','MAN','Vauxhall',
+  // Rare / collector
+  'AC','Ariel','Autobianchi','Avia','Bristol','Brilliance','De Tomaso',
+  'Saturn','Wiesmann',
+].filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a.localeCompare(b,'cs'));
+
+const CAR_MODELS = {
+  'Alfa Romeo':['33','75','145','146','147','155','156','159','164','166','Brera','GTA','GTV','Giulia','Giulietta','MiTo','Spider','Stelvio','Tonale'],
+  'Audi':['A1','A2','A3','A4','A4 Allroad','A5','A6','A6 Allroad','A7','A8','e-tron','e-tron GT','Q2','Q3','Q4 e-tron','Q5','Q5 Sportback','Q6','Q7','Q8','Q8 e-tron','R8','RS3','RS4','RS5','RS6','RS7','RS Q3','RS Q8','S1','S3','S4','S5','S6','S7','S8','SQ5','SQ7','SQ8','TT','TTS','TT RS'],
+  'BMW':['1','2','2 Active Tourer','3','3 GT','4','5','6','6 GT','7','8','i3','i4','i5','i7','iX','iX1','iX2','iX3','M1','M2','M3','M4','M5','M6','M8','X1','X2','X3','X3 M','X4','X4 M','X5','X5 M','X6','X6 M','X7','Z3','Z4'],
+  'Citroën':['AX','Berlingo','BX','C-Elysee','C1','C2','C3','C3 Aircross','C3 Picasso','C4','C4 Cactus','C4 Picasso','C4 Spacetourer','C5','C5 Aircross','C5 X','C6','C8','C-Crosser','C-Zero','Jumper','Jumpy','Nemo','Saxo','Synergie','Xantia','XM','Xsara','Xsara Picasso','ZX'],
+  'CUPRA':['Ateca','Born','Formentor','Leon','Terramar'],
+  'Dacia':['Bigster','Dokker','Duster','Jogger','Logan','Lodgy','Sandero','Sandero Stepway','Spring'],
+  'DS':['DS3','DS3 Crossback','DS4','DS5','DS7','DS7 Crossback','DS9'],
+  'Fiat':['124 Spider','127','128','500','500L','500X','Albea','Barchetta','Bravo','Brava','Coupe','Croma','Doblo','Ducato','Freemont','Grande Punto','Idea','Linea','Marea','Multipla','Palio','Panda','Punto','Scudo','Sedici','Stilo','Tipo','Ulysse'],
+  'Ford':['B-Max','C-Max','EcoSport','Edge','Escape','Everest','Explorer','F-150','Fiesta','Focus','Fusion','Galaxy','Grand C-Max','Ka','Ka+','Kuga','Maverick','Mondeo','Mustang','Mustang Mach-E','Puma','Ranger','S-Max','Tourneo','Transit','Transit Connect','Transit Custom','Transit Courier'],
+  'Honda':['Accord','City','Civic','CR-V','CR-Z','e','e:Ny1','FR-V','HR-V','Insight','Jazz','Legend','Logo','NSX','Pilot','Prelude','Stream'],
+  'Hyundai':['Bayon','Elantra','Getz','i10','i20','i20 N','i30','i30 N','i40','i50','IONIQ','IONIQ 5','IONIQ 6','IONIQ 9','ix20','ix35','ix55','Kona','Kona Electric','Nexo','Santa Cruz','Santa Fe','Sonata','Stargazer','Staria','Terracan','Trajet','Tucson','Veloster'],
+  'Jaguar':['E-Pace','E-Type','F-Pace','F-Type','I-Pace','S-Type','X-Type','XE','XF','XJ','XK'],
+  'Jeep':['Avenger','Cherokee','Commander','Compass','Gladiator','Grand Cherokee','Grand Wagoneer','Patriot','Renegade','Wrangler'],
+  'Kia':['Carens','Carnival','Ceed','EV3','EV6','EV9','Magentis','Niro','Optima','Picanto','ProCeed','Rio','Sorento','Soul','Sportage','Stinger','Stonic','Venga','XCeed'],
+  'Land Rover':['Defender','Discovery','Discovery Sport','Freelander','Range Rover','Range Rover Evoque','Range Rover Sport','Range Rover Velar'],
+  'Lexus':['CT','ES','GS','GX','IS','LC','LM','LS','LX','NX','RC','RX','RZ','UX'],
+  'Mazda':['2','3','5','6','BT-50','CX-3','CX-30','CX-5','CX-60','CX-7','CX-9','MX-3','MX-5','MX-30','RX-7','RX-8'],
+  'Mercedes-Benz':['A','B','C','CLA','CLE','CLS','E','EQA','EQB','EQC','EQE','EQS','G','GL','GLA','GLB','GLC','GLE','GLK','GLS','ML','R','S','SL','SLC','SLK','Sprinter','V','Vaneo','Viano','Vito'],
+  'MG':['3','4','5','6','7','EHS','HS','Marvel R','ZS','ZS EV'],
+  'MINI':['Cabrio','Clubman','Cooper','Countryman','Coupe','Hatch','John Cooper Works','Paceman','Roadster'],
+  'Mitsubishi':['3000 GT','ASX','Carisma','Colt','Eclipse','Eclipse Cross','Galant','Grandis','L200','L300','Lancer','Outlander','Pajero','Pajero Sport','Space Gear','Space Runner','Space Star','Space Wagon'],
+  'Nissan':['100 NX','200 SX','350Z','370Z','Almera','Ariya','Frontier','GT-R','Juke','Leaf','Maxima','Micra','Murano','Navara','Note','Pathfinder','Patrol','Pixo','Primera','Pulsar','Qashqai','Serena','Sunny','Terrano','Tiida','X-Trail'],
+  'Opel':['Adam','Agila','Ampera','Antara','Astra','Calibra','Cascada','Combo','Corsa','Crossland','Frontera','Grandland','Insignia','Kadett','Meriva','Mokka','Mokka-e','Movano','Omega','Rekord','Senator','Signum','Sintra','Tigra','Vectra','Vivaro','Zafira','Zafira Tourer'],
+  'Peugeot':['1007','104','107','108','2008','204','205','206','207','207 CC','208','3008','301','305','306','307','308','405','406','407','408','4007','4008','5008','504','505','508','607','806','807','Bipper','Expert','Partner','RCZ','Rifter','Traveller'],
+  'Polestar':['1','2','3','4','5','6'],
+  'Porsche':['356','718 Boxster','718 Cayman','911','918','928','944','959','964','993','996','997','Boxster','Cayenne','Cayman','Macan','Panamera','Taycan'],
+  'Renault':['Arkana','Austral','Captur','Clio','Espace','Express','Fluence','Freetrekker','Grand Modus','Grand Scenic','Kadjar','Kangoo','Koleos','Laguna','Latitude','Logan','Master','Megane','Megane E-Tech','Modus','Safrane','Scenic','Symbol','Trafic','Twingo','Twizy','Vel Satis','Wind','Zoe'],
+  'SEAT':['Alhambra','Altea','Altea XL','Arona','Ateca','Cordoba','Exeo','Ibiza','Inca','Leon','Leon Cupra','Mii','Tarraco','Terra','Toledo'],
+  'Škoda':['Citigo','Enyaq','Enyaq Coupé','Fabia','Fabia Combi','Fabia RS','Felicia','Kamiq','Karoq','Kodiaq','Octavia','Octavia Combi','Octavia RS','Rapid','Roomster','Scala','Superb','Superb Combi','Yeti'],
+  'Smart':['#1','#3','EQ','ForFour','ForTwo','Roadster'],
+  'Subaru':['BRZ','Forester','Impreza','Legacy','Levorg','Outback','SVX','Tribeca','WRX','XV'],
+  'Suzuki':['Alto','Baleno','Celerio','Grand Vitara','Ignis','Jimny','Kizashi','Liana','S-Cross','Splash','Swift','SX4','Vitara','Wagon R+'],
+  'Tesla':['Cybertruck','Model 3','Model S','Model X','Model Y','Roadster'],
+  'Toyota':['Auris','Auris Hybrid','Avensis','Aygo','bZ4X','bZ3','C-HR','Camry','Carina','Celica','Corolla','Corolla Cross','FJ Cruiser','GR86','GR Yaris','Hilux','Land Cruiser','Picnic','Prius','Prius+','ProAce','ProAce City','RAV4','RAV4 Hybrid','Sequoia','Supra','Urban Cruiser','Verso','Verso-S','Yaris','Yaris Cross','Yaris GR'],
+  'Volkswagen':['Amarok','Arteon','Beetle','Bora','Caddy','California','Caravelle','CC','Crafter','e-Golf','e-up!','Eos','Fox','Golf','Golf Alltrack','Golf Estate','Golf GTD','Golf GTI','Golf GTE','Golf R','Golf Variant','ID.3','ID.4','ID.5','ID.6','ID.7','ID. Buzz','Jetta','Lupo','Multivan','Passat','Passat Alltrack','Passat CC','Phaeton','Polo','Polo GTI','Scirocco','Sharan','T-Cross','T-Roc','Tiguan','Tiguan Allspace','Touareg','Touran','Transporter','up!'],
+  'Volvo':['C30','C40','C70','S40','S60','S60 Cross Country','S80','S90','V40','V40 Cross Country','V50','V60','V60 Cross Country','V70','V90','V90 Cross Country','XC40','XC60','XC70','XC90'],
+  'BYD':['Atto 3','Han','Sea Lion 6','Sea Lion 7','Seal','Sealion 6','Tang'],
+  'Genesis':['G70','G80','G90','GV60','GV70','GV80'],
+  'Cupra':['Ateca','Born','Formentor','Leon','Terramar'],
+};
+
 </script>
 </body>
 </html>

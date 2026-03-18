@@ -1,0 +1,295 @@
+{
+  "cars": [
+    {
+      "id": "car_octavia",
+      "make": "Škoda",
+      "model": "Octavia III Combi",
+      "year": 2018,
+      "plate": "5Z5 5555",
+      "vin": "TMBJJ7NE1J0000000",
+      "fuelType": "diesel",
+      "status": "active",
+      "startOdo": 152000,
+      "color": "#3b82f6",
+      "stk": "2026-09-15",
+      "stkWarn": 30,
+      "emission": "2026-09-15",
+      "emissionWarn": 30,
+      "pov": "2026-01-20",
+      "povWarn": 30,
+      "insurance": "2026-01-20",
+      "insuranceWarn": 30,
+      "oilInterval": 15000,
+      "oilLastKm": 165000,
+      "oilWarn": 1000,
+      "acquired": "2024-01-15",
+      "decommissioned": null,
+      "note": "Daily family car. Tyre size: 225/45 R17"
+    },
+    {
+      "id": "car_mx5",
+      "make": "Mazda",
+      "model": "MX-5 (NC)",
+      "year": 2010,
+      "plate": "9B9 9999",
+      "vin": "JMZnC18F08000000",
+      "fuelType": "petrol",
+      "status": "active",
+      "startOdo": 88000,
+      "color": "#ef4444",
+      "stk": "2025-05-20",
+      "stkWarn": 30,
+      "emission": "2025-05-20",
+      "emissionWarn": 30,
+      "pov": "2025-06-01",
+      "povWarn": 30,
+      "insurance": null,
+      "insuranceWarn": 30,
+      "oilInterval": 10000,
+      "oilLastKm": 94000,
+      "oilWarn": 1000,
+      "acquired": "2023-05-10",
+      "decommissioned": null,
+      "note": "Weekend fun car. Keep in garage."
+    }
+  ],
+  "records": [
+    {
+      "id": "r_c1_purch",
+      "carId": "car_octavia",
+      "date": "2024-01-15",
+      "odo": 152000,
+      "desc": "Purchase of vehicle",
+      "cat": "Nákup vozidla",
+      "qty": 1,
+      "price": 350000,
+      "note": "Bought from dealer AutoXYZ",
+      "createdAt": "2024-01-15T10:00:00.000Z"
+    },
+    {
+      "id": "r_c1_reg",
+      "carId": "car_octavia",
+      "date": "2024-01-16",
+      "odo": 152050,
+      "desc": "Registration fee",
+      "cat": "Administrativa",
+      "qty": 1,
+      "price": 800,
+      "note": "",
+      "createdAt": "2024-01-16T09:00:00.000Z"
+    },
+    {
+      "id": "r_c1_ins_2024",
+      "carId": "car_octavia",
+      "date": "2024-01-16",
+      "odo": 152050,
+      "desc": "Annual Insurance (POV + HAV)",
+      "cat": "Administrativa",
+      "qty": 1,
+      "price": 12500,
+      "note": "Allianz",
+      "createdAt": "2024-01-16T09:30:00.000Z"
+    },
+    {
+      "id": "r_c1_service_init",
+      "carId": "car_octavia",
+      "date": "2024-01-20",
+      "odo": 152500,
+      "desc": "Initial Service (Oil, Filters)",
+      "cat": "Servis a opravy",
+      "qty": 1,
+      "price": 4500,
+      "note": "Castrol Edge 5W-30, MANN filters",
+      "createdAt": "2024-01-20T14:00:00.000Z"
+    },
+    {
+      "id": "r_c1_tires_sum",
+      "carId": "car_octavia",
+      "date": "2024-04-01",
+      "odo": 156000,
+      "desc": "New Summer Tyres Michelin Pilot Sport 5",
+      "cat": "Pneu a kola",
+      "qty": 4,
+      "price": 2800,
+      "note": "Total 11200 + fitting",
+      "createdAt": "2024-04-01T10:00:00.000Z"
+    },
+    {
+      "id": "r_c1_tires_sum_fit",
+      "carId": "car_octavia",
+      "date": "2024-04-01",
+      "odo": 156000,
+      "desc": "Tyre fitting & balancing",
+      "cat": "Pneu a kola",
+      "qty": 1,
+      "price": 1200,
+      "note": "",
+      "createdAt": "2024-04-01T10:05:00.000Z"
+    },
+    {
+      "id": "r_c1_wipers",
+      "carId": "car_octavia",
+      "date": "2024-09-15",
+      "odo": 162000,
+      "desc": "Bosch Aerotwin Wipers",
+      "cat": "Provozní náplně",
+      "qty": 1,
+      "price": 850,
+      "note": "Front + Rear",
+      "createdAt": "2024-09-15T16:00:00.000Z"
+    },
+    {
+      "id": "r_c1_ins_2025",
+      "carId": "car_octavia",
+      "date": "2025-01-15",
+      "odo": 166000,
+      "desc": "Annual Insurance (POV + HAV)",
+      "cat": "Administrativa",
+      "qty": 1,
+      "price": 11800,
+      "note": "Allianz - renewal",
+      "createdAt": "2025-01-15T09:00:00.000Z"
+    },
+    {
+      "id": "r_c1_brakes",
+      "carId": "car_octavia",
+      "date": "2025-02-20",
+      "odo": 167500,
+      "desc": "Rear brake pads & discs ATE",
+      "cat": "Servis a opravy",
+      "qty": 1,
+      "price": 6200,
+      "note": "",
+      "createdAt": "2025-02-20T11:00:00.000Z"
+    },
+    {
+      "id": "r_c2_purch",
+      "carId": "car_mx5",
+      "date": "2023-05-10",
+      "odo": 88000,
+      "desc": "Purchase of vehicle",
+      "cat": "Nákup vozidla",
+      "qty": 1,
+      "price": 280000,
+      "note": "Private seller",
+      "createdAt": "2023-05-10T11:00:00.000Z"
+    },
+    {
+      "id": "r_c2_detail",
+      "carId": "car_mx5",
+      "date": "2023-05-15",
+      "odo": 88100,
+      "desc": "Full detailing & ceramic coating",
+      "cat": "Vybavení a vzhled",
+      "qty": 1,
+      "price": 15000,
+      "note": "Valid for 3 years",
+      "createdAt": "2023-05-15T18:00:00.000Z"
+    },
+    {
+      "id": "r_c2_oil",
+      "carId": "car_mx5",
+      "date": "2024-05-01",
+      "odo": 94000,
+      "desc": "Bitumen underbody protection check & Oil change",
+      "cat": "Servis a opravy",
+      "qty": 1,
+      "price": 3500,
+      "note": "Also checked roof drains",
+      "createdAt": "2024-05-01T09:00:00.000Z"
+    }
+  ],
+  "fuels": [
+    {
+      "id": "f_1", "carId": "car_octavia", "date": "2024-01-15", "odo": 152020, "fuelTypeId": "d", "liters": 48.5, "cost": 1843, "fullTank": true,
+      "createdAt": "2024-01-15T12:00:00.000Z"
+    },
+    {
+      "id": "f_2", "carId": "car_octavia", "date": "2024-02-05", "odo": 153100, "fuelTypeId": "d", "liters": 52.1, "cost": 1979, "fullTank": true,
+      "createdAt": "2024-02-05T12:00:00.000Z"
+    },
+    {
+      "id": "f_3", "carId": "car_octavia", "date": "2024-03-01", "odo": 154250, "fuelTypeId": "d", "liters": 55.0, "cost": 2090, "fullTank": true,
+      "createdAt": "2024-03-01T12:00:00.000Z"
+    },
+    {
+      "id": "f_4", "carId": "car_octavia", "date": "2024-03-25", "odo": 155500, "fuelTypeId": "d", "liters": 15.0, "cost": 600, "fullTank": false,
+      "note": "Quick top-up",
+      "createdAt": "2024-03-25T12:00:00.000Z"
+    },
+    {
+      "id": "f_5", "carId": "car_octavia", "date": "2024-03-28", "odo": 155900, "fuelTypeId": "d", "liters": 45.3, "cost": 1721, "fullTank": true,
+      "createdAt": "2024-03-28T12:00:00.000Z"
+    },
+    {
+      "id": "f_6", "carId": "car_octavia", "date": "2024-04-20", "odo": 156950, "fuelTypeId": "d", "liters": 49.8, "cost": 1892, "fullTank": true,
+      "createdAt": "2024-04-20T12:00:00.000Z"
+    },
+    {
+      "id": "f_7", "carId": "car_octavia", "date": "2024-05-15", "odo": 158100, "fuelTypeId": "d", "liters": 54.2, "cost": 2059, "fullTank": true,
+      "createdAt": "2024-05-15T12:00:00.000Z"
+    },
+    {
+      "id": "f_8", "carId": "car_octavia", "date": "2024-07-01", "odo": 160500, "fuelTypeId": "d", "liters": 53.0, "cost": 2014, "fullTank": true,
+      "note": "Vacation trip start",
+      "createdAt": "2024-07-01T12:00:00.000Z"
+    },
+    {
+      "id": "f_9", "carId": "car_octavia", "date": "2024-07-15", "odo": 161800, "fuelTypeId": "d", "liters": 56.5, "cost": 2350, "fullTank": true,
+      "note": "Foreign highway price",
+      "createdAt": "2024-07-15T12:00:00.000Z"
+    },
+    {
+      "id": "f_10", "carId": "car_octavia", "date": "2024-08-20", "odo": 163000, "fuelTypeId": "d", "liters": 51.2, "cost": 1945, "fullTank": true,
+      "createdAt": "2024-08-20T12:00:00.000Z"
+    },
+    {
+      "id": "f_11", "carId": "car_octavia", "date": "2024-09-30", "odo": 164200, "fuelTypeId": "d", "liters": 50.5, "cost": 1818, "fullTank": true,
+      "createdAt": "2024-09-30T12:00:00.000Z"
+    },
+    {
+      "id": "f_12", "carId": "car_octavia", "date": "2024-11-10", "odo": 165500, "fuelTypeId": "d", "liters": 55.1, "cost": 2093, "fullTank": true,
+      "createdAt": "2024-11-10T12:00:00.000Z"
+    },
+    {
+      "id": "f_13", "carId": "car_octavia", "date": "2025-01-05", "odo": 166800, "fuelTypeId": "d", "liters": 52.8, "cost": 2006, "fullTank": true,
+      "createdAt": "2025-01-05T12:00:00.000Z"
+    },
+    {
+      "id": "f_21", "carId": "car_mx5", "date": "2023-05-10", "odo": 88020, "fuelTypeId": "p100", "liters": 40.0, "cost": 1800, "fullTank": true,
+      "createdAt": "2023-05-10T11:00:00.000Z"
+    },
+    {
+      "id": "f_22", "carId": "car_mx5", "date": "2023-06-15", "odo": 88500, "fuelTypeId": "p100", "liters": 38.5, "cost": 1732, "fullTank": true,
+      "createdAt": "2023-06-15T11:00:00.000Z"
+    },
+    {
+      "id": "f_23", "carId": "car_mx5", "date": "2023-08-01", "odo": 89100, "fuelTypeId": "p98", "liters": 42.0, "cost": 1848, "fullTank": true,
+      "createdAt": "2023-08-01T11:00:00.000Z"
+    },
+    {
+      "id": "f_24", "carId": "car_mx5", "date": "2024-05-01", "odo": 94000, "fuelTypeId": "p100", "liters": 39.0, "cost": 1755, "fullTank": true,
+      "note": "Season start",
+      "createdAt": "2024-05-01T09:00:00.000Z"
+    }
+  ],
+  "reminders": [
+    {
+      "id": "rem_1",
+      "carId": "car_octavia",
+      "name": "Oil change",
+      "type": "km",
+      "interval": 15000,
+      "lastDone": 165000,
+      "warnAt": 1000
+    },
+    {
+      "id": "rem_2",
+      "carId": "car_mx5",
+      "name": "Roof impregnation",
+      "type": "date",
+      "date": "2025-05-01"
+    }
+  ],
+  "exportedAt": "2026-03-18T12:00:00.000Z"
+}

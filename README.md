@@ -1,6 +1,6 @@
 # MyCars — Vehicle Maintenance Tracker
 
-**Version:** 3.5 · **Build:** 20260316-004  
+**Version:** 3.6.0 · **Build:** 20260318-011  
 **Author:** kraah  
 **Type:** Single-file offline web application
 
@@ -32,7 +32,7 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 | **Dashboard** | Vehicle status, document expiry alerts, last refuel, key statistics |
 | **Records** | Service records with 5 summary stat cards, full-text search, category filter |
 | **Fuel log** | Fuel entries with per-tank consumption, average price/litre |
-| **Analytics** | Category expense chart, monthly stacked bar chart, 10 stat cards |
+| **Analytics** | Expense charts, monthly trends, and categorized stats (Costs, Service, Fuel) |
 | **Reminders** | Km-based and date-based reminders with status indicators |
 | **Settings** | Language, JSON backup, CSV import, data management, app info |
 
@@ -157,6 +157,11 @@ Two reminder types:
 
 **Date-based** (e.g. MOT expiry)
 - Fields: name, date
+
+**Automatic (Seasonal)**
+- The app can automatically remind you to change tyres (Summer/Winter)
+- Enabled in **Settings** → **Tyre change reminders**
+- Alerts 30 days before **Nov 1** (Winter side) and **Mar 31** (Summer side) for all active vehicles
 
 Status: `OK` · `Due soon` (within warning threshold) · `Overdue`
 
@@ -299,7 +304,7 @@ Datum,Typ paliva,Tankováno litrů,Cena za litr,Celková cena,Stav tachometru,Km
 | **Mobile** | Responsive — sidebar becomes slide-in drawer on screens ≤ 768px |
 | **Touch targets** | Minimum 44 × 44 px on all interactive elements |
 | **WCAG** | Text contrast ratios ≥ 4.5:1 |
-| **Codebase** | ~2 250 lines, single file |
+| **Codebase** | ~2 500 lines, single file |
 
 ### localStorage data structure
 
