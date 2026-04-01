@@ -1,0 +1,44 @@
+{
+  "name": "MyCars — Evidence vozidel",
+  "short_name": "MyCars",
+  "description": "Offline vehicle maintenance and expense tracker",
+  "start_url": "./MyCars.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07080d",
+  "theme_color": "#0f1018",
+  "lang": "cs",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%230f1018'/%3E%3Cpath d='M80 304l40-104c5-13 16-24 32-24h208c16 0 27 11 32 24l40 104v64H80v-64z' fill='%236c8fff'/%3E%3Ccircle cx='152' cy='368' r='40' fill='%2307080d'/%3E%3Ccircle cx='360' cy='368' r='40' fill='%2307080d'/%3E%3Crect x='80' y='288' width='352' height='8' rx='4' fill='%230f1018' opacity='0.4'/%3E%3C/svg%3E",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='36' fill='%230f1018'/%3E%3Cpath d='M30 114l15-39c2-5 6-9 12-9h78c6 0 10 4 12 9l15 39v24H30v-24z' fill='%236c8fff'/%3E%3Ccircle cx='57' cy='138' r='15' fill='%2307080d'/%3E%3Ccircle cx='135' cy='138' r='15' fill='%2307080d'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%230f1018'/%3E%3Cpath d='M80 304l40-104c5-13 16-24 32-24h208c16 0 27 11 32 24l40 104v64H80v-64z' fill='%236c8fff'/%3E%3Ccircle cx='152' cy='368' r='40' fill='%2307080d'/%3E%3Ccircle cx='360' cy='368' r='40' fill='%2307080d'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Přehled vozů",
+      "short_name": "Fleet",
+      "description": "Zobrazit přehled všech vozidel",
+      "url": "./MyCars.html#fleet"
+    },
+    {
+      "name": "Nové tankování",
+      "short_name": "Tankování",
+      "description": "Přidat záznam tankování",
+      "url": "./MyCars.html#fuel"
+    }
+  ]
+}

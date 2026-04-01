@@ -1,8 +1,8 @@
 # MyCars — Vehicle Maintenance Tracker
 
-**Version:** 3.6.0 · **Build:** 20260318-011  
+**Version:** 3.10.0 · **Build:** 20260330-001  
 **Author:** kraah  
-**Type:** Single-file offline web application
+**Type:** Offline web application · PWA-ready
 
 ---
 
@@ -10,7 +10,7 @@
 
 MyCars is a privacy-first, offline vehicle maintenance and expense tracker. Everything runs directly in the browser — no server, no account, no data ever leaves your device. Data is stored in browser `localStorage` under the key `mycars_v3`.
 
-The entire application is a single `MyCars.html` file that works over `file://` as well as any HTTP server.
+The application consists of two files: `MyCars.html` (the full app) and `mycars-sw.js` (service worker, ~40 lines). Over `file://` the service worker is silently skipped and the app works exactly as before — no server required. Over HTTP/HTTPS the full PWA experience is available including offline support and home screen installation.
 
 ---
 
@@ -61,16 +61,18 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 
 ## Expense Categories
 
+The application uses a fixed set of categories to organize expenses. Each category has a corresponding Czech name used in the interface when the language is set to Czech.
+
 | Category | Typical items |
 |---|---|
-| **Vehicle purchase** | Acquisition cost — excluded from cost/km and monthly chart |
-| **Administration** | Insurance/liability, MOT/STK, registration transfer, fees, fines |
-| **Fluids & consumables** | Oil, washer fluid, coolant, brake fluid |
-| **Service & repairs** | Labour, filters, brakes, axles, exhaust, engine, timing, diagnostics, bulbs |
-| **Tyres & wheels** | Tyre purchase, fitting, balancing, rims, alignment |
-| **Equipment & appearance** | Floor mats, cosmetics, paint repair, interior accessories |
+| **Vehicle purchase**<br>*(Nákup vozidla)* | Acquisition cost — excluded from cost/km and monthly chart |
+| **Administration**<br>*(Administrativa)* | Insurance (liability/comprehensive), MOT/STK, registration transfer, fees, fines |
+| **Fluids & consumables**<br>*(Provozní náplně)* | Engine oil, washer fluid, coolant, brake fluid, AdBlue |
+| **Service & repairs**<br>*(Servis a opravy)* | All mechanical repairs, filters, brakes, engine parts, timing belt, diagnostics, labour |
+| **Tyres & wheels**<br>*(Pneumatiky a kola)* | Tyre purchase, fitting, balancing, rims, seasonal change, alignment |
+| **Equipment & appearance**<br>*(Vybavení a vzhled)* | Car cosmetics, cleaning, floor mats, accessories, paint repair, interior |
 
-> Vehicle purchase is intentionally isolated from all cost-per-km and monthly trend calculations so it does not distort running-cost analysis.
+> **Vehicle purchase** is intentionally isolated from all cost-per-km and monthly trend calculations so it does not distort running-cost analysis.
 
 ---
 
@@ -292,11 +294,50 @@ Datum,Typ paliva,Tankováno litrů,Cena za litr,Celková cena,Stav tachometru,Km
 
 ---
 
+## PWA Installation
+
+MyCars supports installation as a Progressive Web App (PWA) on Android and Linux desktop when served over HTTP/HTTPS.
+
+### What changes with PWA
+| Feature | `file://` | HTTP/HTTPS (PWA) |
+|---|---|---|
+| App works | ✅ | ✅ |
+| Data in localStorage | ✅ | ✅ |
+| Offline support | ✅ (no SW needed) | ✅ (SW cache) |
+| Home screen icon | ❌ | ✅ |
+| Standalone window | ❌ | ✅ |
+| Install prompt | ❌ | ✅ |
+| Auto-update notification | ❌ | ✅ |
+
+### Files
+| File | Role | Required for file:// |
+|---|---|---|
+| `MyCars.html` | Full application | ✅ |
+| `mycars-sw.js` | Service worker | ❌ (ignored) |
+| `manifest.json` | PWA manifest | ❌ (ignored) |
+
+### Android installation
+1. Serve the folder over HTTP (e.g. from a NAS, VPS, or LAN share with a web server)
+2. Open the URL in Chrome or Vivaldi on Android
+3. Tap **Settings → Install as app** inside MyCars, or use the browser's "Add to Home Screen"
+4. The app installs with a launcher icon and opens without browser chrome
+
+### Linux installation
+1. Serve the folder over HTTP (e.g. `caddy file-server` or nginx)
+2. Open the URL in Chrome or Chromium
+3. Click **Settings → Install as app** or use the browser's install button in the address bar
+4. The app installs as a standalone desktop application
+
+### Service worker update behaviour
+When a new version of MyCars is deployed, the service worker detects the update in the background. A toast notification appears prompting the user to close and reopen the app. No action is required otherwise — the update applies automatically on next launch.
+
+---
+
 ## Technical Details
 
 | | |
 |---|---|
-| **Stack** | Plain HTML + CSS + JavaScript, zero dependencies |
+| **Stack** | Plain HTML + CSS + JavaScript, zero dependencies · PWA (Service Worker + Web App Manifest) |
 | **Storage** | `localStorage` — key `mycars_v3` |
 | **Fonts** | Outfit + JetBrains Mono (Google Fonts CDN) |
 | **Protocol** | Works over `file://` and HTTP |
@@ -304,7 +345,7 @@ Datum,Typ paliva,Tankováno litrů,Cena za litr,Celková cena,Stav tachometru,Km
 | **Mobile** | Responsive — sidebar becomes slide-in drawer on screens ≤ 768px |
 | **Touch targets** | Minimum 44 × 44 px on all interactive elements |
 | **WCAG** | Text contrast ratios ≥ 4.5:1 |
-| **Codebase** | ~2 500 lines, single file |
+| **Codebase** | ~3 500 lines · `MyCars.html` + `mycars-sw.js` + `manifest.json` |
 
 ### localStorage data structure
 
