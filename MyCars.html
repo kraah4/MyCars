@@ -461,7 +461,7 @@
   /* ── Fleet dashboard ────────────────────────────── */
   .fleet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 18px }
   @media (max-width: 600px) { .fleet-grid { grid-template-columns: 1fr } }
-  .fleet-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: border-color .15s, box-shadow .15s }
+  .fleet-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: border-color .15s, box-shadow .15s; display: flex; flex-direction: column }
   .fleet-card:hover { border-color: var(--border2); box-shadow: 0 6px 24px rgba(0,0,0,.35) }
   .fleet-card-header { padding: 18px 20px 14px; display: flex; align-items: center; gap: 13px; border-bottom: 1px solid var(--border) }
   .fleet-card-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0 }
@@ -470,7 +470,7 @@
   /* FIXED: was .72rem → .75rem */
   .fleet-card-sub { font-size: .75rem; color: var(--text2); font-family: var(--font-mono); margin-top: 3px }
   .fleet-card-km { font-size: .9rem; font-weight: 600; color: var(--text); font-family: var(--font-mono); flex-shrink: 0 }
-  .fleet-card-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 11px }
+  .fleet-card-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 11px; flex: 1 }
   .fleet-doc-row { display: flex; gap: 8px; flex-wrap: wrap }
   /* FIXED: was .72rem → .75rem */
   .fleet-doc-pill { display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: .75rem; font-weight: 500; border: 1px solid }
@@ -1779,15 +1779,31 @@ function renderDashboard(){
       const hasTyres = car.tyres && (car.tyres.summer||car.tyres.winter||car.tyres.allseason);
       if(!hasTyres) return '';
       const cs2=state.lang==='cs';
+      // Renderuje jeden řádek nebo dva (přední / zadní) pro danou sadu
       const row=(icon,label,data)=>{
         if(!data) return '';
         const s=tyreSummary(data);
         if(!s) return '';
-        return `<div style="display:flex;align-items:baseline;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
-          <span style="font-size:.8rem;width:16px;flex-shrink:0">${icon}</span>
-          <span style="font-size:.78rem;color:var(--text2);width:90px;flex-shrink:0">${label}</span>
-          <span style="font-size:.82rem;font-family:var(--font-mono);color:var(--text)">${s}</span>
-        </div>`;
+        // tyreSummary vrátí string (same) nebo {front,rear} (různé nápravy)
+        if(typeof s === 'string'){
+          return `<div style="display:flex;align-items:baseline;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:.8rem;width:16px;flex-shrink:0">${icon}</span>
+            <span style="font-size:.78rem;color:var(--text2);width:90px;flex-shrink:0">${label}</span>
+            <span style="font-size:.82rem;font-family:var(--font-mono);color:var(--text)">${s}</span>
+          </div>`;
+        }
+        // Různé nápravy — dva podřádky
+        const axleRow=(axleIcon,axleLabel,val)=>val?`
+          <div style="display:flex;align-items:baseline;gap:10px;padding:4px 0 4px 26px;border-bottom:1px solid var(--border)">
+            <span style="font-size:.75rem;color:var(--text3);width:64px;flex-shrink:0">${axleIcon} ${axleLabel}</span>
+            <span style="font-size:.82rem;font-family:var(--font-mono);color:var(--text)">${val}</span>
+          </div>`:'';
+        return `<div style="display:flex;align-items:baseline;gap:10px;padding:6px 0 2px;border-bottom:none">
+            <span style="font-size:.8rem;width:16px;flex-shrink:0">${icon}</span>
+            <span style="font-size:.78rem;color:var(--text2);width:90px;flex-shrink:0">${label}</span>
+          </div>`
+          + axleRow('🔵', cs2?'Přední':'Front', s.front)
+          + axleRow('🔴', cs2?'Zadní':'Rear',  s.rear);
       };
       const rows = car.tyreAllSeason
         ? row('🔄', cs2?'Celoroční':'All-season', car.tyres.allseason)
@@ -2352,7 +2368,8 @@ function getAutoReminders(car){
     const diffSummer=Math.round((nextSummer-today)/86400000);
     if(diffSummer<=30){
       const sc=diffSummer<0?'due':diffSummer<7?'warn':'warn';
-      const summerSize=car.tyres?.summer?tyreSummary(car.tyres.summer):'';
+      const summerRaw=car.tyres?.summer?tyreSummary(car.tyres.summer):'';
+      const summerSize=typeof summerRaw==='object'?summerRaw.front:summerRaw;
       const summerName=(cs?'Přezutí na letní':'Switch to summer')+(summerSize?` — ${summerSize}`:'');
       reminders.push({id:'auto_tire_summer_'+car.id, carId:car.id,
         name:summerName, icon:'🌞',
@@ -2366,7 +2383,8 @@ function getAutoReminders(car){
     const diffWinter=Math.round((nextWinter-today)/86400000);
     if(diffWinter<=30){
       const sc=diffWinter<0?'due':'warn';
-      const winterSize=car.tyres?.winter?tyreSummary(car.tyres.winter):'';
+      const winterRaw=car.tyres?.winter?tyreSummary(car.tyres.winter):'';
+      const winterSize=typeof winterRaw==='object'?winterRaw.front:winterRaw;
       const winterName=(cs?'Přezutí na zimní':'Switch to winter')+(winterSize?` — ${winterSize}`:'');
       reminders.push({id:'auto_tire_winter_'+car.id, carId:car.id,
         name:winterName, icon:'❄️',
@@ -2456,7 +2474,13 @@ function openRecordModal(recordId){
   const carSel=document.getElementById('r-car');
   carSel.innerHTML=state.cars.map(c=>`<option value="${c.id}" ${(rec?rec.carId:state.currentCarId)===c.id?'selected':''}>${c.make||''} ${c.model||c.name||''} ${c.plate?'('+c.plate+')':''}</option>`).join('');
   const catSel=document.getElementById('r-cat');
-  catSel.innerHTML=CATEGORIES[state.lang].map((c,i)=>`<option value="${CATEGORIES.cs[i]}" ${rec&&rec.cat===CATEGORIES.cs[i]?'selected':''}>${c}</option>`).join('');
+  // Nový záznam: první položka je prázdný placeholder, uživatel musí vybrat
+  // Editace: předvybrána stávající kategorie záznamu
+  const placeholderOpt = rec
+    ? ''
+    : `<option value="" disabled selected hidden>${state.lang==='cs'?'— Vyberte kategorii —':'— Select category —'}</option>`;
+  catSel.innerHTML = placeholderOpt +
+    CATEGORIES[state.lang].map((c,i)=>`<option value="${CATEGORIES.cs[i]}" ${rec&&rec.cat===CATEGORIES.cs[i]?'selected':''}>${c}</option>`).join('');
   const today=new Date().toISOString().slice(0,10);
   setDateTriple('r-date', rec?.date||today);
   document.getElementById('r-odo').value=rec?.odo||getMaxOdo(state.currentCarId)||'';
@@ -2480,7 +2504,7 @@ function saveRecord(){
   const note=document.getElementById('r-note').value.trim();
   if(!date)errors.push(t('date')+': neplatné nebo neúplné datum');
   if(!desc)errors.push(t('desc')+': '+t('required_field'));
-  if(!cat)errors.push(t('cat')+': '+t('required_field'));
+  if(!cat)errors.push(t('cat')+': '+(state.lang==='cs'?'vyberte kategorii':'please select a category'));
   if(isNaN(qty)||qty<=0)errors.push(t('qty')+': '+t('required_field'));
   if(errors.length){document.getElementById('record-errors').innerHTML=errors.map(e=>`<div class="form-error">⚠ ${e}</div>`).join('');return;}
   if(state.editingRecordId){
@@ -2595,9 +2619,9 @@ function toggleTyreMode(){
     : (cs?'Sezónní pneumatiky (letní + zimní)':'Seasonal tyres (summer + winter)');
 }
 
-// Přečte data jedné sady z formuláře
-function getTyreSet(set){
-  const g = id => document.getElementById(`c-tyre-${set}-${id}`)?.value||'';
+// Přečte data jedné osy z formuláře (axle: 'front' nebo 'rear')
+function getTyreAxle(set, axle){
+  const g = id => document.getElementById(`c-tyre-${set}-${axle}-${id}`)?.value||'';
   const width=parseInt(g('width'))||null;
   const aspect=parseInt(g('aspect'))||null;
   const rim=parseInt(g('rim'))||null;
@@ -2605,93 +2629,197 @@ function getTyreSet(set){
   const speed=g('speed').toUpperCase().trim()||null;
   const plow=parseFloat(g('plow'))||null;
   const phigh=parseFloat(g('phigh'))||null;
-  // Vrátí null pokud nic nevyplněno
   if(!width&&!aspect&&!rim&&!load&&!speed&&!plow&&!phigh) return null;
   return {width,aspect,rim,load,speed,plow,phigh};
 }
 
-// Zapíše data jedné sady do formuláře
-function setTyreSet(set, data){
-  const s = id => {
-    const el=document.getElementById(`c-tyre-${set}-${id}`);
-    if(el) el.value=data?.[id]||'';
-  };
-  ['width','aspect','rim','load','speed','plow','phigh'].forEach(s);
+// Přečte celou sadu (přední + zadní) z formuláře
+function getTyreSet(set){
+  const sameEl = document.getElementById(`c-tyre-${set}-same`);
+  const same = sameEl ? sameEl.checked : true;
+  const front = getTyreAxle(set, 'front');
+  const rear  = same ? null : getTyreAxle(set, 'rear');
+  if(!front && !rear) return null;
+  return {same, front, rear};
 }
 
-// Formátuje sadu pneumatik jako řetězec: "235/45 R17 97Y"
+// Zapíše data jedné osy do formuláře
+function setTyreAxle(set, axle, data){
+  if(!data) return;
+  const fields = ['width','aspect','rim','load','speed','plow','phigh'];
+  fields.forEach(id => {
+    const el = document.getElementById(`c-tyre-${set}-${axle}-${id}`);
+    if(el) el.value = data[id]||'';
+  });
+}
+
+// Zapíše celou sadu (přední + zadní) do formuláře
+// Podporuje starý formát (data.width přímo na root) pro zpětnou kompatibilitu
+function setTyreSet(set, data){
+  if(!data) return;
+  // Detekce starého formátu: data má přímo width/aspect/rim (bez front/rear)
+  const isLegacy = data.width !== undefined || data.aspect !== undefined;
+  if(isLegacy){
+    // Starý formát → použij jako přední, zadní nechat prázdné, same=true
+    setTyreAxle(set, 'front', data);
+    const sameEl = document.getElementById(`c-tyre-${set}-same`);
+    if(sameEl) sameEl.checked = true;
+    toggleTyreSame(set);
+    return;
+  }
+  // Nový formát
+  const sameEl = document.getElementById(`c-tyre-${set}-same`);
+  if(sameEl) sameEl.checked = data.same !== false;
+  toggleTyreSame(set);
+  setTyreAxle(set, 'front', data.front);
+  if(!data.same) setTyreAxle(set, 'rear', data.rear);
+}
+
+// Formátuje jednu osu jako řetězec: "235/45 R17 97Y 2.2/2.5 bar"
+function tyreAxleSummary(a){
+  if(!a) return '';
+  const parts=[];
+  if(a.width&&a.aspect&&a.rim) parts.push(`${a.width}/${a.aspect} R${a.rim}`);
+  else if(a.width) parts.push(`${a.width}`);
+  if(a.load||a.speed) parts.push(`${a.load||''}${a.speed||''}`);
+  if(a.plow||a.phigh) parts.push(`${a.plow||'?'}/${a.phigh||'?'} bar`);
+  return parts.join(' ');
+}
+
+// Formátuje celou sadu — vrátí řetězec nebo objekt {front, rear} pro zobrazení
+// Podporuje starý formát (přímé width na root)
 function tyreSummary(t){
   if(!t) return '';
-  const parts=[];
-  if(t.width&&t.aspect&&t.rim) parts.push(`${t.width}/${t.aspect} R${t.rim}`);
-  else if(t.width) parts.push(`${t.width}`);
-  if(t.load||t.speed) parts.push(`${t.load||''}${t.speed||''}`);
-  if(t.plow||t.phigh) parts.push(`${t.plow||'?'}/${t.phigh||'?'} bar`);
-  return parts.join(' ');
+  // Starý formát — data přímo na root objektu
+  if(t.width !== undefined || t.aspect !== undefined) return tyreAxleSummary(t);
+  // Nový formát
+  const f = tyreAxleSummary(t.front);
+  const r = tyreAxleSummary(t.rear);
+  if(t.same || !r) return f; // přední = zadní, vrátí jen jeden řetězec
+  if(!f) return r;
+  return {front: f, rear: r}; // objekt pro víceřádkové zobrazení
+}
+
+// Přepne viditelnost zadní nápravy podle toggleu "Přední = zadní"
+function toggleTyreSame(set){
+  const sameEl  = document.getElementById(`c-tyre-${set}-same`);
+  const rearDiv = document.getElementById(`c-tyre-${set}-rear-section`);
+  const lbl     = document.getElementById(`c-tyre-${set}-same-label`);
+  if(!sameEl || !rearDiv) return;
+  const same = sameEl.checked;
+  rearDiv.style.display = same ? 'none' : '';
+  if(lbl) lbl.textContent = same
+    ? (state.lang==='cs' ? 'Přední = zadní (stejné)' : 'Front = rear (identical)')
+    : (state.lang==='cs' ? 'Přední ≠ zadní (různé)'  : 'Front ≠ rear (different)');
 }
 
 function renderTyreTab(car){
   const cs = state.lang==='cs';
   const allSeason = car?.tyreAllSeason||false;
 
-  const fieldsHtml = (set) => `
+  // Pomocník: pole pro jednu osu (axle = 'front' | 'rear')
+  const axleFields = (set, axle, plow_ph='2.2', phigh_ph='2.5') => `
     <div class="form-group">
       <label class="form-label">${cs?'Šířka (mm)':'Width (mm)'}</label>
-      <input type="number" class="form-input" id="c-tyre-${set}-width" placeholder="235" min="100" max="455" step="5">
+      <input type="number" class="form-input" id="c-tyre-${set}-${axle}-width" placeholder="235" min="100" max="455" step="5">
     </div>
     <div class="form-group">
       <label class="form-label">${cs?'Výškový profil (%)':'Aspect ratio (%)'}</label>
-      <input type="number" class="form-input" id="c-tyre-${set}-aspect" placeholder="45" min="20" max="90">
+      <input type="number" class="form-input" id="c-tyre-${set}-${axle}-aspect" placeholder="45" min="20" max="90">
     </div>
     <div class="form-group">
       <label class="form-label">${cs?'Průměr ráfku R':'Rim R'}</label>
-      <input type="number" class="form-input" id="c-tyre-${set}-rim" placeholder="17" min="10" max="26">
+      <input type="number" class="form-input" id="c-tyre-${set}-${axle}-rim" placeholder="17" min="10" max="26">
     </div>
     <div class="form-group">
       <label class="form-label">${cs?'Hmotnostní index':'Load index'}</label>
-      <input type="number" class="form-input" id="c-tyre-${set}-load" placeholder="97" min="50" max="130">
+      <input type="number" class="form-input" id="c-tyre-${set}-${axle}-load" placeholder="97" min="50" max="130">
     </div>
     <div class="form-group">
       <label class="form-label">${cs?'Rychlostní index':'Speed index'}</label>
-      <input type="text" class="form-input" id="c-tyre-${set}-speed" placeholder="Y" maxlength="2" style="text-transform:uppercase"
-        oninput="validateSpeedIndex(this)">
+      <input type="text" class="form-input" id="c-tyre-${set}-${axle}-speed" placeholder="Y" maxlength="2"
+        style="text-transform:uppercase" oninput="validateSpeedIndex(this)">
     </div>
     <div class="form-group">
       <label class="form-label">${cs?'Tlak – nízká zátěž (bar)':'Pressure – low load (bar)'}</label>
-      <input type="number" class="form-input" id="c-tyre-${set}-plow" placeholder="2.2" min="1.5" max="4.5" step="0.1">
+      <input type="number" class="form-input" id="c-tyre-${set}-${axle}-plow" placeholder="${plow_ph}" min="1.5" max="4.5" step="0.1">
     </div>
     <div class="form-group">
       <label class="form-label">${cs?'Tlak – vysoká zátěž (bar)':'Pressure – high load (bar)'}</label>
-      <input type="number" class="form-input" id="c-tyre-${set}-phigh" placeholder="2.5" min="1.5" max="4.5" step="0.1">
+      <input type="number" class="form-input" id="c-tyre-${set}-${axle}-phigh" placeholder="${phigh_ph}" min="1.5" max="4.5" step="0.1">
     </div>
     <div class="form-group"></div>`;
+
+  // Celá sekce jedné sady: přední náprava + toggle + zadní náprava
+  const setSection = (set, isSame) => `
+    <div class="form-section-label full" style="margin-top:4px;border-left-color:var(--text2)">
+      🔵 ${cs?'Přední náprava':'Front axle'}
+    </div>
+    ${axleFields(set,'front')}
+    <div class="form-group full" style="margin:4px 0 2px;">
+      <div class="toggle-wrap">
+        <label class="toggle">
+          <input type="checkbox" id="c-tyre-${set}-same" ${isSame?'checked':''}
+            onchange="toggleTyreSame('${set}')">
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label" id="c-tyre-${set}-same-label">
+          ${isSame
+            ? (cs?'Přední = zadní (stejné)':'Front = rear (identical)')
+            : (cs?'Přední ≠ zadní (různé)':'Front ≠ rear (different)')}
+        </span>
+      </div>
+    </div>
+    <div id="c-tyre-${set}-rear-section" style="display:${isSame?'none':''}; grid-column:1/-1;">
+      <div class="form-grid">
+        <div class="form-section-label full" style="border-left-color:var(--text3)">
+          🔴 ${cs?'Zadní náprava':'Rear axle'}
+        </div>
+        ${axleFields(set,'rear','2.4','2.7')}
+      </div>
+    </div>`;
+
+  // Určíme výchozí same pro každou sadu
+  const getSame = (set) => {
+    const d = car?.tyres?.[set];
+    if(!d) return true;               // prázdná sada → same=true
+    if(d.width !== undefined) return true; // starý formát → same=true
+    return d.same !== false;
+  };
 
   const tab = document.getElementById('car-tab-tyres');
   tab.innerHTML = `
     <div class="form-grid">
       <div class="form-group full" style="margin-bottom:4px;">
         <div class="toggle-wrap">
-          <label class="toggle"><input type="checkbox" id="c-tyre-allseason" ${allSeason?'checked':''} onchange="toggleTyreMode()"><span class="toggle-slider"></span></label>
-          <span class="toggle-label" id="c-tyre-mode-label">${allSeason?(cs?'Celoroční pneumatiky':'All-season tyres'):(cs?'Sezónní pneumatiky (letní + zimní)':'Seasonal tyres (summer + winter)')}</span>
+          <label class="toggle">
+            <input type="checkbox" id="c-tyre-allseason" ${allSeason?'checked':''} onchange="toggleTyreMode()">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label" id="c-tyre-mode-label">
+            ${allSeason?(cs?'Celoroční pneumatiky':'All-season tyres'):(cs?'Sezónní pneumatiky (letní + zimní)':'Seasonal tyres (summer + winter)')}
+          </span>
         </div>
       </div>
     </div>
+
     <div id="tyre-seasonal" style="display:${allSeason?'none':''}">
       <div class="form-grid" style="margin-top:6px;">
         <div class="form-section-label full">🌞 ${cs?'Letní pneumatiky':'Summer tyres'}</div>
-        ${fieldsHtml('summer')}
-        <div class="form-section-label full" style="margin-top:4px;">❄️ ${cs?'Zimní pneumatiky':'Winter tyres'}</div>
-        ${fieldsHtml('winter')}
+        ${setSection('summer', getSame('summer'))}
+        <div class="form-section-label full" style="margin-top:8px;">❄️ ${cs?'Zimní pneumatiky':'Winter tyres'}</div>
+        ${setSection('winter', getSame('winter'))}
       </div>
     </div>
+
     <div id="tyre-allseason" style="display:${allSeason?'':'none'}">
       <div class="form-grid" style="margin-top:6px;">
         <div class="form-section-label full">🔄 ${cs?'Celoroční pneumatiky':'All-season tyres'}</div>
-        ${fieldsHtml('allseason')}
+        ${setSection('allseason', getSame('allseason'))}
       </div>
     </div>`;
 
-  // Naplnit hodnotami
+  // Naplnit hodnotami ze stávajícího záznamu
   if(car?.tyres){
     ['summer','winter','allseason'].forEach(set=>{
       if(car.tyres[set]) setTyreSet(set, car.tyres[set]);
@@ -3031,8 +3159,8 @@ function renderSettings(){
     <div class="section-title">${cs?'O aplikaci':'About'}</div>
     <div class="settings-card" style="max-width:480px;">
       <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-      <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.10.0</span></div>
-      <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260330-001</span></div>
+      <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.10.1</span></div>
+      <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260423-002</span></div>
       <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
       <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
       <div class="settings-info-row"><span>${cs?'Dokumentace':'Documentation'}</span><span><a href="README.md" target="_blank" style="color:var(--accent);text-decoration:none;">README.md ↗</a></span></div>

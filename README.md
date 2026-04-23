@@ -1,8 +1,8 @@
 # MyCars — Vehicle Maintenance Tracker
 
-**Version:** 3.10.0 · **Build:** 20260330-001  
+**Version:** 3.10.1 · **Build:** 20260423-001  
 **Author:** kraah  
-**Type:** Offline web application · PWA-ready
+**Type:** Single-file offline web application
 
 ---
 
@@ -10,7 +10,7 @@
 
 MyCars is a privacy-first, offline vehicle maintenance and expense tracker. Everything runs directly in the browser — no server, no account, no data ever leaves your device. Data is stored in browser `localStorage` under the key `mycars_v3`.
 
-The application consists of two files: `MyCars.html` (the full app) and `mycars-sw.js` (service worker, ~40 lines). Over `file://` the service worker is silently skipped and the app works exactly as before — no server required. Over HTTP/HTTPS the full PWA experience is available including offline support and home screen installation.
+The entire application is a single `MyCars.html` file that works over `file://` as well as any HTTP server.
 
 ---
 
@@ -53,6 +53,7 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 | Acquisition date | no | Date the vehicle was purchased |
 | Decommission date | no | Date the vehicle was retired |
 | Colour | no | Visual identifier dot in the sidebar |
+| Tyres | no | Summer / winter / all-season sets, each with **front and rear axle** parameters: width, aspect ratio, rim diameter, load index, speed index, tyre pressure (low/high load). A "Front = rear" toggle hides the rear fields when both axles share the same specification. |
 | Documents | no | STK, Emissions, Liability insurance, Comprehensive insurance — each with expiry date + warning threshold (days) |
 | Oil service | no | Interval (km), last done at (km), warning threshold (km remaining) |
 | Notes | no | Free text |
@@ -294,50 +295,11 @@ Datum,Typ paliva,Tankováno litrů,Cena za litr,Celková cena,Stav tachometru,Km
 
 ---
 
-## PWA Installation
-
-MyCars supports installation as a Progressive Web App (PWA) on Android and Linux desktop when served over HTTP/HTTPS.
-
-### What changes with PWA
-| Feature | `file://` | HTTP/HTTPS (PWA) |
-|---|---|---|
-| App works | ✅ | ✅ |
-| Data in localStorage | ✅ | ✅ |
-| Offline support | ✅ (no SW needed) | ✅ (SW cache) |
-| Home screen icon | ❌ | ✅ |
-| Standalone window | ❌ | ✅ |
-| Install prompt | ❌ | ✅ |
-| Auto-update notification | ❌ | ✅ |
-
-### Files
-| File | Role | Required for file:// |
-|---|---|---|
-| `MyCars.html` | Full application | ✅ |
-| `mycars-sw.js` | Service worker | ❌ (ignored) |
-| `manifest.json` | PWA manifest | ❌ (ignored) |
-
-### Android installation
-1. Serve the folder over HTTP (e.g. from a NAS, VPS, or LAN share with a web server)
-2. Open the URL in Chrome or Vivaldi on Android
-3. Tap **Settings → Install as app** inside MyCars, or use the browser's "Add to Home Screen"
-4. The app installs with a launcher icon and opens without browser chrome
-
-### Linux installation
-1. Serve the folder over HTTP (e.g. `caddy file-server` or nginx)
-2. Open the URL in Chrome or Chromium
-3. Click **Settings → Install as app** or use the browser's install button in the address bar
-4. The app installs as a standalone desktop application
-
-### Service worker update behaviour
-When a new version of MyCars is deployed, the service worker detects the update in the background. A toast notification appears prompting the user to close and reopen the app. No action is required otherwise — the update applies automatically on next launch.
-
----
-
 ## Technical Details
 
 | | |
 |---|---|
-| **Stack** | Plain HTML + CSS + JavaScript, zero dependencies · PWA (Service Worker + Web App Manifest) |
+| **Stack** | Plain HTML + CSS + JavaScript, zero dependencies |
 | **Storage** | `localStorage` — key `mycars_v3` |
 | **Fonts** | Outfit + JetBrains Mono (Google Fonts CDN) |
 | **Protocol** | Works over `file://` and HTTP |
@@ -345,7 +307,7 @@ When a new version of MyCars is deployed, the service worker detects the update 
 | **Mobile** | Responsive — sidebar becomes slide-in drawer on screens ≤ 768px |
 | **Touch targets** | Minimum 44 × 44 px on all interactive elements |
 | **WCAG** | Text contrast ratios ≥ 4.5:1 |
-| **Codebase** | ~3 500 lines · `MyCars.html` + `mycars-sw.js` + `manifest.json` |
+| **Codebase** | ~2 500 lines, single file |
 
 ### localStorage data structure
 
@@ -393,3 +355,17 @@ When a new version of MyCars is deployed, the service worker detects the update 
 ```
 
 > Data persists in the browser profile. Clearing browser data or using private/incognito mode will erase it. Use **Settings → Export backup** regularly.
+
+#### Tyre set structure (summer / winter / allseason)
+
+```json
+{
+  "same": true,
+  "front": { "width": 235, "aspect": 45, "rim": 17, "load": 97, "speed": "Y", "plow": 2.2, "phigh": 2.5 },
+  "rear": null
+}
+```
+
+`same: true` → rear axle is identical to front (rear field is null, only front is stored).  
+`same: false` → rear object contains its own independent parameters.  
+**Legacy format** (parameters directly on set root, pre-3.10.1) is automatically detected and treated as `same: true`.
