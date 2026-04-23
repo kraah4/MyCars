@@ -1,6 +1,6 @@
 # MyCars — Vehicle Maintenance Tracker
 
-**Version:** 3.10.1 · **Build:** 20260423-001  
+**Version:** 3.10.1 · **Build:** 20260423-002  
 **Author:** kraah  
 **Type:** Single-file offline web application
 
