@@ -50,24 +50,59 @@
     --space-lg: 24px;
     --space-xl: 32px;
   }
+  /* ── Bright / outdoor theme ────────────────────── */
+  html.theme-bright {
+    --bg:       #eef0f6;
+    --surface:  #ffffff;
+    --surface2: #f3f4fb;
+    --surface3: #e8eaf5;
+    --border:   #d2d4e8;
+    --border2:  #bbbdd8;
+    --accent:         #2952d9;
+    --accent-dim:     rgba(41,82,217,.10);
+    --accent2:        #c25000;
+    --text:     #0d0e1a;
+    --text2:    #3e4068;
+    --text3:    #5a5c82;
+    --green:    #0a7a4a;
+    --green-dim:rgba(10,122,74,.10);
+    --red:      #c02020;
+    --red-dim:  rgba(192,32,32,.10);
+    --amber:    #9a6400;
+    --amber-dim:rgba(154,100,0,.10);
+    --blue:     #5b35c5;
+  }
+  /* Bright: btn-primary text stays dark so contrast is guaranteed */
+  html.theme-bright .btn-primary { color: #fff }
+  /* Bright: modal overlay lighter */
+  html.theme-bright .modal-overlay { background: rgba(0,0,0,.35) }
+  /* Bright: sidebar + topbar border is slightly stronger */
+  html.theme-bright #sidebar,
+  html.theme-bright #topbar { box-shadow: 0 1px 0 var(--border) }
+  /* Bright: table header row needs tinted bg */
+  html.theme-bright thead tr { background: var(--surface2) }
+  /* Bright: inactive car opacity — min .65 so text contrast stays ≥ 4.5:1 even when dimmed */
+  html.theme-bright .car-item.inactive-car { opacity: .65 }
+
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
   html { font-size: 16px }
-  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; overflow-x: hidden; -webkit-font-smoothing: antialiased }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; overflow-x: hidden; -webkit-font-smoothing: antialiased; line-height: 1.5 }
 
   /* ── Layout — mobile first ──────────────────────── */
   #app { display: flex; height: 100vh; overflow: hidden; position: relative }
   #sidebar { width: var(--sidebar-w); min-width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; transition: transform .25s cubic-bezier(.4,0,.2,1); z-index: 100 }
   #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0 }
   #topbar { height: 60px; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 22px; gap: 10px; flex-shrink: 0; background: var(--surface); position: relative; justify-content: space-between }
-  #content { flex: 1; overflow-y: auto; padding: 26px 26px }
+  #content-scroll { flex: 1; overflow-y: auto }
+  .content-inner { max-width: 1400px; margin: 0 auto; padding: 26px 26px }
   #sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 99; backdrop-filter: blur(2px) }
   #sidebar-overlay.active { display: block }
 
   /* Mobile: sidebar jako drawer */
   @media (max-width: 768px) {
-    #sidebar { position: fixed; top: 0; left: 0; height: 100vh; transform: translateX(-100%); box-shadow: 4px 0 24px rgba(0,0,0,.5) }
+    #sidebar { position: fixed; top: 0; left: 0; height: 100vh; width: min(85vw, 300px); min-width: 0; transform: translateX(-100%); box-shadow: 4px 0 24px rgba(0,0,0,.5) }
     #sidebar.open { transform: translateX(0) }
-    #content { padding: 20px 16px }
+    .content-inner { padding: 20px 16px }
     #topbar { padding: 0 14px; gap: 8px }
     /* Hide desktop search bar on mobile */
     .topbar-search-wrap { display: none }
@@ -102,9 +137,9 @@
   @media (max-width: 600px) {
     .bar-chart-yaxis { width: 34px }
     .bar-chart-inner { margin-left: 38px }
-    .bar-chart-ylabel { font-size: .65rem; padding-right: 4px }
+    .bar-chart-ylabel { font-size: .68rem; padding-right: 4px }
     .bar-chart { height: 130px }
-    .bar-label { font-size: .65rem }
+    .bar-label { font-size: .68rem }
     .bar-chart-header { flex-direction: column; align-items: flex-start; gap: 6px }
     /* Make chart container scroll horizontally on tiny screens so bars aren’t squashed */
     .bar-chart-outer { min-width: 280px }
@@ -129,17 +164,16 @@
   .sidebar-logo h1 span { color: var(--accent) }
   .sidebar-logo p { color: var(--text2); font-size: .78rem; margin-top: 5px; font-weight: 400 }
   .sidebar-section { padding: 20px 12px 6px }
-  .sidebar-section-label { font-size: .68rem; font-weight: 700; color: var(--text3); letter-spacing: .09em; padding: 0 8px; margin-bottom: 6px; text-transform: uppercase }
+  .sidebar-section-label { font-size: .72rem; font-weight: 700; color: var(--text3); letter-spacing: .09em; padding: 0 8px; margin-bottom: 6px; text-transform: uppercase }
   .nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: none; background: none; color: var(--text2); font-family: var(--font); font-size: .9rem; font-weight: 400; cursor: pointer; border-radius: var(--radius-sm); text-align: left; transition: all .14s; min-height: 46px }
   .nav-btn:hover { background: var(--surface2); color: var(--text) }
   .nav-btn.active { background: var(--accent-dim); color: var(--accent); font-weight: 500 }
-  .nav-btn .icon { width: 20px; text-align: center; flex-shrink: 0; font-size: 1.05rem; line-height: 1; opacity: .7 }
-  .nav-btn.active .icon { opacity: 1 }
+
   .cars-list { padding: 0 12px; flex: 1; overflow-y: auto }
   .car-item { display: flex; align-items: center; gap: 10px; padding: 10px 10px; border-radius: var(--radius-sm); cursor: pointer; transition: all .14s; margin-bottom: 2px; min-height: 46px }
   .car-item:hover { background: var(--surface2) }
   .car-item.active { background: var(--surface2); box-shadow: inset 3px 0 0 var(--accent) }
-  .car-item.inactive-car { opacity: .4 }
+  .car-item.inactive-car { opacity: .55 } /* was .4 — dark text failed WCAG at that level */
   .car-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0 }
   .car-name { font-size: .875rem; color: var(--text); flex: 1; min-width: 0; line-height: 1.3; font-weight: 500 }
   .car-name small { display: block; color: var(--text2); font-size: .75rem; font-family: var(--font-mono); margin-top: 2px; font-weight: 400 }
@@ -239,7 +273,10 @@
 
   /* ── Tables ─────────────────────────────────── */
   .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden }
-  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; position: relative }
+  /* Fade gradient naznačuje horizontální scroll */
+  .table-scroll::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 32px; background: linear-gradient(to left, var(--surface), transparent); pointer-events: none; opacity: 0; transition: opacity .2s }
+  .table-scroll.scrollable::after { opacity: 1 }
   .table-header { display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: transparent; flex-wrap: wrap }
   .table-header-title { font-size: .95rem; font-weight: 600; flex: 1; letter-spacing: -.01em }
   .search-input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: .85rem; padding: 9px 13px; border-radius: var(--radius-sm); width: 190px; transition: border-color .15s; min-height: 40px }
@@ -260,17 +297,19 @@
   .td-muted { color: var(--text2) }
 
   /* ── Badges ─────────────────────────────────── */
-  .cat-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: .72rem; font-weight: 500; white-space: nowrap }
-  .fuel-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: .72rem; font-weight: 500; background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,197,94,.2) }
+  .cat-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: .75rem; font-weight: 500; white-space: nowrap }
+  .fuel-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: .75rem; font-weight: 500; background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,197,94,.2) }
   .full-tank-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); vertical-align: middle }
   .partial-tank-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--text3); vertical-align: middle }
-  .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 20px; font-size: .72rem; font-weight: 500 }
+  .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 20px; font-size: .75rem; font-weight: 500 }
   .status-badge.active { background: var(--green-dim); color: var(--green) }
   .status-badge.inactive { background: var(--surface3); color: var(--text3) }
 
   /* ── Row actions ────────────────────────────── */
   .row-actions { display: flex; gap: 4px; opacity: 0; transition: opacity .15s }
   tbody tr:hover .row-actions { opacity: 1 }
+  /* Touch devices: always show row actions (no hover available) */
+  @media (hover: none) { .row-actions { opacity: 1 } }
   .row-btn { width: 36px; height: 36px; border-radius: 6px; border: 1px solid var(--border2); background: none; color: var(--text2); cursor: pointer; font-size: 1.05rem; display: flex; align-items: center; justify-content: center; transition: all .12s; flex-shrink: 0 }
   .row-btn:hover { background: var(--surface3); color: var(--text) }
   .row-btn.del:hover { border-color: var(--red); color: var(--red) }
@@ -282,6 +321,16 @@
   .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 12px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; transform: translateY(12px); transition: transform .2s; box-shadow: 0 24px 64px rgba(0,0,0,.5) }
   .modal.wide { max-width: 700px }
   .modal-overlay.open .modal { transform: translateY(0) }
+  /* Mobile: modal jako bottom sheet — snazší ovládání palcem */
+  @media (max-width: 600px) {
+    .modal-overlay { align-items: flex-end; padding: 0 }
+    .modal { border-radius: 20px 20px 0 0; max-height: 92dvh; max-width: 100%; transform: translateY(100%) }
+    .modal.wide { max-width: 100% }
+    .modal-overlay.open .modal { transform: translateY(0) }
+    /* 1 sloupec ve formuláři — pole jsou dostatečně široká pro palec */
+    .modal .form-grid { grid-template-columns: 1fr }
+    .modal .form-grid .full { grid-column: 1 }
+  }
   .modal-head { padding: 20px 22px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px }
   .modal-head h2 { font-size: 1.05rem; font-weight: 600; flex: 1; letter-spacing: -.02em }
   .modal-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 22px }
@@ -290,7 +339,7 @@
   .modal-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500 }
   .modal-tab-content { display: none }
   .modal-tab-content.active { display: block }
-  .modal-close { width: 28px; height: 28px; border: 1px solid var(--border2); background: none; color: var(--text2); border-radius: var(--radius-sm); cursor: pointer; font-size: .95rem; display: flex; align-items: center; justify-content: center; transition: all .12s }
+  .modal-close { width: 40px; height: 40px; border: 1px solid var(--border2); background: none; color: var(--text2); border-radius: var(--radius-sm); cursor: pointer; font-size: .95rem; display: flex; align-items: center; justify-content: center; transition: all .12s; flex-shrink: 0 }
   .modal-close:hover { border-color: var(--red); color: var(--red) }
   .modal-body { padding: 22px }
   .modal-foot { padding: 16px 22px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end }
@@ -319,7 +368,7 @@
   .bar-chart-gridlines { position: absolute; inset: 0 0 22px 0; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; z-index: 0 }
   .bar-chart-gridline { width: 100%; border-top: 1px solid var(--border) }
   .bar-chart-avgline { position: absolute; left: 0; right: 0; border-top: 1.5px dashed var(--accent); opacity: .45; pointer-events: none; z-index: 2 }
-  .bar-chart-avglabel { position: absolute; right: 0; font-size: .7rem; color: var(--accent); opacity: .8; font-family: var(--font-mono); transform: translateY(-110%); white-space: nowrap }
+  .bar-chart-avglabel { position: absolute; right: 0; font-size: .72rem; color: var(--accent); opacity: .8; font-family: var(--font-mono); transform: translateY(-110%); white-space: nowrap }
   .bar-chart-total { font-size: .75rem; color: var(--text2); display: flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0 }
   .bar-chart-total::before { content: ''; display: inline-block; width: 16px; border-top: 1.5px dashed var(--text3) }
   .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 160px; position: relative; z-index: 1; overflow: visible; min-width: 0 }
@@ -354,7 +403,7 @@
   .alert-item.warn { border-color: rgba(245,158,11,.3); background: var(--amber-dim); color: var(--amber) }
   .alert-item.danger { border-color: rgba(239,68,68,.3); background: var(--red-dim); color: var(--red) }
   .alert-item.info { border-color: rgba(99,102,241,.3); background: rgba(99,102,241,.08); color: var(--blue) }
-  .alert-icon { font-size: 1.05rem; flex-shrink: 0 }
+  .alert-icon { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: currentColor; align-self: flex-start; margin-top: 6px }
   .alert-text { flex: 1 }
   .alert-text strong { display: block }
   /* FIXED: opacity:.7 on colored text → explicit color inherit without opacity degradation */
@@ -384,11 +433,11 @@
 
   /* ── Empty state ────────────────────────────── */
   .empty { text-align: center; padding: 56px 20px; color: var(--text3) }
-  .empty .empty-icon { font-size: 2.5rem; margin-bottom: 14px; opacity: .5 }
+  .empty .empty-icon { font-size: 1.5rem; margin-bottom: 14px; opacity: .35; font-family: var(--font-mono); letter-spacing: .05em }
   .empty p { font-size: .95rem }
 
   /* ── Toast ──────────────────────────────────── */
-  #toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface3); border: 1px solid var(--border2); color: var(--text); padding: 12px 20px; border-radius: var(--radius); font-size: .875rem; z-index: 9999; transform: translateY(16px); opacity: 0; transition: all .2s; pointer-events: none; font-weight: 500 }
+  #toast { position: fixed; bottom: max(24px, env(safe-area-inset-bottom, 24px)); right: max(24px, env(safe-area-inset-right, 24px)); background: var(--surface3); border: 1px solid var(--border2); color: var(--text); padding: 12px 20px; border-radius: var(--radius); font-size: .875rem; z-index: 9999; transform: translateY(16px); opacity: 0; transition: all .2s; pointer-events: none; font-weight: 500 }
   #toast.show { transform: translateY(0); opacity: 1 }
   #toast.success { border-color: var(--green); color: var(--green) }
   #toast.error { border-color: var(--red); color: var(--red) }
@@ -427,8 +476,7 @@
   /* ── Fuel stats / two-col ────────────────────── */
   .fuel-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 14px; margin-bottom: 24px }
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px }
-  @media(max-width: 1100px) { .two-col { grid-template-columns: 1fr } }
-  @media(max-width: 900px) { .two-col { grid-template-columns: 1fr } }
+  @media(max-width: 960px) { .two-col { grid-template-columns: 1fr } }
 
   /* ── Color swatches ─────────────────────────── */
   .color-swatch { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: all .15s; display: inline-block }
@@ -448,7 +496,7 @@
   .date-triple { display: flex; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: border-color .15s; overflow: hidden; position: relative }
   .date-triple:focus-within { border-color: var(--accent) }
   .date-triple.error { border-color: var(--red) }
-  .date-triple input { background: none; border: none; color: var(--text); font-family: var(--font-mono); font-size: .85rem; padding: 9px 0; text-align: center; outline: none; -moz-appearance: textfield }
+  .date-triple input { background: none; border: none; color: var(--text); font-family: var(--font-mono); font-size: .85rem; padding: 9px 0; text-align: center; outline: none; -moz-appearance: textfield; appearance: textfield }
   .date-triple input::-webkit-outer-spin-button, .date-triple input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0 }
   .date-triple input.dt-d { width: 34px }
   .date-triple input.dt-m { width: 34px }
@@ -530,6 +578,12 @@
   .ac-item strong { color: var(--accent) }
 
   /* ── Settings page ──────────────────────────── */
+  /* Two-col wrapper: left = preferences, right = system/info */
+  .settings-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; align-items: start; margin-bottom: 28px }
+  @media(max-width: 768px) { .settings-two-col { grid-template-columns: 1fr } }
+  .settings-two-col > div > .section-title { margin-top: 0 }
+  .settings-col-card { margin-bottom: 20px }
+  /* Data grid: 2-col for export/import/delete actions */
   .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px }
   @media(max-width: 700px) { .settings-grid { grid-template-columns: 1fr } }
   .settings-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 24px }
@@ -540,6 +594,87 @@
   .settings-info-row:last-child { border-bottom: none }
   .settings-info-row span:first-child { color: var(--text2) }
   .settings-info-row span:last-child { font-family: var(--font-mono); font-size: .8rem; color: var(--text) }
+
+  /* ── Vehicle Edit Page — accordion sections ──────────────── */
+  .edit-accordion { display: flex; flex-direction: column; gap: 10px; margin-bottom: 110px }
+  .edit-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .15s }
+  .edit-section:has(.edit-section-body.open) { border-color: var(--border2) }
+  .edit-section-head { display: flex; align-items: center; gap: 10px; padding: 16px 18px; cursor: pointer; user-select: none; transition: background .12s; min-height: 52px }
+  .edit-section-head:hover { background: var(--surface2) }
+
+  .edit-section-title { font-size: .95rem; font-weight: 600; flex: 1; letter-spacing: -.01em }
+  .edit-section-summary { font-size: .75rem; color: var(--text3); font-family: var(--font-mono); max-width: 180px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0 }
+  .edit-section-chevron { color: var(--text3); transition: transform .22s; font-size: .75rem; flex-shrink: 0; margin-left: 4px }
+  .edit-section-chevron.open { transform: rotate(90deg); color: var(--accent) }
+  .edit-section-body { border-top: 1px solid var(--border); padding: 22px 18px; display: none }
+  .edit-section-body.open { display: block }
+  /* Sticky save bar */
+  .edit-sticky-bar { position: fixed; bottom: 0; left: var(--sidebar-w); right: 0; background: var(--surface); border-top: 2px solid var(--border2); padding: 12px 24px; display: flex; gap: 10px; align-items: center; z-index: 90; box-shadow: 0 -4px 24px rgba(0,0,0,.35) }
+  @media (max-width: 768px) { .edit-sticky-bar { left: 0; padding: 10px 16px } }
+  .edit-sticky-spacer { flex: 1 }
+
+  /* Topbar: na mid breakpointu (768–900px) schovat texty tlačítek, zobrazit jen ikony */
+  @media (max-width: 900px) and (min-width: 769px) {
+    #add-fuel-btn .btn-label,
+    #add-record-btn .btn-label { display: none }
+    #add-fuel-btn .btn-icon,
+    #add-record-btn .btn-icon { display: inline; font-size: 1.15rem; line-height: 1 }
+    #add-fuel-btn, #add-record-btn { padding: 0 12px; min-width: 40px }
+    .topbar-search-wrap { max-width: 200px }
+  }
+
+  /* ── Reminders grid — kompaktnější na malém telefonu ──── */
+  @media (max-width: 480px) {
+    .reminders-grid { grid-template-columns: 1fr }
+    .reminder-card { padding: 14px 16px }
+  }
+  .wizard-wrap { max-width: 660px; margin: 0 auto; padding-bottom: 110px }
+  .wizard-progress { display: flex; align-items: center; margin-bottom: 28px }
+  .wizard-dot { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .82rem; font-weight: 700; flex-shrink: 0; border: 2px solid; transition: all .2s }
+  .wizard-dot.done { background: var(--accent); border-color: var(--accent); color: #02061a }
+  .wizard-dot.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent) }
+  .wizard-dot.pending { background: var(--surface2); border-color: var(--border2); color: var(--text3) }
+  .wizard-line { flex: 1; height: 2px; background: var(--border2); transition: background .3s }
+  .wizard-line.done { background: var(--accent) }
+  .wizard-step-label { font-size: .72rem; color: var(--text3); margin-top: 8px; text-align: center; font-weight: 500 }
+  .wizard-header { margin-bottom: 20px }
+  .wizard-header-title { font-size: 1.1rem; font-weight: 700; letter-spacing: -.02em }
+  .wizard-header-sub { font-size: .82rem; color: var(--text2); margin-top: 4px }
+  .wizard-body { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 20px }
+  .wizard-sticky { position: fixed; bottom: 0; left: var(--sidebar-w); right: 0; background: var(--surface); border-top: 2px solid var(--border2); padding: 12px 24px; display: flex; gap: 10px; align-items: center; z-index: 90; box-shadow: 0 -4px 24px rgba(0,0,0,.35) }
+  @media (max-width: 768px) { .wizard-sticky { left: 0; padding: 10px 16px } }
+  .wizard-step-info { flex: 1; font-size: .78rem; color: var(--text3) }
+
+  /* ── Records master-detail layout (desktop) ────────────── */
+  .records-layout { display: grid; grid-template-columns: 1fr; gap: 0 }
+  .records-master { min-width: 0 }
+  .records-detail { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; position: sticky; top: 20px; align-self: start; max-height: calc(100vh - 120px); flex-direction: column }
+  .records-detail-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text3); padding: 48px 20px; text-align: center; min-height: 280px; gap: 8px }
+  .records-detail-empty-icon { font-size: 1.8rem; opacity: .25; margin-bottom: 6px }
+  .records-detail-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0 }
+  .records-detail-title { font-size: .95rem; font-weight: 600; flex: 1; letter-spacing: -.01em }
+  .records-detail-body { padding: 20px; overflow-y: auto; flex: 1 }
+  .records-detail-foot { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; flex-shrink: 0; background: var(--surface) }
+  .records-master tbody tr { cursor: pointer }
+  .records-master tbody tr.record-selected { background: var(--accent-dim) !important }
+  @media (min-width: 1200px) {
+    .records-layout { grid-template-columns: minmax(0,1fr) 400px; gap: 20px; align-items: start }
+    .records-detail { display: flex }
+  }
+
+  /* ── Car edit page: 2-column grid on wide screens ──────── */
+  .edit-accordion-outer { max-width: 720px; margin: 0 auto }
+  @media (min-width: 1200px) {
+    .edit-accordion-outer { max-width: none }
+    .edit-accordion { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 80px; align-items: start }
+    .edit-section-body { display: block !important } /* all sections always visible */
+    .edit-section-head { cursor: default }
+    .edit-section-head:hover { background: transparent }
+    .edit-section-chevron { display: none }
+    .edit-section-summary { display: none }
+    #section-tyres { grid-column: 1 / -1 }
+    .edit-section:has(.edit-section-body.open) { border-color: var(--border) }
+  }
 </style>
 </head>
 <body>
@@ -552,16 +687,16 @@
 
     <div class="sidebar-section">
       <div class="sidebar-section-label">Navigace</div>
-      <button class="nav-btn active" onclick="showPage('fleet')" id="nav-fleet" title="Přehled vozů"><span class="icon">⊞</span><span data-cs="Přehled vozů" data-en="Fleet">Přehled vozů</span></button>
-      <button class="nav-btn" onclick="showPage('dashboard')" id="nav-dashboard" title="Přehled"><span class="icon">◉</span><span data-cs="Detail vozu" data-en="Vehicle">Detail vozu</span></button>
-      <button class="nav-btn" onclick="showPage('records')" id="nav-records" title="Záznamy"><span class="icon">☰</span><span data-cs="Záznamy" data-en="Records">Záznamy</span></button>
-      <button class="nav-btn" onclick="showPage('fuel')" id="nav-fuel" title="Tankování"><span class="icon">⊟</span><span data-cs="Tankování" data-en="Fuel log">Tankování</span></button>
-      <button class="nav-btn" onclick="showPage('analytics')" id="nav-analytics" title="Analytika"><span class="icon">◫</span><span data-cs="Analytika" data-en="Analytics">Analytika</span></button>
-      <button class="nav-btn" onclick="showPage('reminders')" id="nav-reminders" title="Připomínky"><span class="icon">◷</span><span data-cs="Připomínky" data-en="Reminders">Připomínky</span></button>
+      <button class="nav-btn active" onclick="showPage('fleet')" id="nav-fleet" title="Přehled vozů"><span data-cs="Přehled vozů" data-en="Fleet">Přehled vozů</span></button>
+      <button class="nav-btn" onclick="showPage('dashboard')" id="nav-dashboard" title="Přehled"><span data-cs="Detail vozu" data-en="Vehicle">Detail vozu</span></button>
+      <button class="nav-btn" onclick="showPage('records')" id="nav-records" title="Záznamy"><span data-cs="Záznamy" data-en="Records">Záznamy</span></button>
+      <button class="nav-btn" onclick="showPage('fuel')" id="nav-fuel" title="Tankování"><span data-cs="Tankování" data-en="Fuel log">Tankování</span></button>
+      <button class="nav-btn" onclick="showPage('analytics')" id="nav-analytics" title="Analytika"><span data-cs="Analytika" data-en="Analytics">Analytika</span></button>
+      <button class="nav-btn" onclick="showPage('reminders')" id="nav-reminders" title="Připomínky"><span data-cs="Připomínky" data-en="Reminders">Připomínky</span></button>
     </div>
 
     <div style="border-top:1px solid var(--border);padding:8px 12px;margin-top:auto;">
-      <button class="nav-btn" onclick="showPage('settings')" id="nav-settings" title="Nastavení"><span class="icon">◎</span><span data-cs="Nastavení" data-en="Settings">Nastavení</span></button>
+      <button class="nav-btn" onclick="showPage('settings')" id="nav-settings" title="Nastavení"><span data-cs="Nastavení" data-en="Settings">Nastavení</span></button>
     </div>
 
     <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
@@ -578,20 +713,20 @@
       <!-- Desktop search — flex child, shrinks with window -->
       <div class="topbar-search-wrap">
         <div class="topbar-search-inner">
-          <span class="topbar-search-icon">🔍</span>
+          <span class="topbar-search-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
           <input type="text" class="topbar-search-input" id="topbar-search" placeholder="Hledat vozidlo..." data-cs="Hledat vozidlo..." data-en="Search vehicle..." oninput="handleGlobalSearch(this.value)">
         </div>
       </div>
 
       <!-- Mobile: search icon that opens the overlay -->
-      <button id="search-toggle" onclick="toggleSearchOverlay()" aria-label="Hledat" title="Hledat vozidlo">🔍</button>
+      <button id="search-toggle" onclick="toggleSearchOverlay()" aria-label="Hledat" title="Hledat vozidlo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></button>
 
       <button class="btn btn-fuel" id="add-fuel-btn" onclick="openFuelModal()" title="Přidat záznam tankování">
-        <span class="btn-icon" aria-hidden="true">⊟</span>
+        <span class="btn-icon" aria-hidden="true">+</span>
         <span class="btn-label" data-cs="Nové tankování" data-en="New fuel entry">Nové tankování</span>
       </button>
       <button class="btn btn-primary" id="add-record-btn" onclick="openRecordModal()" title="Přidat servisní záznam">
-        <span class="btn-icon" aria-hidden="true">＋</span>
+        <span class="btn-icon" aria-hidden="true">+</span>
         <span class="btn-label" data-cs="Nový záznam" data-en="New record">Nový záznam</span>
       </button>
     </div>
@@ -599,7 +734,7 @@
     <!-- Mobile search overlay — appears below topbar on toggle -->
     <div id="search-overlay">
       <div id="search-overlay-wrap">
-        <span id="search-overlay-icon">🔍</span>
+        <span id="search-overlay-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
         <input type="text" id="search-overlay-input"
           placeholder="Hledat vozidlo..."
           data-cs="Hledat vozidlo..." data-en="Search vehicle..."
@@ -610,7 +745,7 @@
     </div>
 
     <div id="car-switcher" style="display:none"></div>
-    <div id="content"></div>
+    <div id="content-scroll"><div id="content" class="content-inner"></div></div>
   </main>
 </div>
 
@@ -674,127 +809,6 @@
   </div>
 </div>
 
-<!-- CAR MODAL -->
-<div class="modal-overlay" id="car-modal">
-  <div class="modal wide">
-    <div class="modal-head">
-      <h2 id="car-modal-title">Nové vozidlo</h2>
-      <button class="modal-close" onclick="closeModal('car-modal')">✕</button>
-    </div>
-    <div class="modal-tabs">
-      <button class="modal-tab active" onclick="switchCarTab('basic',this)">Základní info</button>
-      <button class="modal-tab" onclick="switchCarTab('docs',this)">Dokumenty &amp; termíny</button>
-      <button class="modal-tab" onclick="switchCarTab('service',this)">Servis</button>
-      <button class="modal-tab" onclick="switchCarTab('tyres',this)" data-cs="Pneumatiky" data-en="Tyres">Pneumatiky</button>
-    </div>
-    <div class="modal-body">
-      <!-- TAB: BASIC -->
-      <div class="modal-tab-content active" id="car-tab-basic">
-        <div class="form-grid">
-          <div class="form-group">
-            <label class="form-label required">Značka</label>
-            <div class="ac-wrap" id="ac-make-wrap">
-              <input type="text" class="form-input" id="c-make" placeholder="Škoda" autocomplete="off" oninput="acFilter('make')" onfocus="acFilter('make')" onblur="setTimeout(()=>{const l=document.getElementById('ac-make-list');if(l)l.style.display='none';},150)" onkeydown="acKey(event,'make')">
-              <div class="ac-dropdown" id="ac-make-list" style="display:none"></div>
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label required">Model</label>
-            <div class="ac-wrap" id="ac-model-wrap">
-              <input type="text" class="form-input" id="c-model" placeholder="Octavia" autocomplete="off" oninput="acFilter('model')" onfocus="acFilter('model')" onblur="setTimeout(()=>{const l=document.getElementById('ac-model-list');if(l)l.style.display='none';},150)" onkeydown="acKey(event,'model')">
-              <div class="ac-dropdown" id="ac-model-list" style="display:none"></div>
-            </div>
-          </div>
-          <div class="form-group"><label class="form-label">Rok výroby</label><input type="number" class="form-input" id="c-year" placeholder="2008" min="1900" max="2099"></div>
-          <div class="form-group"><label class="form-label">SPZ</label><input type="text" class="form-input" id="c-plate" placeholder="1Z3 4567" style="text-transform:uppercase" title="Státní poznávací značka" data-title-cs="Státní poznávací značka" data-title-en="License Plate Number"></div>
-          <div class="form-group full"><label class="form-label">VIN</label><input type="text" class="form-input" id="c-vin" placeholder="TMBBG61Z982..." style="text-transform:uppercase" title="Vehicle Identification Number — unikátní číslo karoserie (17 znaků)" data-title-cs="Vehicle Identification Number — unikátní číslo karoserie (17 znaků)" data-title-en="Vehicle Identification Number — unique chassis number (17 chars)"></div>
-          <div class="form-group"><label class="form-label required">Typ paliva</label>
-            <select class="form-select" id="c-fueltype" title="Hlavní palivo vozidla" data-title-cs="Hlavní palivo vozidla" data-title-en="Primary vehicle fuel">
-              <option value="" disabled selected hidden data-cs="Vyberte" data-en="Select">Vyberte</option>
-              <option value="petrol">Benzín</option>
-              <option value="diesel">Diesel</option>
-              <option value="lpg">LPG</option>
-              <option value="electric">Elektro</option>
-              <option value="hybrid">Hybrid</option>
-              <option value="phev">Plug-in Hybrid (PHEV)</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label" id="c-status-label">Stav</label>
-            <div class="toggle-wrap" style="margin-top:4px;">
-              <label class="toggle"><input type="checkbox" id="c-status-toggle"><span class="toggle-slider"></span></label>
-              <span class="toggle-label" id="c-status-text">Aktivní</span>
-            </div>
-          </div>
-          <div class="form-group"><label class="form-label">Počáteční km</label><input type="number" class="form-input" id="c-startodo" placeholder="243927"></div>
-          <div class="form-group"><label class="form-label" data-cs="Datum pořízení" data-en="Acquisition date">Datum pořízení</label><div class="date-triple" id="c-acquired-wrap"><input type="number" class="dt-d" id="c-acquired-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="c-acquired-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="c-acquired-y" placeholder="RRRR" min="1900" max="2099"></div></div>
-          <div class="form-group"><label class="form-label" data-cs="Datum vyřazení" data-en="Decommission date">Datum vyřazení</label><div class="date-triple" id="c-decommissioned-wrap"><input type="number" class="dt-d" id="c-decommissioned-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="c-decommissioned-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="c-decommissioned-y" placeholder="RRRR" min="1900" max="2099"></div></div>
-          <div class="form-group full"><label class="form-label">Barva</label>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;" id="color-picker">
-              <span class="color-swatch" style="background:#e8c547" data-color="#e8c547"></span>
-              <span class="color-swatch" style="background:#ff6b35" data-color="#ff6b35"></span>
-              <span class="color-swatch" style="background:#4caf82" data-color="#4caf82"></span>
-              <span class="color-swatch" style="background:#5b8dee" data-color="#5b8dee"></span>
-              <span class="color-swatch" style="background:#b05be8" data-color="#b05be8"></span>
-              <span class="color-swatch" style="background:#e05c5c" data-color="#e05c5c"></span>
-              <span class="color-swatch" style="background:#7a5230" data-color="#7a5230"></span>
-              <span class="color-swatch" style="background:#c8956a" data-color="#c8956a"></span>
-              <span class="color-swatch" style="background:#e8e4d8" data-color="#e8e4d8"></span>
-              <span class="color-swatch" style="background:#2a2a2a;border:1px solid #555" data-color="#2a2a2a"></span>
-              <span class="color-swatch" style="background:#aaa" data-color="#aaaaaa"></span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <!-- TAB: DOCS -->
-      <div class="modal-tab-content" id="car-tab-docs">
-        <div class="form-grid">
-          <div class="form-section-label" data-cs="STK – Technická prohlídka" data-en="STK – Technical Inspection" title="Státní technická kontrola" data-title-cs="Státní technická kontrola" data-title-en="Technical Inspection / MOT">STK – Technická prohlídka</div>
-          <div class="form-group"><label class="form-label" data-cs="Platnost do" data-en="Valid until">Platnost do</label><div class="date-triple" id="c-stk-wrap"><input type="number" class="dt-d" id="c-stk-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="c-stk-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="c-stk-y" placeholder="RRRR" min="1900" max="2099"></div></div>
-          <div class="form-group"><label class="form-label" data-cs="Varovat (dní předem)" data-en="Warn (days before)" title="Zobrazit upozornění X dní před vypršením platnosti" data-title-cs="Zobrazit upozornění X dní před vypršením platnosti" data-title-en="Show alert X days before expiration">Varovat (dní předem)</label><input type="number" class="form-input" id="c-stk-warn" value="30" placeholder="30"></div>
-
-          <div class="form-section-label" data-cs="Emise – Měření emisí" data-en="Emission Check" title="Měření emisí škodlivých látek" data-title-cs="Měření emisí škodlivých látek" data-title-en="Emission measurement check">Emise – Měření emisí</div>
-          <div class="form-group"><label class="form-label" data-cs="Platnost do" data-en="Valid until">Platnost do</label><div class="date-triple" id="c-emission-wrap"><input type="number" class="dt-d" id="c-emission-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="c-emission-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="c-emission-y" placeholder="RRRR" min="1900" max="2099"></div></div>
-          <div class="form-group"><label class="form-label" data-cs="Varovat (dní předem)" data-en="Warn (days before)" title="Zobrazit upozornění X dní před vypršením platnosti" data-title-cs="Zobrazit upozornění X dní před vypršením platnosti" data-title-en="Show alert X days before expiration">Varovat (dní předem)</label><input type="number" class="form-input" id="c-emission-warn" value="30" placeholder="30"></div>
-
-          <div class="form-section-label" data-cs="POV – Povinné ručení" data-en="Compulsory Vehicle Liability" title="Pojištění odpovědnosti z provozu vozidla (ze zákona povinné)" data-title-cs="Pojištění odpovědnosti z provozu vozidla (ze zákona povinné)" data-title-en="Compulsory Third Party Liability Insurance">POV – Povinné ručení</div>
-          <div class="form-group"><label class="form-label" data-cs="Platnost do" data-en="Valid until">Platnost do</label><div class="date-triple" id="c-pov-wrap"><input type="number" class="dt-d" id="c-pov-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="c-pov-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="c-pov-y" placeholder="RRRR" min="1900" max="2099"></div></div>
-          <div class="form-group"><label class="form-label" data-cs="Varovat (dní předem)" data-en="Warn (days before)" title="Zobrazit upozornění X dní před vypršením platnosti" data-title-cs="Zobrazit upozornění X dní před vypršením platnosti" data-title-en="Show alert X days before expiration">Varovat (dní předem)</label><input type="number" class="form-input" id="c-pov-warn" value="30" placeholder="30"></div>
-
-          <div class="form-section-label" data-cs="Havarijní pojištění (volitelné)" data-en="Comprehensive Insurance (optional)" title="Dobrovolné pojištění pro případ havárie, živelné události nebo krádeže" data-title-cs="Dobrovolné pojištění pro případ havárie, živelné události nebo krádeže" data-title-en="Voluntary insurance covering damage, theft, or natural disasters">Havarijní pojištění (volitelné)</div>
-          <div class="form-group"><label class="form-label" data-cs="Platnost do" data-en="Valid until">Platnost do</label><div class="date-triple" id="c-ins-wrap"><input type="number" class="dt-d" id="c-ins-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="c-ins-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="c-ins-y" placeholder="RRRR" min="1900" max="2099"></div></div>
-          <div class="form-group"><label class="form-label" data-cs="Varovat (dní předem)" data-en="Warn (days before)" title="Zobrazit upozornění X dní před vypršením platnosti" data-title-cs="Zobrazit upozornění X dní před vypršením platnosti" data-title-en="Show alert X days before expiration">Varovat (dní předem)</label><input type="number" class="form-input" id="c-ins-warn" value="30" placeholder="30"></div>
-
-          <div class="form-section-label" data-cs="Asistenční služby (volitelné)" data-en="Roadside Assistance (optional)" title="Služby pomoci na cestách (odtah, oprava na místě)" data-title-cs="Služby pomoci na cestách (odtah, oprava na místě)" data-title-en="Roadside help services (towing, on-spot repair)">Asistenční služby (volitelné)</div>
-          <div class="form-group"><label class="form-label" data-cs="Platnost do" data-en="Valid until">Platnost do</label><div class="date-triple" id="c-assist-wrap"><input type="number" class="dt-d" id="c-assist-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="c-assist-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="c-assist-y" placeholder="RRRR" min="1900" max="2099"></div></div>
-          <div class="form-group"><label class="form-label" data-cs="Varovat (dní předem)" data-en="Warn (days before)" title="Zobrazit upozornění X dní před vypršením platnosti" data-title-cs="Zobrazit upozornění X dní před vypršením platnosti" data-title-en="Show alert X days before expiration">Varovat (dní předem)</label><input type="number" class="form-input" id="c-assist-warn" value="30" placeholder="30"></div>
-        </div>
-      </div>
-      <!-- TAB: SERVICE -->
-      <div class="modal-tab-content" id="car-tab-service">
-        <div class="form-grid">
-          <div class="form-section-label" data-cs="Výměna oleje" data-en="Oil change">Výměna oleje</div>
-          <div class="form-group"><label class="form-label" data-cs="Interval (km)" data-en="Interval (km)">Interval (km)</label><input type="number" class="form-input" id="c-oil-interval" placeholder="10000"></div>
-          <div class="form-group"><label class="form-label" data-cs="Naposledy při (km)" data-en="Last done at (km)">Naposledy při (km)</label><input type="number" class="form-input" id="c-oil-last" placeholder="245448"></div>
-          <div class="form-group"><label class="form-label" data-cs="Varovat (km zbývá)" data-en="Warn (km left)">Varovat (km zbývá)</label><input type="number" class="form-input" id="c-oil-warn" placeholder="1000" value="1000"></div>
-          <div class="form-group"><label class="form-label" data-cs="Typ motorového oleje" data-en="Engine oil type">Typ motorového oleje</label><input type="text" class="form-input" id="c-oil-type" placeholder="5W-30 Longlife"></div>
-          <div class="form-section-label" data-cs="Chladící kapalina" data-en="Coolant">Chladící kapalina</div>
-          <div class="form-group"><label class="form-label" data-cs="Typ chladící kapaliny" data-en="Coolant type">Typ chladící kapaliny</label><input type="text" class="form-input" id="c-coolant-type" placeholder="G13 / G12+"></div>
-          <div class="form-group"></div>
-          <div class="form-section-label" data-cs="Poznámka k vozidlu" data-en="Vehicle notes">Poznámka k vozidlu</div>
-          <div class="form-group full"><textarea class="form-textarea" id="c-note" rows="3" placeholder="Poznámky..."></textarea></div>
-        </div>
-      </div>
-      <!-- TAB: TYRES — obsah generován dynamicky přes renderTyreTab() -->
-      <div class="modal-tab-content" id="car-tab-tyres"></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-danger" id="delete-car-btn" onclick="deleteCar()" style="display:none;margin-right:auto;">Smazat vozidlo</button>
-      <button class="btn btn-ghost" onclick="closeModal('car-modal')">Zrušit</button>
-      <button class="btn btn-primary" onclick="saveCar()">Uložit</button>
-    </div>
-  </div>
-</div>
 
 <!-- REMINDER MODAL -->
 <div class="modal-overlay" id="reminder-modal">
@@ -849,7 +863,7 @@
             <label class="form-label required">Typ importu</label>
             <select class="form-select" id="csv-type" onchange="csvTypeChanged()">
               <option value="records">Servisní záznamy</option>
-              <option value="fuel">Tankování</option>
+              <option value="fuel">tankování</option>
             </select>
           </div>
           <div class="form-group full">
@@ -918,11 +932,13 @@ function getFuelOptions(carId) {
 let state = {
   lang:'cs', currentPage:'fleet', currentCarId:null,
   editingRecordId:null, editingCarId:null, editingFuelId:null,
+  editReturnPage:'fleet', openSection:'basic', wizardStep:1,
   sortField:'date', sortDir:-1, fuelSortField:'date', fuelSortDir:-1,
   filterCat:'', search:'', fuelSearch:'', carSearch:'',
   page:1, fuelPage:1, pageSize:25,
+  selectedRecordId:null,
   selectedColor:'#e8c547',
-  settings:{ tireReminders:true },
+  settings:{ tireReminders:true, theme:'dark' },
   analyticsCarId:null,  // null = all active | '__all__' = all incl. inactive | carId = single car
   remindersCarId:null,   // null = all active | carId = single car
   cars:[], records:[], reminders:[], fuels:[]
@@ -1059,7 +1075,18 @@ function setupDatePickers() {
       } catch (err) {
         picker.value = today;
       }
-      
+
+      // Position hidden input so native calendar opens ABOVE the trigger.
+      // Browser opens calendar below the input by default, so we place the
+      // hidden input ~300px above the trigger — calendar then lands just above it.
+      const rect = wrap.getBoundingClientRect();
+      const calH = 310; // approx native calendar height (px)
+      const top = rect.top >= calH
+        ? rect.top - calH          // enough room above → calendar appears above trigger
+        : rect.bottom;             // too close to top → fall back to below
+      picker.style.cssText = `position:fixed;top:${top}px;left:${rect.left}px;`
+        + `width:${rect.width}px;height:0;opacity:0;pointer-events:none;z-index:9999;`;
+
       // Open native picker
       try {
         if (picker.showPicker) picker.showPicker();
@@ -1090,6 +1117,8 @@ function initDateTripleNav(prefix){
   if(dEl.dataset.navInit) return; // již inicializováno
   dEl.dataset.navInit='1';
   mEl.dataset.navInit='1';
+  // inputmode: numeric klávesnice na mobilech (bez +/– šipek jako type=number)
+  [dEl,mEl,yEl].forEach(el=>el.setAttribute('inputmode','numeric'));
   dEl.addEventListener('input',()=>{if(dEl.value.length>=2)mEl.focus();});
   mEl.addEventListener('input',()=>{if(mEl.value.length>=2)yEl.focus();});
 }
@@ -1202,12 +1231,28 @@ function loadData(){
     if(d){const p=JSON.parse(d);state.cars=p.cars||[];state.records=p.records||[];state.reminders=p.reminders||[];state.fuels=p.fuels||[];if(p.settings)Object.assign(state.settings,p.settings);if(p.lang)state.lang=p.lang;}
     if(state.cars.length)state.currentCarId=state.cars[0].id;
   }catch(e){console.warn('Chyba při načítání dat',e);}
+  // Apply saved theme
+  applyTheme();
 }
 function saveData(){
   localStorage.setItem('mycars_v3',JSON.stringify({cars:state.cars,records:state.records,reminders:state.reminders,fuels:state.fuels,settings:state.settings,lang:state.lang,savedAt:new Date().toISOString()}));
 }
 
 // ─── LANG ────────────────────────────────────────────────────
+function applyTheme(){
+  document.documentElement.classList.toggle('theme-bright', state.settings.theme==='bright');
+  // Update meta theme-color for browser chrome
+  const meta=document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.content=state.settings.theme==='bright'?'#ffffff':'#0f1018';
+}
+
+function setTheme(t){
+  state.settings.theme=t;
+  saveData();
+  applyTheme();
+  renderPage(); // refresh toggle UI in settings
+}
+
 function setLang(l){
   state.lang=l;
   saveData();
@@ -1326,7 +1371,7 @@ function renderCarSwitcher(){
   const bar=document.getElementById('car-switcher');
   if(!bar) return;
   const page=state.currentPage;
-  const hideOn=['fleet','settings'];
+  const hideOn=['fleet','settings','vehicle-edit','vehicle-wizard'];
   if(hideOn.includes(page)){bar.style.display='none';return;}
 
   const cs=state.lang==='cs';
@@ -1434,34 +1479,31 @@ function toggleCswMenu(){
   trigger.setAttribute('aria-expanded',String(isOpen));
 }
 
-function selectAnalyticsCar(val){
-  state.analyticsCarId=val==='__all__active'?null:val;
-  // Also sync currentCarId when a real car is picked (helps navigation to other pages)
-  if(val&&val!=='__all__active'&&val!=='__all__') state.currentCarId=val;
+function closeCswMenu(){
   const menu=document.getElementById('csw-menu');
   const trigger=document.getElementById('csw-trigger');
   if(menu) menu.style.display='none';
   if(trigger){trigger.classList.remove('open');trigger.setAttribute('aria-expanded','false');}
+}
+
+function selectAnalyticsCar(val){
+  state.analyticsCarId=val==='__all__active'?null:val;
+  // Also sync currentCarId when a real car is picked (helps navigation to other pages)
+  if(val&&val!=='__all__active'&&val!=='__all__') state.currentCarId=val;
+  closeCswMenu();
   renderCarSwitcher();
   renderPage();
 }
 function selectRemindersCar(val){
   state.remindersCarId=val==='__all__active'?null:val;
   if(val&&val!=='__all__active'&&val!=='__all__') state.currentCarId=val;
-  const menu=document.getElementById('csw-menu');
-  const trigger=document.getElementById('csw-trigger');
-  if(menu) menu.style.display='none';
-  if(trigger){trigger.classList.remove('open');trigger.setAttribute('aria-expanded','false');}
+  closeCswMenu();
   renderCarSwitcher();
   renderPage();
 }
 
 function switchCar(id){
-  // Close dropdown
-  const menu=document.getElementById('csw-menu');
-  const trigger=document.getElementById('csw-trigger');
-  if(menu) menu.style.display='none';
-  if(trigger){trigger.classList.remove('open');trigger.setAttribute('aria-expanded','false');}
+  closeCswMenu();
   state.currentCarId=id;
   state.page=1;state.fuelPage=1;
   state.filterCat='';state.search='';state.fuelSearch='';
@@ -1481,13 +1523,14 @@ function showPage(page){
   document.getElementById('nav-'+page)?.classList.add('active');
   const onSettings = page==='settings';
   const onFleet = page==='fleet';
+  const onEdit = page==='vehicle-edit' || page==='vehicle-wizard';
   const fuelBtn=document.getElementById('add-fuel-btn');
   const recBtn=document.getElementById('add-record-btn');
   const searchWrap=document.querySelector('.topbar-search-wrap');
   
-  if(fuelBtn) fuelBtn.style.display=(onSettings||onFleet)?'none':'';
-  if(recBtn) recBtn.style.display=(onSettings||onFleet)?'none':'';
-  if(searchWrap) searchWrap.style.visibility=(onSettings)?'hidden':'visible';
+  if(fuelBtn) fuelBtn.style.display=(onSettings||onFleet||onEdit)?'none':'';
+  if(recBtn) recBtn.style.display=(onSettings||onFleet||onEdit)?'none':'';
+  if(searchWrap) searchWrap.style.visibility=(onSettings||onEdit)?'hidden':'visible';
 
   closeSidebarOnMobile();
   renderCarSwitcher();
@@ -1502,7 +1545,9 @@ function renderPage(){
     fleet:cs?'Přehled vozů':'Fleet',
     dashboard:t('dashboard'),records:t('records'),fuel:t('fuel'),
     analytics:t('analytics'),reminders:t('reminders'),
-    settings:cs?'Nastavení':'Settings'
+    settings:cs?'Nastavení':'Settings',
+    'vehicle-edit':cs?'Upravit vozidlo':'Edit vehicle',
+    'vehicle-wizard':cs?'Nové vozidlo':'New vehicle'
   };
   const pageName=pageNames[page]||page;
   const activeCars=state.cars.filter(c=>c.status!=='inactive');
@@ -1517,16 +1562,364 @@ function renderPage(){
     const v=state.remindersCarId;
     if(!v) subtitle=cs?`Všechna aktivní (${activeCars.length})`:`All active (${activeCars.length})`;
     else{ const c=getCar(v); subtitle=c?`${c.make||''} ${c.model||''}`.trim():''; }
-  } else if(!['settings','fleet'].includes(page)&&car){
+  } else if(page==='vehicle-edit'){
+    const editCar=getCar(state.editingCarId);
+    subtitle=editCar?`${editCar.make||''} ${editCar.model||''}`.trim():'';
+  } else if(!['settings','fleet','vehicle-wizard'].includes(page)&&car){
     subtitle=`${car.make||''} ${car.model||car.name||''} ${car.plate?'('+car.plate+')':''}`.trim();
   }
 
   document.getElementById('page-title').innerHTML=
     pageName+(subtitle?` <span>— ${subtitle}</span>`:'');
 
-  const pages={fleet:renderFleet,dashboard:renderDashboard,records:renderRecords,fuel:renderFuelPage,analytics:renderAnalytics,reminders:renderRemindersPage,settings:renderSettings};
+  const pages={fleet:renderFleet,dashboard:renderDashboard,records:renderRecords,fuel:renderFuelPage,analytics:renderAnalytics,reminders:renderRemindersPage,settings:renderSettings,'vehicle-edit':renderCarEditPage,'vehicle-wizard':renderVehicleWizard};
   document.getElementById('content').innerHTML='';
   pages[page]?.();
+}
+
+
+// ─── HELPERS — shared between edit page & wizard ─────────────
+
+// Fill all form fields from a car object (same logic as old openCarModal)
+function fillCarForm(car){
+  const cs = state.lang==='cs';
+  // Basic
+  document.getElementById('c-make').value  = car?.make||'';
+  document.getElementById('c-model').value = car?.model||'';
+  document.getElementById('c-year').value  = car?.year||'';
+  document.getElementById('c-plate').value = car?.plate||'';
+  document.getElementById('c-vin').value   = car?.vin||'';
+  document.getElementById('c-fueltype').value = car?.fuelType||'';
+  document.getElementById('c-startodo').value = car?.startOdo||'';
+  document.getElementById('c-note').value     = car?.note||'';
+  // Dates basic
+  setDateTriple('c-acquired',      car?.acquired||'');
+  setDateTriple('c-decommissioned',car?.decommissioned||'');
+  // Status toggle
+  const isActive = (car?.status||'active')==='active';
+  const tog = document.getElementById('c-status-toggle');
+  if(tog){ tog.checked = isActive; updateStatusToggleLabel(isActive); tog.onchange=()=>updateStatusToggleLabel(tog.checked); }
+  // Docs
+  setDateTriple('c-stk',    car?.stk||'');    setVal('c-stk-warn',    car?.stkWarn??30);
+  setDateTriple('c-emission',car?.emission||'');setVal('c-emission-warn',car?.emissionWarn??30);
+  setDateTriple('c-pov',    car?.pov||'');    setVal('c-pov-warn',    car?.povWarn??30);
+  setDateTriple('c-ins',    car?.insurance||'');setVal('c-ins-warn',  car?.insuranceWarn??30);
+  setDateTriple('c-assist', car?.assist||''); setVal('c-assist-warn', car?.assistWarn??30);
+  // Service
+  setVal('c-oil-interval', car?.oilInterval||'');
+  setVal('c-oil-last',     car?.oilLastKm||'');
+  setVal('c-oil-warn',     car?.oilWarn??1000);
+  setVal('c-oil-type',     car?.oilType||'');
+  setVal('c-coolant-type', car?.coolantType||'');
+  // Color swatches
+  state.selectedColor = car?.color||'#e8c547';
+  document.querySelectorAll('.color-swatch').forEach(s=>{
+    s.classList.toggle('selected', s.dataset.color===state.selectedColor);
+    s.onclick=()=>{ state.selectedColor=s.dataset.color; document.querySelectorAll('.color-swatch').forEach(x=>x.classList.remove('selected')); s.classList.add('selected'); };
+  });
+  // Tyres (rendered via renderTyreTab, filled after render)
+  const tyreTab = document.getElementById('car-tab-tyres');
+  if(tyreTab) renderTyreTab(car);
+  // Date pickers & nav
+  setupDatePickers();
+  document.querySelectorAll('.date-triple').forEach(wrap=>{
+    const prefix=wrap.id.replace('-wrap','');
+    initDateTripleNav(prefix);
+  });
+  // Drivetrain — nastavit hodnoty přepínačů a servisních polí (HTML je již vygenerováno builderem)
+  const autoEl=document.getElementById('c-has-automatic');
+  const x4El=document.getElementById('c-has-4x4');
+  if(autoEl){ autoEl.checked=_carEditDrivetrain.hasAutomatic; }
+  if(x4El){ x4El.checked=_carEditDrivetrain.has4x4; }
+  // saveCarEditDrivetrain voláme jen pokud jsou přepínače v DOM (základní sekce je otevřena)
+  if(autoEl||x4El) saveCarEditDrivetrain();
+  setVal('c-gearbox-oil-interval', car?.gearboxOilInterval||'');
+  setVal('c-gearbox-oil-last',     car?.gearboxOilLastKm||'');
+  setVal('c-gearbox-oil-warn',     car?.gearboxOilWarn??1000);
+  setVal('c-4x4-oil-interval',     car?.xferOilInterval||'');
+  setVal('c-4x4-oil-last',         car?.xferOilLastKm||'');
+  setVal('c-4x4-oil-warn',         car?.xferOilWarn??1000);
+}
+
+function setVal(id, val){
+  const el=document.getElementById(id);
+  if(el) el.value=val;
+}
+
+// Summary text for accordion header when section is closed
+function sectionSummary(section, car){
+  if(!car) return '';
+  const cs=state.lang==='cs';
+  if(section==='basic'){
+    const parts=[car.make,car.model,car.year?'('+car.year+')':'',car.plate].filter(Boolean);
+    if(car.hasAutomatic) parts.push(cs?'Automat':'Auto');
+    if(car.has4x4) parts.push('4×4');
+    return parts.join(' ');
+  }
+  if(section==='docs'){
+    const today=new Date(); today.setHours(0,0,0,0);
+    const dates=[{n:'STK',d:car.stk,w:car.stkWarn},{n:cs?'Emise':'Emiss.',d:car.emission,w:car.emissionWarn},{n:'POV',d:car.pov,w:car.povWarn}];
+    const due=dates.filter(x=>{ if(!x.d) return false; const diff=Math.round((new Date(x.d+'T12:00:00')-today)/86400000); return diff<(x.w||30); });
+    if(due.length) return due.map(x=>x.n).join(', ');
+    const next=dates.filter(x=>x.d).sort((a,b)=>a.d.localeCompare(b.d))[0];
+    return next?next.n+' '+fmtDate(next.d):'';
+  }
+  if(section==='service'){
+    const parts=[];
+    if(car.oilInterval) parts.push((cs?'Olej ':'Oil ')+fmtNum(car.oilInterval)+' km');
+    if(car.oilType) parts.push(car.oilType);
+    if(car.hasAutomatic&&car.gearboxOilInterval) parts.push((cs?'Převodovka ':'Gearbox ')+fmtNum(car.gearboxOilInterval)+' km');
+    if(car.has4x4&&car.xferOilInterval) parts.push('4×4 '+fmtNum(car.xferOilInterval)+' km');
+    return parts.join(' · ');
+  }
+  if(section==='tyres'){
+    const t=car.tyres;
+    if(!t) return '';
+    const s=car.tyreAllSeason?tyreSummary(t.allseason):tyreSummary(t.summer);
+    return typeof s==='string'?s:(s?.front||'');
+  }
+  return '';
+}
+
+function toggleEditSection(name){
+  if(window.innerWidth>=1200) return; // Desktop: all sections always visible via CSS grid
+  state.openSection = state.openSection===name ? null : name;
+  // Re-render edit page to reflect new open state
+  renderCarEditPage();
+  // After re-render, scroll opened section into view
+  if(state.openSection){
+    setTimeout(()=>{
+      const el=document.getElementById('section-'+state.openSection);
+      if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+    }, 50);
+  }
+}
+
+// ─── VEHICLE EDIT PAGE ─────────────────────────────────────────
+function renderCarEditPage(){
+  const el = document.getElementById('content');
+  const car = getCar(state.editingCarId);
+  if(!car){ showPage(state.editReturnPage||'fleet'); return; }
+  const cs = state.lang==='cs';
+
+  const sections=[
+    {id:'basic',   title:cs?'Základní informace':'Basic info',
+      form: buildBasicSectionForm(cs)},
+    {id:'docs',    title:cs?'Dokumenty & termíny':'Documents & dates',  form:"\n<div class='form-grid'>\n  <div class='form-section-label'>STK – Technická prohlídka</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-stk-wrap'>\n      <input type='number' class='dt-d' id='c-stk-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-stk-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-stk-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-stk-warn' value='30'></div>\n  <div class='form-section-label'>Emise – Měření emisí</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-emission-wrap'>\n      <input type='number' class='dt-d' id='c-emission-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-emission-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-emission-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-emission-warn' value='30'></div>\n  <div class='form-section-label'>POV – Povinné ručení</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-pov-wrap'>\n      <input type='number' class='dt-d' id='c-pov-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-pov-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-pov-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-pov-warn' value='30'></div>\n  <div class='form-section-label'>Havarijní pojištění (volitelné)</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-ins-wrap'>\n      <input type='number' class='dt-d' id='c-ins-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-ins-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-ins-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-ins-warn' value='30'></div>\n  <div class='form-section-label'>Asistenční služby (volitelné)</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-assist-wrap'>\n      <input type='number' class='dt-d' id='c-assist-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-assist-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-assist-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-assist-warn' value='30'></div>\n</div>"},
+    {id:'service', title:cs?'Servis':'Service',
+      form: buildServiceSectionForm(cs, _carEditDrivetrain.hasAutomatic, _carEditDrivetrain.has4x4)},
+    {id:'tyres',   title:cs?'Pneumatiky':'Tyres',
+      form:`<div id="car-tab-tyres"></div>`},
+  ];
+
+  const accordionHtml = sections.map(sec=>{
+    const isOpen = state.openSection===sec.id;
+    const summary = sectionSummary(sec.id, car);
+    return `<div class="edit-section" id="section-${sec.id}">
+      <div class="edit-section-head" onclick="toggleEditSection('${sec.id}')">
+        <span class="edit-section-title">${sec.title}</span>
+        ${!isOpen&&summary?`<span class="edit-section-summary">${summary}</span>`:''}
+        <span class="edit-section-chevron${isOpen?' open':''}">▶</span>
+      </div>
+      <div class="edit-section-body${isOpen?' open':''}">
+        ${sec.form}
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML=`
+    <div class="edit-accordion-outer">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap;">
+        ${carDotHtml(car.color||'#888','car-header-dot')}
+        <div>
+          <div style="font-size:1.15rem;font-weight:700;letter-spacing:-.02em">${car.make} ${car.model} ${car.year?'('+car.year+')':''}</div>
+          <div style="font-size:.78rem;color:var(--text2);font-family:var(--font-mono)">${car.plate||'—'} · ${fmtNum(getMaxOdo(car.id))} km</div>
+        </div>
+      </div>
+      <div class="edit-accordion">${accordionHtml}</div>
+    </div>
+    <div class="edit-sticky-bar">
+      <button class="btn btn-danger" onclick="deleteCar()" style="padding:9px 14px">
+        ${cs?'Smazat':'Delete'}
+      </button>
+      <div class="edit-sticky-spacer"></div>
+      <button class="btn btn-ghost" onclick="cancelCarEdit()">
+        ${cs?'Zrušit':'Cancel'}
+      </button>
+      <button class="btn btn-primary" onclick="saveCar()">
+        ${cs?'Uložit':'Save'}
+      </button>
+    </div>`;
+
+  // Fill form values & init tyre tab
+  fillCarForm(car);
+}
+
+function cancelCarEdit(){
+  showPage(state.editReturnPage||'fleet');
+}
+
+// ─── VEHICLE WIZARD (nové vozidlo) ────────────────────────────
+function renderVehicleWizard(){
+  const el = document.getElementById('content');
+  const cs = state.lang==='cs';
+  const step = state.wizardStep||1;
+  const steps=[
+    {label:cs?'Základní':'Basic'},
+    {label:cs?'Dokumenty':'Docs'},
+    {label:cs?'Servis':'Service'},
+    {label:cs?'Pneumatiky':'Tyres'},
+  ];
+
+  // Progress bar
+  const progressHtml = `<div style="margin-bottom:6px">
+    <div class="wizard-progress">
+      ${steps.map((s,i)=>{
+        const n=i+1;
+        const cls=n<step?'done':n===step?'active':'pending';
+        return (i>0?`<div class="wizard-line${n<=step?' done':''}"></div>`:'')
+          +`<div class="wizard-dot ${cls}">${n<step?'✓':n}</div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px">
+      ${steps.map(s=>`<div class="wizard-step-label">${s.label}</div>`).join('')}
+    </div>
+  </div>`;
+
+  const stepTitles=[
+    cs?'Základní informace':'Basic information',
+    cs?'Dokumenty & termíny':'Documents & dates',
+    cs?'Servis':'Service info',
+    cs?'Pneumatiky':'Tyres',
+  ];
+  const stepSubs=[
+    cs?'Vyplňte značku, model a typ paliva (povinné)':'Enter make, model and fuel type (required)',
+    cs?'Termíny platnosti dokumentů (volitelné)':'Document expiry dates (optional)',
+    cs?'Olejové intervaly a poznámky (volitelné)':'Oil intervals and notes (optional)',
+    cs?'Parametry pneumatik (volitelné)':'Tyre parameters (optional)',
+  ];
+  const stepForms=[
+    buildBasicSectionForm(cs),
+    "\n<div class='form-grid'>\n  <div class='form-section-label'>STK – Technická prohlídka</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-stk-wrap'>\n      <input type='number' class='dt-d' id='c-stk-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-stk-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-stk-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-stk-warn' value='30'></div>\n  <div class='form-section-label'>Emise – Měření emisí</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-emission-wrap'>\n      <input type='number' class='dt-d' id='c-emission-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-emission-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-emission-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-emission-warn' value='30'></div>\n  <div class='form-section-label'>POV – Povinné ručení</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-pov-wrap'>\n      <input type='number' class='dt-d' id='c-pov-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-pov-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-pov-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-pov-warn' value='30'></div>\n  <div class='form-section-label'>Havarijní pojištění (volitelné)</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-ins-wrap'>\n      <input type='number' class='dt-d' id='c-ins-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-ins-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-ins-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-ins-warn' value='30'></div>\n  <div class='form-section-label'>Asistenční služby (volitelné)</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-assist-wrap'>\n      <input type='number' class='dt-d' id='c-assist-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-assist-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-assist-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-assist-warn' value='30'></div>\n</div>",
+    buildServiceSectionForm(cs, _wizardDraftData['_hasAutomatic']||false, _wizardDraftData['_has4x4']||false),
+    `<div id="car-tab-tyres"></div>`,
+  ];
+
+  el.innerHTML=`
+    <div class="wizard-wrap">
+      ${progressHtml}
+      <div class="wizard-header">
+        <div class="wizard-header-title">${stepTitles[step-1]}</div>
+        <div class="wizard-header-sub">${stepSubs[step-1]}</div>
+      </div>
+      <div class="wizard-body">
+        ${stepForms[step-1]}
+      </div>
+    </div>
+    <div class="wizard-sticky">
+      <span class="wizard-step-info">${cs?'Krok':'Step'} ${step} ${cs?'z':'of'} ${steps.length}</span>
+      ${step>1?`<button class="btn btn-ghost" onclick="wizardBack()">← ${cs?'Zpět':'Back'}</button>`:''}
+      ${step<steps.length
+        ?`<button class="btn btn-primary" onclick="wizardNext()">${cs?'Další':'Next'} →</button>`
+        :`<button class="btn btn-primary" onclick="saveCar()">${cs?'Vytvořit vozidlo':'Create vehicle'}</button>`}
+    </div>`;
+
+  // For step 1 pre-fill nothing (new car); for step 4 render tyre tab
+  if(step===4) renderTyreTab(null);
+  setupDatePickers();
+  document.querySelectorAll('.date-triple').forEach(wrap=>{
+    const prefix=wrap.id.replace('-wrap','');
+    initDateTripleNav(prefix);
+  });
+  // Re-init color swatches
+  state.selectedColor = state.selectedColor||'#e8c547';
+  document.querySelectorAll('.color-swatch').forEach(s=>{
+    s.classList.toggle('selected', s.dataset.color===state.selectedColor);
+    s.onclick=()=>{ state.selectedColor=s.dataset.color; document.querySelectorAll('.color-swatch').forEach(x=>x.classList.remove('selected')); s.classList.add('selected'); };
+  });
+  // Status toggle init
+  const tog=document.getElementById('c-status-toggle');
+  if(tog){ if(!tog.dataset.init){tog.checked=true; updateStatusToggleLabel(true); tog.dataset.init='1';} tog.onchange=()=>updateStatusToggleLabel(tog.checked); }
+}
+
+function wizardNext(){
+  // Validate step 1 required fields
+  if(state.wizardStep===1){
+    const make=document.getElementById('c-make')?.value.trim();
+    const model=document.getElementById('c-model')?.value.trim();
+    const fuel=document.getElementById('c-fueltype')?.value;
+    if(!make||!model||!fuel){
+      showToast(state.lang==='cs'?'Vyplňte značku, model a typ paliva':'Enter make, model and fuel type','error');
+      return;
+    }
+  }
+  // Persist values between steps via state._wizardDraft
+  _saveWizardDraft();
+  state.wizardStep = Math.min(4, (state.wizardStep||1)+1);
+  renderVehicleWizard();
+  _loadWizardDraft();
+  document.getElementById('content-scroll').scrollTop=0;
+}
+
+function wizardBack(){
+  _saveWizardDraft();
+  state.wizardStep = Math.max(1, (state.wizardStep||1)-1);
+  renderVehicleWizard();
+  _loadWizardDraft();
+  document.getElementById('content-scroll').scrollTop=0;
+}
+
+// Draft persists wizard form values between step transitions
+let _wizardDraftData = {};
+// Stav přepínačů pohonu při editaci vozidla (perzistuje mezi přepínáním záložek)
+let _carEditDrivetrain = {hasAutomatic:false, has4x4:false};
+
+function _saveWizardDraft(){
+  const ids=['c-make','c-model','c-year','c-plate','c-vin','c-fueltype','c-startodo','c-note',
+    'c-stk-warn','c-emission-warn','c-pov-warn','c-ins-warn','c-assist-warn',
+    'c-oil-interval','c-oil-last','c-oil-warn','c-oil-type','c-coolant-type',
+    'c-gearbox-oil-interval','c-gearbox-oil-last','c-gearbox-oil-warn',
+    'c-4x4-oil-interval','c-4x4-oil-last','c-4x4-oil-warn'];
+  ids.forEach(id=>{ const el=document.getElementById(id); if(el) _wizardDraftData[id]=el.value; });
+  // Date triples
+  ['c-acquired','c-decommissioned','c-stk','c-emission','c-pov','c-ins','c-assist'].forEach(p=>{
+    _wizardDraftData[p]=getDateTriple(p);
+  });
+  _wizardDraftData['_color']=state.selectedColor;
+  const tog=document.getElementById('c-status-toggle');
+  if(tog) _wizardDraftData['_status']=tog.checked;
+  const autoEl=document.getElementById('c-has-automatic');
+  const x4El=document.getElementById('c-has-4x4');
+  if(autoEl) _wizardDraftData['_hasAutomatic']=autoEl.checked;
+  if(x4El) _wizardDraftData['_has4x4']=x4El.checked;
+}
+
+function _loadWizardDraft(){
+  const d=_wizardDraftData;
+  if(!Object.keys(d).length) return;
+  const ids=['c-make','c-model','c-year','c-plate','c-vin','c-fueltype','c-startodo','c-note',
+    'c-stk-warn','c-emission-warn','c-pov-warn','c-ins-warn','c-assist-warn',
+    'c-oil-interval','c-oil-last','c-oil-warn','c-oil-type','c-coolant-type'];
+  ids.forEach(id=>{ const el=document.getElementById(id); if(el&&d[id]!==undefined) el.value=d[id]; });
+  ['c-acquired','c-decommissioned','c-stk','c-emission','c-pov','c-ins','c-assist'].forEach(p=>{
+    if(d[p]!==undefined) setDateTriple(p,d[p]||'');
+  });
+  if(d['_color']){ state.selectedColor=d['_color']; document.querySelectorAll('.color-swatch').forEach(s=>{ s.classList.toggle('selected',s.dataset.color===state.selectedColor); }); }
+  const tog=document.getElementById('c-status-toggle');
+  if(tog&&d['_status']!==undefined){ tog.checked=d['_status']; updateStatusToggleLabel(tog.checked); }
+  // Drivetrain — nastavit hodnoty (HTML generuje buildBasicSectionForm / buildServiceSectionForm)
+  setVal('c-gearbox-oil-interval', parseInt(d['c-gearbox-oil-interval'])||'');
+  setVal('c-gearbox-oil-last',     parseInt(d['c-gearbox-oil-last'])||'');
+  setVal('c-gearbox-oil-warn',     parseInt(d['c-gearbox-oil-warn'])||1000);
+  setVal('c-4x4-oil-interval',     parseInt(d['c-4x4-oil-interval'])||'');
+  setVal('c-4x4-oil-last',         parseInt(d['c-4x4-oil-last'])||'');
+  setVal('c-4x4-oil-warn',         parseInt(d['c-4x4-oil-warn'])||1000);
+  const autoElW=document.getElementById('c-has-automatic');
+  const x4ElW=document.getElementById('c-has-4x4');
+  if(autoElW&&d['_hasAutomatic']!==undefined){ autoElW.checked=d['_hasAutomatic']; }
+  if(x4ElW&&d['_has4x4']!==undefined){ x4ElW.checked=d['_has4x4']; }
+  // saveCarEditDrivetrain voláme jen pokud jsou přepínače v DOM (krok 0 — základní info)
+  if(autoElW||x4ElW) saveCarEditDrivetrain();
 }
 
 // ─── FLEET DASHBOARD ─────────────────────────────────────────
@@ -1553,12 +1946,12 @@ function renderFleet(){
 
   if(!allFleetCars.length){
     if(state.carSearch){
-      el.innerHTML=`<div class="empty"><div class="empty-icon">🔍</div>
+      el.innerHTML=`<div class="empty"><div class="empty-icon">— —</div>
         <p>${cs?'Žádná vozidla neodpovídají hledání':'No vehicles match your search'}</p>
         <button class="btn btn-ghost" onclick="document.getElementById('topbar-search').value='';handleGlobalSearch('');" style="margin-top:16px;">${cs?'Zrušit hledání':'Clear search'}</button>
       </div>`;
     }else{
-      el.innerHTML=`<div class="empty"><div class="empty-icon">🚗</div>
+      el.innerHTML=`<div class="empty"><div class="empty-icon">— —</div>
         <p>${cs?'Žádná aktivní vozidla. Přidejte první vozidlo.':'No active vehicles. Add your first vehicle.'}</p>
         <button class="btn btn-primary" style="margin-top:16px;" onclick="openCarModal()">${cs?'Přidat vozidlo':'Add vehicle'}</button>
       </div>`;
@@ -1599,7 +1992,27 @@ function renderFleet(){
         ?`${cs?'Prošlé o':'Overdue by'} ${fmtNum(Math.abs(left))} km`
         :`${fmtNum(left)} km`;
       oilHtml=`<div class="fleet-row">
-        <span class="fleet-row-label">${cs?'Olej':'Oil'}</span>
+        <span class="fleet-row-label">${cs?'Olej motor.':'Engine oil'}</span>
+        <span class="fleet-row-val ${sc}">${label}</span>
+      </div>`;
+    }
+    // Olej v převodovce
+    if(isActive&&car.hasAutomatic&&car.gearboxOilInterval&&car.gearboxOilLastKm){
+      const left=(car.gearboxOilLastKm+car.gearboxOilInterval)-maxOdo;
+      const sc=left<=0?'due':left<=(car.gearboxOilWarn||1000)?'warn':'ok';
+      const label=left<=0?`${cs?'Prošlé o':'Overdue by'} ${fmtNum(Math.abs(left))} km`:`${fmtNum(left)} km`;
+      oilHtml+=`<div class="fleet-row">
+        <span class="fleet-row-label">${cs?'Převodovka':'Gearbox'}</span>
+        <span class="fleet-row-val ${sc}">${label}</span>
+      </div>`;
+    }
+    // Olej ve čtyřkolce
+    if(isActive&&car.has4x4&&car.xferOilInterval&&car.xferOilLastKm){
+      const left=(car.xferOilLastKm+car.xferOilInterval)-maxOdo;
+      const sc=left<=0?'due':left<=(car.xferOilWarn||1000)?'warn':'ok';
+      const label=left<=0?`${cs?'Prošlé o':'Overdue by'} ${fmtNum(Math.abs(left))} km`:`${fmtNum(left)} km`;
+      oilHtml+=`<div class="fleet-row">
+        <span class="fleet-row-label">${cs?'Čtyřkolka':'4×4'}</span>
         <span class="fleet-row-val ${sc}">${label}</span>
       </div>`;
     }
@@ -1622,6 +2035,8 @@ function renderFleet(){
       ${car.emission?docLabel(cs?'Emise':'Emiss.',car.emission,car.emissionWarn,cs?'Měření emisí':'Emission Check'):''}
       ${car.insurance?docLabel(cs?'Havar':'Comp.',car.insurance,car.insuranceWarn,cs?'Havarjní pojištění':'Comprehensive Insurance'):''}
       ${car.assist?docLabel(cs?'Asist':'Assist',car.assist,car.assistWarn,cs?'Asistenční služby':'Roadside Assistance'):''}
+      ${car.hasAutomatic?`<span class="fleet-doc-pill" style="background:var(--amber-dim);color:var(--amber);border-color:transparent">${cs?'Automat':'Auto'}</span>`:''}
+      ${car.has4x4?`<span class="fleet-doc-pill" style="background:var(--amber-dim);color:var(--amber);border-color:transparent">4×4</span>`:''}
     </div>`;
 
     // Overall alert level — only for active cars
@@ -1632,7 +2047,11 @@ function renderFleet(){
     ]:[];
     const oilLeft=isActive&&car.oilInterval&&car.oilLastKm?(car.oilLastKm+car.oilInterval)-maxOdo:999999;
     const oilSc=oilLeft<=0?'due':oilLeft<=(car.oilWarn||1000)?'warn':'ok';
-    const allStatuses=isActive?[...docStatuses,oilSc]:[];
+    const gearboxLeft=isActive&&car.hasAutomatic&&car.gearboxOilInterval&&car.gearboxOilLastKm?(car.gearboxOilLastKm+car.gearboxOilInterval)-maxOdo:999999;
+    const gearboxSc=gearboxLeft<=0?'due':gearboxLeft<=(car.gearboxOilWarn||1000)?'warn':'ok';
+    const xferLeft=isActive&&car.has4x4&&car.xferOilInterval&&car.xferOilLastKm?(car.xferOilLastKm+car.xferOilInterval)-maxOdo:999999;
+    const xferSc=xferLeft<=0?'due':xferLeft<=(car.xferOilWarn||1000)?'warn':'ok';
+    const allStatuses=isActive?[...docStatuses,oilSc,gearboxSc,xferSc]:[];
     const cardAccent=!isActive?'var(--border)':allStatuses.includes('due')?'var(--red)':allStatuses.includes('warn')?'var(--amber)':'var(--border)';
 
     return `<div class="fleet-card" style="border-color:${cardAccent}" onclick="selectCar('${car.id}')">
@@ -1648,14 +2067,14 @@ function renderFleet(){
         ${docHtml}
         ${oilHtml}
         ${fuelHtml}
-        ${isActive&&avgC>0?`<div class="fleet-row">
+        ${avgC>0?`<div class="fleet-row">
           <span class="fleet-row-label">${cs?'Průměrná spotřeba':'Avg consumption'}</span>
           <span class="fleet-row-val">${fmtNum(avgC,1)} l/100 km</span>
         </div>`:''}
       </div>
-      <div class="fleet-card-footer" style="${!isActive?'opacity:.6':''}">
+      <div class="fleet-card-footer" style="${!isActive?'opacity:.6':''}"> 
         <span class="status-badge ${car.status||'active'}">${car.status==='inactive'?(cs?'Neaktivní':'Inactive'):(cs?'Aktivní':'Active')}</span>
-        <span style="font-size:.72rem;color:var(--text2)">${cs?'Kliknutím zobrazit detail →':'Click for detail →'}</span>
+        <button class="btn btn-ghost" style="font-size:.78rem;padding:6px 12px;min-height:36px;" onclick="event.stopPropagation();openCarModal('${car.id}')" title="${cs?'Upravit vozidlo':'Edit vehicle'}">${cs?'Upravit':'Edit'}</button>
       </div>
     </div>`;
   })(car);
@@ -1689,7 +2108,7 @@ function renderFleet(){
 function renderDashboard(){
   const el=document.getElementById('content');
   const car=getCar(state.currentCarId);
-  if(!car){el.innerHTML=`<div class="empty"><div class="empty-icon">🚗</div><p>${t('no_car')}</p></div>`;return;}
+  if(!car){el.innerHTML=`<div class="empty"><div class="empty-icon">— —</div><p>${t('no_car')}</p></div>`;return;}
 
   const recs=getCarRecords(car.id);
   const fuels=getCarFuels(car.id);
@@ -1708,7 +2127,7 @@ function renderDashboard(){
   });
   const alertsHtml=alerts.length?`<div class="alerts-list">${alerts.map(a=>`
     <div class="alert-item ${a.level}">
-      <span class="alert-icon">${a.level==='danger'?'⚠':'◎'}</span>
+      <span class="alert-icon"></span>
       <span class="alert-text"><strong>${a.title}</strong><small>${a.detail}</small></span>
     </div>`).join('')}</div>`:'';
 
@@ -1741,6 +2160,8 @@ function renderDashboard(){
             car.decommissioned?(cs?'vyřazeno':'decom.')+' '+fmtDate(car.decommissioned):'',
           ].filter(Boolean).join(' · ')}
           <span class="status-badge ${car.status||'active'}" style="margin-left:8px;">${car.status==='inactive'?t('inactive'):t('active')}</span>
+          ${car.hasAutomatic?`<span class="cat-badge" style="background:rgba(108,143,255,.12);color:var(--accent);margin-left:6px">${cs?'Automat':'Auto'}</span>`:''}
+          ${car.has4x4?`<span class="cat-badge" style="background:rgba(52,211,153,.12);color:var(--green);margin-left:4px">4×4</span>`:''}
           ${(car.oilType||car.coolantType)?`<span style="display:block;margin-top:4px;color:var(--text3)">${[
             car.oilType?(cs?'Olej: ':'Oil: ')+car.oilType:'',
             car.coolantType?(cs?'Chladivo: ':'Coolant: ')+car.coolantType:'',
@@ -1780,34 +2201,32 @@ function renderDashboard(){
       if(!hasTyres) return '';
       const cs2=state.lang==='cs';
       // Renderuje jeden řádek nebo dva (přední / zadní) pro danou sadu
-      const row=(icon,label,data)=>{
+      const row=(label,data)=>{
         if(!data) return '';
         const s=tyreSummary(data);
         if(!s) return '';
         // tyreSummary vrátí string (same) nebo {front,rear} (různé nápravy)
         if(typeof s === 'string'){
           return `<div style="display:flex;align-items:baseline;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
-            <span style="font-size:.8rem;width:16px;flex-shrink:0">${icon}</span>
-            <span style="font-size:.78rem;color:var(--text2);width:90px;flex-shrink:0">${label}</span>
+            <span style="font-size:.78rem;color:var(--text2);width:100px;flex-shrink:0">${label}</span>
             <span style="font-size:.82rem;font-family:var(--font-mono);color:var(--text)">${s}</span>
           </div>`;
         }
         // Různé nápravy — dva podřádky
-        const axleRow=(axleIcon,axleLabel,val)=>val?`
-          <div style="display:flex;align-items:baseline;gap:10px;padding:4px 0 4px 26px;border-bottom:1px solid var(--border)">
-            <span style="font-size:.75rem;color:var(--text3);width:64px;flex-shrink:0">${axleIcon} ${axleLabel}</span>
+        const axleRow=(axleLabel,val)=>val?`
+          <div style="display:flex;align-items:baseline;gap:10px;padding:4px 0 4px 16px;border-bottom:1px solid var(--border)">
+            <span style="font-size:.75rem;color:var(--text3);width:74px;flex-shrink:0">${axleLabel}</span>
             <span style="font-size:.82rem;font-family:var(--font-mono);color:var(--text)">${val}</span>
           </div>`:'';
         return `<div style="display:flex;align-items:baseline;gap:10px;padding:6px 0 2px;border-bottom:none">
-            <span style="font-size:.8rem;width:16px;flex-shrink:0">${icon}</span>
-            <span style="font-size:.78rem;color:var(--text2);width:90px;flex-shrink:0">${label}</span>
+            <span style="font-size:.78rem;color:var(--text2);width:100px;flex-shrink:0">${label}</span>
           </div>`
-          + axleRow('🔵', cs2?'Přední':'Front', s.front)
-          + axleRow('🔴', cs2?'Zadní':'Rear',  s.rear);
+          + axleRow(cs2?'Přední':'Front', s.front)
+          + axleRow(cs2?'Zadní':'Rear',  s.rear);
       };
       const rows = car.tyreAllSeason
-        ? row('🔄', cs2?'Celoroční':'All-season', car.tyres.allseason)
-        : [row('🌞', cs2?'Letní':'Summer', car.tyres.summer), row('❄️', cs2?'Zimní':'Winter', car.tyres.winter)].join('');
+        ? row(cs2?'Celoroční':'All-season', car.tyres.allseason)
+        : [row(cs2?'Letní':'Summer', car.tyres.summer), row(cs2?'Zimní':'Winter', car.tyres.winter)].join('');
       if(!rows) return '';
       return `<div class="section-title" style="margin-top:6px">${cs2?'Pneumatiky':'Tyres'}</div>
         <div class="table-wrap" style="padding:4px 16px;margin-bottom:22px">${rows}</div>`;
@@ -1847,6 +2266,20 @@ function buildAlerts(car){
     if(left<=0)alerts.push({level:'danger',title:state.lang==='cs'?'Výměna oleje':'Oil change',detail:`${Math.abs(left)} km ${state.lang==='cs'?'prošlé':'overdue'}`});
     else if(left<=(car.oilWarn||1000))alerts.push({level:'warn',title:state.lang==='cs'?'Výměna oleje':'Oil change',detail:`${t('oil_due')} ${fmtNum(left)} km`});
   }
+  // Výměna oleje v převodovce (automatická převodovka)
+  if(car.hasAutomatic&&car.gearboxOilInterval&&car.gearboxOilLastKm){
+    const left=(car.gearboxOilLastKm+car.gearboxOilInterval)-maxOdo;
+    const warnKm=car.gearboxOilWarn||1000;
+    if(left<=0)alerts.push({level:'danger',title:state.lang==='cs'?'Výměna oleje v převodovce':'Gearbox oil change',detail:`${Math.abs(left)} km ${state.lang==='cs'?'prošlé':'overdue'}`});
+    else if(left<=warnKm)alerts.push({level:'warn',title:state.lang==='cs'?'Výměna oleje v převodovce':'Gearbox oil change',detail:`${t('oil_due')} ${fmtNum(left)} km`});
+  }
+  // Výměna oleje ve čtyřkolce (pohon 4×4)
+  if(car.has4x4&&car.xferOilInterval&&car.xferOilLastKm){
+    const left=(car.xferOilLastKm+car.xferOilInterval)-maxOdo;
+    const warnKm=car.xferOilWarn||1000;
+    if(left<=0)alerts.push({level:'danger',title:state.lang==='cs'?'Výměna oleje ve čtyřkolce':'4×4 oil change',detail:`${Math.abs(left)} km ${state.lang==='cs'?'prošlé':'overdue'}`});
+    else if(left<=warnKm)alerts.push({level:'warn',title:state.lang==='cs'?'Výměna oleje ve čtyřkolce':'4×4 oil change',detail:`${t('oil_due')} ${fmtNum(left)} km`});
+  }
   state.reminders.filter(r=>r.carId===car.id).forEach(rem=>{
     if(rem.type==='km'){
       const left=(rem.lastDone||0)+(rem.interval||0)-maxOdo;
@@ -1865,7 +2298,7 @@ function buildAlerts(car){
 function renderRecords(){
   const el=document.getElementById('content');
   const car=getCar(state.currentCarId);
-  if(!car){el.innerHTML=`<div class="empty"><div class="empty-icon">🚗</div><p>${t('no_car')}</p></div>`;return;}
+  if(!car){el.innerHTML=`<div class="empty"><div class="empty-icon">— —</div><p>${t('no_car')}</p></div>`;return;}
   const allRecs=getCarRecords(car.id);
   let recs=allRecs;
   if(state.filterCat)recs=recs.filter(r=>r.cat===state.filterCat);
@@ -1890,16 +2323,18 @@ function renderRecords(){
   const topCat=Object.entries(topCatMap).sort((a,b)=>b[1]-a[1])[0];
 
   el.innerHTML=`
+  <div class="records-layout">
+  <div class="records-master">
     <div class="stats-grid" style="margin-bottom:18px;">
       <div class="stat-card yellow" title="${cs?'Součet všech servisních výdajů (bez paliva)':'Sum of all service expenses (excl. fuel)'}">
         <div class="stat-label">${cs?'Celkem za záznamy':'Total (records)'}</div>
         <div class="stat-value small">${fmtMoney(totalCost)}</div>
-        <div class="stat-sub">${cs?'bez paliva':'excl. fuel'}</div>
+        <div class="stat-sub">${cs?'Bez paliva':'Excl. fuel'}</div>
       </div>
       <div class="stat-card blue" title="${cs?'Celkový počet servisních záznamů pro toto vozidlo':'Total number of service records for this vehicle'}">
         <div class="stat-label">${cs?'Počet záznamů':'Record count'}</div>
         <div class="stat-value">${allRecs.length}</div>
-        <div class="stat-sub">${cs?'celkem položek':'total items'}</div>
+        <div class="stat-sub">${cs?'Celkem položek':'Total items'}</div>
       </div>
       <div class="stat-card red" title="${cs?'Nejvyšší jednorázový výdaj v historii záznamů':'Highest single expense in records history'}">
         <div class="stat-label">${cs?'Nejvyšší výdaj':'Highest expense'}</div>
@@ -1937,7 +2372,7 @@ function renderRecords(){
       <th class="td-right" onclick="sortBy('total')">${t('total_price')} ${sa('total')}</th>
       <th></th>
     </tr></thead><tbody>
-    ${paged.length?paged.map(r=>`<tr>
+    ${paged.length?paged.map(r=>`<tr data-rid="${r.id}" onclick="selectRecord('${r.id}')" class="${state.selectedRecordId===r.id?'record-selected':''}">
       <td class="td-mono td-muted">${fmtDate(r.date)}</td>
       <td class="td-mono td-muted">${fmtNum(r.odo)}</td>
       <td>${r.desc}${r.note?`<br><small style="color:var(--text3)">${r.note}</small>`:''}</td>
@@ -1946,26 +2381,154 @@ function renderRecords(){
       <td class="td-right td-mono">${fmtMoney(r.price)}</td>
       <td class="td-right td-mono">${fmtMoney((r.qty||1)*(r.price||0))}</td>
       <td><div class="row-actions">
-        <button class="row-btn" onclick="openRecordModal('${r.id}')" title="${state.lang==='cs'?'Upravit záznam':'Edit record'}"><span class="edit-icon">✏</span></button>
+        <button class="row-btn" onclick="event.stopPropagation();selectRecord('${r.id}')" title="${state.lang==='cs'?'Upravit záznam':'Edit record'}"><span class="edit-icon">✏</span></button>
         <button class="row-btn del" onclick="deleteRecord('${r.id}')" title="${state.lang==='cs'?'Smazat záznam':'Delete record'}">✕</button>
       </div></td>
-    </tr>`).join(''):`<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:32px">${t('no_records')}</td></tr>`}
+    </tr>`).join(''):`<tr><td colspan="8"><div style="text-align:center;padding:32px 20px;color:var(--text3)">
+      <div style="margin-bottom:12px">${t('no_records')}</div>
+      <button class="btn btn-primary" onclick="openRecordModal()">${cs?'Přidat první záznam':'Add first record'}</button>
+    </div></td></tr>`}
     </tbody></table></div>
     <div class="pagination"><span class="flex1">${t('total_records')}: ${total}</span>
       <button class="page-btn" onclick="changePage(-1)" ${state.page<=1?'disabled':''}>‹</button>
       <span>${state.page} / ${pages}</span>
       <button class="page-btn" onclick="changePage(1)" ${state.page>=pages?'disabled':''}>›</button>
     </div>
+  </div>
+  </div>
+  <div class="records-detail" id="records-detail"></div>
   </div>`;
+  if(state.selectedRecordId) renderRecordDetail();
 }
 function sortBy(f){if(state.sortField===f)state.sortDir*=-1;else{state.sortField=f;state.sortDir=-1;}renderRecords();}
 function changePage(d){state.page+=d;renderRecords();}
+
+// ─── RECORDS DETAIL PANEL ───────────────────────────────────────────
+function selectRecord(id){
+  // On narrow screens keep using the modal; on wide screens use the inline panel
+  if(window.innerWidth<1200){openRecordModal(id);return;}
+  state.selectedRecordId=id;
+  document.querySelectorAll('.records-master tbody tr').forEach(tr=>{
+    tr.classList.toggle('record-selected',tr.dataset.rid===id);
+  });
+  renderRecordDetail();
+}
+
+function closeRecordDetail(){
+  state.selectedRecordId=null;
+  document.querySelectorAll('.records-master tbody tr').forEach(tr=>tr.classList.remove('record-selected'));
+  const panel=document.getElementById('records-detail');
+  if(panel) panel.innerHTML=recordDetailEmptyHtml();
+}
+
+function recordDetailEmptyHtml(){
+  const cs=state.lang==='cs';
+  return`<div class="records-detail-empty">
+    <div class="records-detail-empty-icon">←</div>
+    <div style="font-size:.9rem;color:var(--text2)">${cs?'Vyberte záznam ze seznamu':'Select a record from the list'}</div>
+    <div style="font-size:.78rem">${cs?'Klikněte na řádek pro detail a editaci':'Click a row to view details and edit'}</div>
+  </div>`;
+}
+
+function renderRecordDetail(){
+  const panel=document.getElementById('records-detail');
+  if(!panel) return;
+  const id=state.selectedRecordId;
+  if(!id){panel.innerHTML=recordDetailEmptyHtml();return;}
+  const rec=state.records.find(r=>r.id===id);
+  if(!rec){state.selectedRecordId=null;panel.innerHTML=recordDetailEmptyHtml();return;}
+  const cs=state.lang==='cs';
+  panel.innerHTML=`
+    <div class="records-detail-head">
+      <div class="records-detail-title">${cs?'Detail záznamu':'Record detail'}</div>
+      <button class="modal-close" onclick="closeRecordDetail()" title="${cs?'Zavřít':'Close'}">&#x2715;</button>
+    </div>
+    <div class="records-detail-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">${t('date')}</label>
+          <div class="date-triple" id="ri-date-wrap">
+            <input type="number" class="dt-d" id="ri-date-d" placeholder="DD" min="1" max="31">
+            <span class="dt-sep">.</span>
+            <input type="number" class="dt-m" id="ri-date-m" placeholder="MM" min="1" max="12">
+            <span class="dt-sep">.</span>
+            <input type="number" class="dt-y" id="ri-date-y" placeholder="RRRR" min="1900" max="2099">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">${t('odo')}</label>
+          <input type="number" class="form-input" id="ri-odo">
+        </div>
+        <div class="form-group full">
+          <label class="form-label required">${t('desc')}</label>
+          <input type="text" class="form-input" id="ri-desc">
+        </div>
+        <div class="form-group full">
+          <label class="form-label required">${t('cat')}</label>
+          <select class="form-select" id="ri-cat">
+            ${CATEGORIES[state.lang].map((c,i)=>`<option value="${CATEGORIES.cs[i]}">${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label required">${t('qty')}</label>
+          <input type="number" class="form-input" id="ri-qty" step="0.01" min="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">${t('unit_price')}</label>
+          <input type="number" class="form-input" id="ri-price" step="0.01">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">${cs?'Poznámka':'Note'}</label>
+          <textarea class="form-textarea" id="ri-note"></textarea>
+        </div>
+      </div>
+      <div id="ri-errors" style="margin-top:10px"></div>
+    </div>
+    <div class="records-detail-foot">
+      <button class="btn btn-danger" onclick="deleteRecord('${rec.id}')" style="margin-right:auto">${cs?'Smazat':'Delete'}</button>
+      <button class="btn btn-ghost" onclick="closeRecordDetail()">${cs?'Zrušit':'Cancel'}</button>
+      <button class="btn btn-primary" onclick="saveRecordInline()">${t('save')}</button>
+    </div>`;
+  // Fill values after DOM is ready (avoids HTML-escaping issues)
+  setDateTriple('ri-date',rec.date||'');
+  document.getElementById('ri-odo').value=rec.odo||'';
+  document.getElementById('ri-desc').value=rec.desc||'';
+  const catSel=document.getElementById('ri-cat');
+  if(catSel) catSel.value=rec.cat||'';
+  document.getElementById('ri-qty').value=rec.qty??1;
+  document.getElementById('ri-price').value=rec.price??'';
+  document.getElementById('ri-note').value=rec.note||'';
+  initDateTripleNav('ri-date');
+}
+
+function saveRecordInline(){
+  const errors=[];
+  const date=getDateTriple('ri-date');
+  const odo=parseFloat(document.getElementById('ri-odo').value)||0;
+  const desc=document.getElementById('ri-desc').value.trim();
+  const cat=document.getElementById('ri-cat').value;
+  const qty=parseFloat(document.getElementById('ri-qty').value);
+  const price=parseFloat(document.getElementById('ri-price').value)||0;
+  const note=document.getElementById('ri-note').value.trim();
+  if(!date)errors.push(t('date')+': neplatné nebo neúpolné datum');
+  if(!desc)errors.push(t('desc')+': '+t('required_field'));
+  if(!cat)errors.push(t('cat')+': '+(state.lang==='cs'?'vyberte kategorii':'please select a category'));
+  if(isNaN(qty)||qty<=0)errors.push(t('qty')+': '+t('required_field'));
+  if(errors.length){document.getElementById('ri-errors').innerHTML=errors.map(e=>`<div class="form-error">${e}</div>`).join('');return;}
+  const id=state.selectedRecordId;
+  const idx=state.records.findIndex(r=>r.id===id);
+  if(idx<0) return;
+  state.records[idx]={...state.records[idx],date,odo,desc,cat,qty,price,note,updatedAt:new Date().toISOString()};
+  saveData();
+  showToast(t('save'),'success');
+  renderRecords(); // re-renders list; calls renderRecordDetail() at end because selectedRecordId is still set
+}
 
 // ─── FUEL PAGE ───────────────────────────────────────────────
 function renderFuelPage(){
   const el=document.getElementById('content');
   const car=getCar(state.currentCarId);
-  if(!car){el.innerHTML=`<div class="empty"><div class="empty-icon">⛽</div><p>${t('no_car')}</p></div>`;return;}
+  if(!car){el.innerHTML=`<div class="empty"><div class="empty-icon">— —</div><p>${t('no_car')}</p></div>`;return;}
 
   let fuels=[...getCarFuels(car.id)];
   if(state.fuelSearch){const q=state.fuelSearch.toLowerCase();fuels=fuels.filter(f=>fuelTypeLabel(f.fuelTypeId).toLowerCase().includes(q)||(f.note||'').toLowerCase().includes(q));}
@@ -2027,7 +2590,10 @@ function renderFuelPage(){
             <button class="row-btn" onclick="openFuelModal('${f.id}')" title="${state.lang==='cs'?'Upravit tankování':'Edit fuel entry'}"><span class="edit-icon">✏</span></button>
             <button class="row-btn del" onclick="deleteFuel('${f.id}')" title="${state.lang==='cs'?'Smazat tankování':'Delete fuel entry'}">✕</button>
           </div></td>
-        </tr>`;}).join(''):`<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:32px">${t('no_records')}</td></tr>`}
+        </tr>`;}).join(''):`<tr><td colspan="9"><div style="text-align:center;padding:32px 20px;color:var(--text3)">
+          <div style="margin-bottom:12px">${t('no_records')}</div>
+          <button class="btn btn-fuel" onclick="openFuelModal()">${cs?'Nahrát první tankování':'Add first fuel entry'}</button>
+        </div></td></tr>`}
       </tbody></table></div>
       <div class="pagination"><span class="flex1">${total} ${state.lang==='cs'?'záznamů':'records'}</span>
         <button class="page-btn" onclick="changeFuelPage(-1)" ${state.fuelPage<=1?'disabled':''}>‹</button>
@@ -2047,7 +2613,7 @@ function renderAnalytics(){
   // Vehicle picker
   const allActiveCars=state.cars.filter(c=>c.status!=='inactive');
   if(!allActiveCars.length&&!state.cars.length){
-    el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><p>${t('no_car')}</p></div>`;return;
+    el.innerHTML=`<div class="empty"><div class="empty-icon">— —</div><p>${t('no_car')}</p></div>`;return;
   }
   // Normalize analyticsCarId
   if(state.analyticsCarId&&state.analyticsCarId!=='__all__'&&!getCar(state.analyticsCarId)) state.analyticsCarId=null;
@@ -2059,7 +2625,7 @@ function renderAnalytics(){
   const recs=selectedCars.flatMap(c=>getCarRecords(c.id));
   const fuels=selectedCars.flatMap(c=>getCarFuels(c.id));
   if(!recs.length&&!fuels.length){
-    el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><p>${t('no_records')}</p></div>`;return;
+    el.innerHTML=`<div class="empty"><div class="empty-icon">— —</div><p>${t('no_records')}</p><div style="display:flex;gap:10px;justify-content:center;margin-top:16px;"><button class="btn btn-ghost" onclick="openRecordModal()">${cs?'Přidat záznam':'Add record'}</button><button class="btn btn-fuel" onclick="openFuelModal()">${cs?'Přidat tankování':'Add fuel entry'}</button></div></div>`;return;
   }
 
   // Výpočty — agregované přes vybraná vozidla
@@ -2205,7 +2771,7 @@ function renderAnalytics(){
       ${!singleCarId?`<div class="stat-card blue" title="${cs?'Počet vozidel zahrnutých do výpočtu':'Number of vehicles included in the calculation'}">
         <div class="stat-label">${cs?'Vozidel':'Vehicles'}</div>
         <div class="stat-value small">${selectedCars.length}</div>
-        <div class="stat-sub">${cs?'ve výběru':'selected'}</div>
+        <div class="stat-sub">${cs?'Ve výběru':'Selected'}</div>
       </div>`:``}
       <div class="stat-card" style="border-top:2px solid var(--blue)" title="${cs?'Celkový počet km ujetých od počátečního stavu tachometru':'Total km driven since starting odometer'}">
         <div class="stat-label">${cs?'Celkem ujeto':'Total driven'}</div>
@@ -2224,12 +2790,12 @@ function renderAnalytics(){
       <div class="stat-card yellow" title="${cs?'Součet všech výdajů: servis + palivo + nákup vozidla':'Sum of all expenses: service + fuel + vehicle purchase'}">
         <div class="stat-label">${t('total_spent')}</div>
         <div class="stat-value small">${fmtMoney(total)}</div>
-        <div class="stat-sub">${cs?'vč. nákupu vozidla':'incl. vehicle purchase'}</div>
+        <div class="stat-sub">${cs?'Vč. nákupu vozidla':'Incl. vehicle purchase'}</div>
       </div>
       ${purchaseCost>0?`<div class="stat-card" style="border-top:2px solid var(--accent2)" title="${cs?'Pořizovací cena vozidla (kategorie Nákup vozidla)':'Vehicle purchase price (category Vehicle purchase)'}">
         <div class="stat-label">${cs?'Nákup vozidla':'Vehicle purchase'}</div>
         <div class="stat-value small">${fmtMoney(purchaseCost)}</div>
-        <div class="stat-sub">${cs?'pořizovací cena':'acquisition cost'}</div>
+        <div class="stat-sub">${cs?'Pořizovací cena':'Acquisition cost'}</div>
       </div>`:''}
 
       <div class="stat-card green" title="${cs?'Cena za ujetý km bez nákupu vozidla: (servis + palivo) ÷ km':'Cost per driven km excl. vehicle purchase: (service + fuel) ÷ km'}">
@@ -2240,7 +2806,7 @@ function renderAnalytics(){
       <div class="stat-card blue" title="${cs?'Průměrné celkové výdaje (servis + palivo + nákup) za kalendářní měsíc':'Average total expenses (service + fuel + purchase) per calendar month'}">
         <div class="stat-label">${cs?'Průměr / měsíc':'Avg / month'}</div>
         <div class="stat-value small">${fmtMoney(monthCount?total/monthCount:0)}</div>
-        <div class="stat-sub">${cs?'vč. nákupu vozidla':'incl. vehicle purchase'}</div>
+        <div class="stat-sub">${cs?'Vč. nákupu vozidla':'Incl. vehicle purchase'}</div>
       </div>
     </div>
 
@@ -2249,17 +2815,17 @@ function renderAnalytics(){
       <div class="stat-card" style="border-top:2px solid var(--red)" title="${cs?'Celkové náklady na servis a opravy (bez nákupu vozidla a paliva)':'Total service and repair costs (excl. vehicle purchase and fuel)'}">
         <div class="stat-label">${cs?'Celkem servis':'Total service'}</div>
         <div class="stat-value small">${fmtMoney(serviceCost)}</div>
-        <div class="stat-sub">${cs?'bez nákupu a paliva':'excl. purchase & fuel'}</div>
+        <div class="stat-sub">${cs?'Bez nákupu a paliva':'Excl. purchase & fuel'}</div>
       </div>
       <div class="stat-card" style="border-top:2px solid var(--blue)" title="${cs?'Průměrné náklady na servis (bez nákupu vozidla a paliva) za kalendářní měsíc':'Average service costs per calendar month'}">
         <div class="stat-label">${cs?'Servis / měsíc':'Service / month'}</div>
         <div class="stat-value small">${fmtMoney(avgServicePerMonth)}</div>
-        <div class="stat-sub">${cs?'průměr bez paliva':'avg excl. fuel'}</div>
+        <div class="stat-sub">${cs?'Průměr bez paliva':'Avg excl. fuel'}</div>
       </div>
       <div class="stat-card" style="border-top:2px solid var(--red)" title="${cs?'Náklady na servis vztažené na ujetý km: servis ÷ km':'Service cost per driven km: service ÷ km'}">
         <div class="stat-label">${cs?'Servis za km':'Service cost/km'}</div>
         <div class="stat-value small">${fmtMoney(kmDriven>0?serviceCost/kmDriven:0)}</div>
-        <div class="stat-sub">${cs?'servis ÷ km':'service ÷ km'}</div>
+        <div class="stat-sub">${cs?'Servis ÷ km':'Service ÷ km'}</div>
       </div>
     </div>
 
@@ -2273,12 +2839,12 @@ function renderAnalytics(){
       <div class="stat-card" style="border-top:2px solid var(--accent)" title="${cs?'Průměrné náklady na palivo za kalendářní měsíc':'Average fuel costs per calendar month'}">
         <div class="stat-label">${cs?'Palivo / měsíc':'Fuel / month'}</div>
         <div class="stat-value small">${fmtMoney(avgFuelPerMonth)}</div>
-        <div class="stat-sub">${cs?'průměr za tankování':'avg fuel spend'}</div>
+        <div class="stat-sub">${cs?'Průměr za tankování':'Avg fuel spend'}</div>
       </div>
       <div class="stat-card" style="border-top:2px solid var(--green)" title="${cs?'Cena za km pouze z nákladů na palivo — palivo ÷ ujetých km':'Fuel-only cost per km — total fuel spend ÷ driven km'}">
         <div class="stat-label">${cs?'Cena za km (palivo)':'Fuel cost/km'}</div>
         <div class="stat-value small">${fmtMoney(kmDriven>0?fuelCost/kmDriven:0)}</div>
-        <div class="stat-sub">${cs?'pouze palivo':'fuel only'}</div>
+        <div class="stat-sub">${cs?'Pouze palivo':'Fuel only'}</div>
       </div>
       <div class="stat-card orange" title="${singleCarId?(cs?'Průměrná spotřeba vypočtená z plných natankování (metoda plné nádrže)':'Average consumption calculated from full fill-ups (full tank method)'):(cs?'Vážený průměr spotřeby: celkem litrů ÷ celkem km přes vybraná vozidla':'Weighted avg consumption: total litres ÷ total km across selected vehicles')}">
         <div class="stat-label">${t('avg_consumption')}</div>
@@ -2335,7 +2901,7 @@ function getAutoReminders(car){
   const today=new Date();today.setHours(0,0,0,0);
   const reminders=[];
 
-  function dateRem(name,isoDate,warnDays=30,icon='📋'){
+  function dateRem(name,isoDate,warnDays=30){
     if(!isoDate) return;
     const d=new Date(isoDate+'T12:00:00');
     const diff=Math.round((d-today)/86400000);
@@ -2343,16 +2909,16 @@ function getAutoReminders(car){
     const detail=diff<0
       ?`${Math.abs(diff)} ${t('days')} ${cs?'prošlé':'overdue'}`
       :`${diff} ${t('days')}`;
-    reminders.push({id:'auto_'+name+'_'+car.id, carId:car.id, name, icon,
+    reminders.push({id:'auto_'+name+'_'+car.id, carId:car.id, name,
       sc, st:diff<0?t('overdue'):diff<warnDays?t('due_soon'):t('ok'),
       detail, meta:fmtDate(isoDate), auto:true});
   }
 
-  dateRem(cs?'STK':'MOT', car.stk, car.stkWarn||30, '🔧');
-  dateRem(cs?'Emise':'Emissions', car.emission, car.emissionWarn||30, '🌿');
-  dateRem(cs?'Pojištění POV':'Liability ins.', car.pov, car.povWarn||30, '🛡️');
-  dateRem(cs?'Havarijní pojištění':'Comprehensive ins.', car.insurance, car.insuranceWarn||30, '🛡️');
-  dateRem(cs?'Asistenční služby':'Roadside assistance', car.assist, car.assistWarn||30, '🚨');
+  dateRem(cs?'STK':'MOT', car.stk, car.stkWarn||30);
+  dateRem(cs?'Emise':'Emissions', car.emission, car.emissionWarn||30);
+  dateRem(cs?'Pojištění POV':'Liability ins.', car.pov, car.povWarn||30);
+  dateRem(cs?'Havarijní pojištění':'Comprehensive ins.', car.insurance, car.insuranceWarn||30);
+  dateRem(cs?'Asistenční služby':'Roadside assistance', car.assist, car.assistWarn||30);
 
   // Přezutí pneumatik — pouze pokud je zapnuto v nastavení a vozidlo je aktivní
   if(state.settings.tireReminders && car.status!=='inactive'){
@@ -2372,7 +2938,7 @@ function getAutoReminders(car){
       const summerSize=typeof summerRaw==='object'?summerRaw.front:summerRaw;
       const summerName=(cs?'Přezutí na letní':'Switch to summer')+(summerSize?` — ${summerSize}`:'');
       reminders.push({id:'auto_tire_summer_'+car.id, carId:car.id,
-        name:summerName, icon:'🌞',
+        name:summerName,
         sc, st:diffSummer<0?t('overdue'):t('due_soon'),
         detail:diffSummer<0?`${Math.abs(diffSummer)} ${t('days')} ${cs?'prošlé':'overdue'}`:`${diffSummer} ${t('days')}`,
         meta:cs?'Termín: 31. 3.':'Deadline: 31 Mar', auto:true});
@@ -2387,10 +2953,39 @@ function getAutoReminders(car){
       const winterSize=typeof winterRaw==='object'?winterRaw.front:winterRaw;
       const winterName=(cs?'Přezutí na zimní':'Switch to winter')+(winterSize?` — ${winterSize}`:'');
       reminders.push({id:'auto_tire_winter_'+car.id, carId:car.id,
-        name:winterName, icon:'❄️',
+        name:winterName,
         sc, st:diffWinter<0?t('overdue'):t('due_soon'),
         detail:diffWinter<0?`${Math.abs(diffWinter)} ${t('days')} ${cs?'prošlé':'overdue'}`:`${diffWinter} ${t('days')}`,
         meta:cs?'Termín: 1. 11.':'Deadline: 1 Nov', auto:true});
+    }
+  }
+
+  // Výměna oleje v převodovce (automatická převodovka)
+  if(car.hasAutomatic&&car.gearboxOilInterval&&car.gearboxOilLastKm){
+    const maxOdo=getMaxOdo(car.id);
+    const left=(car.gearboxOilLastKm+car.gearboxOilInterval)-maxOdo;
+    const warnKm=car.gearboxOilWarn||1000;
+    if(left<=0||left<=warnKm){
+      const sc=left<=0?'due':'warn';
+      reminders.push({id:'auto_gearbox_oil_'+car.id, carId:car.id,
+        name:cs?'Výměna oleje v převodovce':'Gearbox oil change',
+        sc, st:left<=0?t('overdue'):t('due_soon'),
+        detail:left<=0?`${fmtNum(Math.abs(left))} km ${cs?'prošlé':'overdue'}`:`${fmtNum(left)} km ${t('km_left')}`,
+        meta:`${fmtNum(car.gearboxOilLastKm)} + ${fmtNum(car.gearboxOilInterval)} km`, auto:true});
+    }
+  }
+  // Výměna oleje ve čtyřkolce (pohon 4×4)
+  if(car.has4x4&&car.xferOilInterval&&car.xferOilLastKm){
+    const maxOdo=getMaxOdo(car.id);
+    const left=(car.xferOilLastKm+car.xferOilInterval)-maxOdo;
+    const warnKm=car.xferOilWarn||1000;
+    if(left<=0||left<=warnKm){
+      const sc=left<=0?'due':'warn';
+      reminders.push({id:'auto_4x4_oil_'+car.id, carId:car.id,
+        name:cs?'Výměna oleje ve čtyřkolce':'4×4 oil change',
+        sc, st:left<=0?t('overdue'):t('due_soon'),
+        detail:left<=0?`${fmtNum(Math.abs(left))} km ${cs?'prošlé':'overdue'}`:`${fmtNum(left)} km ${t('km_left')}`,
+        meta:`${fmtNum(car.xferOilLastKm)} + ${fmtNum(car.xferOilInterval)} km`, auto:true});
     }
   }
 
@@ -2428,7 +3023,7 @@ function renderRemindersPage(){
     const carName=getCar(rem.carId);
     const carLabel=carName?`${carName.make||''} ${carName.model||''}`.trim():'';
     return`<div class="reminder-card ${sc}">
-      ${isAuto?`<div class="reminder-name" style="display:flex;align-items:center;gap:5px;"><span>${rem.icon||'📋'}</span>${carLabel}</div>`
+      ${isAuto?`<div class="reminder-name">${carLabel}</div>`
               :`<div class="reminder-name">${carLabel}</div>`}
       <div class="reminder-val">${rem.name}</div>
       <div class="reminder-meta">${isAuto?rem.meta:(rem.type==='km'?`${fmtNum(rem.lastDone||0)} + ${fmtNum(rem.interval||0)} km`:fmtDate(rem.date))}</div>
@@ -2452,7 +3047,7 @@ function renderRemindersPage(){
 
     <div class="section-title">${cs?'Vlastní připomínky':'Custom reminders'}</div>
     ${!manualReminders.length
-      ?`<div class="empty" style="padding:28px 20px;"><div class="empty-icon">◎</div><p>${t('no_reminders')}</p></div>`
+      ?`<div class="empty" style="padding:28px 20px;"><div class="empty-icon">— —</div><p>${t('no_reminders')}</p><button class="btn btn-primary" onclick="openReminderModal()" style="margin-top:16px;">${cs?'Přidat připomínku':'Add reminder'}</button></div>`
       :`<div class="reminders-grid">${manualReminders.map(r=>renderReminderCard(r,false)).join('')}</div>`}`;
 }
 
@@ -2506,7 +3101,7 @@ function saveRecord(){
   if(!desc)errors.push(t('desc')+': '+t('required_field'));
   if(!cat)errors.push(t('cat')+': '+(state.lang==='cs'?'vyberte kategorii':'please select a category'));
   if(isNaN(qty)||qty<=0)errors.push(t('qty')+': '+t('required_field'));
-  if(errors.length){document.getElementById('record-errors').innerHTML=errors.map(e=>`<div class="form-error">⚠ ${e}</div>`).join('');return;}
+  if(errors.length){document.getElementById('record-errors').innerHTML=errors.map(e=>`<div class="form-error">${e}</div>`).join('');return;}
   if(state.editingRecordId){
     const idx=state.records.findIndex(r=>r.id===state.editingRecordId);
     state.records[idx]={...state.records[idx],date,odo,desc,cat,carId,qty,price,note,updatedAt:new Date().toISOString()};
@@ -2518,6 +3113,7 @@ function saveRecord(){
 
 function deleteRecord(id){
   if(!confirm(t('confirm_delete')))return;
+  if(state.selectedRecordId===id) state.selectedRecordId=null;
   state.records=state.records.filter(r=>r.id!==id);saveData();renderAll();
 }
 
@@ -2525,7 +3121,7 @@ function deleteRecord(id){
 function openFuelModal(fuelId){
   state.editingFuelId=fuelId||null;
   const f=fuelId?state.fuels.find(x=>x.id===fuelId):null;
-  document.getElementById('fuel-modal-title').textContent=f?(state.lang==='cs'?'Upravit tankování':'Edit fuel entry'):(state.lang==='cs'?'Tankování':'Add fuel');
+  document.getElementById('fuel-modal-title').textContent=f?(state.lang==='cs'?'Upravit tankování':'Edit fuel entry'):(state.lang==='cs'?'tankování':'Add fuel');
   const carSel=document.getElementById('f-car');
   carSel.innerHTML=state.cars.map(c=>`<option value="${c.id}" ${(f?f.carId:state.currentCarId)===c.id?'selected':''}>${c.make||''} ${c.model||c.name||''} ${c.plate?'('+c.plate+')':''}</option>`).join('');
   populateFuelTypes(f?f.carId:state.currentCarId, f?.fuelTypeId);
@@ -2578,7 +3174,7 @@ function saveFuel(){
   if(!date)errors.push(t('date')+': neplatné nebo neúplné datum');
   if(!liters)errors.push(t('liters')+': '+t('required_field'));
   if(!cost)errors.push(t('total_price')+': '+t('required_field'));
-  if(errors.length){document.getElementById('fuel-errors').innerHTML=errors.map(e=>`<div class="form-error">⚠ ${e}</div>`).join('');return;}
+  if(errors.length){document.getElementById('fuel-errors').innerHTML=errors.map(e=>`<div class="form-error">${e}</div>`).join('');return;}
   if(state.editingFuelId){
     const idx=state.fuels.findIndex(f=>f.id===state.editingFuelId);
     state.fuels[idx]={...state.fuels[idx],date,odo,carId,fuelTypeId,liters,cost,fullTank,note,updatedAt:new Date().toISOString()};
@@ -2639,8 +3235,9 @@ function getTyreSet(set){
   const same = sameEl ? sameEl.checked : true;
   const front = getTyreAxle(set, 'front');
   const rear  = same ? null : getTyreAxle(set, 'rear');
-  if(!front && !rear) return null;
-  return {same, front, rear};
+  const mfgDate = document.getElementById(`c-tyre-${set}-mfgdate`)?.value.trim()||null;
+  if(!front && !rear && !mfgDate) return null;
+  return {same, front, rear, ...(mfgDate?{mfgDate}:{})};
 }
 
 // Zapíše data jedné osy do formuláře
@@ -2673,6 +3270,8 @@ function setTyreSet(set, data){
   toggleTyreSame(set);
   setTyreAxle(set, 'front', data.front);
   if(!data.same) setTyreAxle(set, 'rear', data.rear);
+  const mfgEl = document.getElementById(`c-tyre-${set}-mfgdate`);
+  if(mfgEl) mfgEl.value = data.mfgDate||'';
 }
 
 // Formátuje jednu osu jako řetězec: "235/45 R17 97Y 2.2/2.5 bar"
@@ -2753,7 +3352,7 @@ function renderTyreTab(car){
   // Celá sekce jedné sady: přední náprava + toggle + zadní náprava
   const setSection = (set, isSame) => `
     <div class="form-section-label full" style="margin-top:4px;border-left-color:var(--text2)">
-      🔵 ${cs?'Přední náprava':'Front axle'}
+      ${cs?'Přední náprava':'Front axle'}
     </div>
     ${axleFields(set,'front')}
     <div class="form-group full" style="margin:4px 0 2px;">
@@ -2773,10 +3372,16 @@ function renderTyreTab(car){
     <div id="c-tyre-${set}-rear-section" style="display:${isSame?'none':''}; grid-column:1/-1;">
       <div class="form-grid">
         <div class="form-section-label full" style="border-left-color:var(--text3)">
-          🔴 ${cs?'Zadní náprava':'Rear axle'}
+          ${cs?'Zadní náprava':'Rear axle'}
         </div>
         ${axleFields(set,'rear','2.4','2.7')}
       </div>
+    </div>
+    <div class="form-group full" style="margin-top:6px;">
+      <label class="form-label">${cs?'Datum výroby pneumatik':'Tyre manufacture date'}</label>
+      <input type="text" class="form-input" id="c-tyre-${set}-mfgdate"
+        placeholder="${cs?'např. 2023 nebo týen/rok: 2350':'e.g. 2023 or week/year: 2350'}"
+        style="font-family:var(--font-mono)" maxlength="20">
     </div>`;
 
   // Určíme výchozí same pro každou sadu
@@ -2805,16 +3410,16 @@ function renderTyreTab(car){
 
     <div id="tyre-seasonal" style="display:${allSeason?'none':''}">
       <div class="form-grid" style="margin-top:6px;">
-        <div class="form-section-label full">🌞 ${cs?'Letní pneumatiky':'Summer tyres'}</div>
+        <div class="form-section-label full">${cs?'Letní pneumatiky':'Summer tyres'}</div>
         ${setSection('summer', getSame('summer'))}
-        <div class="form-section-label full" style="margin-top:8px;">❄️ ${cs?'Zimní pneumatiky':'Winter tyres'}</div>
+        <div class="form-section-label full" style="margin-top:8px;">${cs?'Zimní pneumatiky':'Winter tyres'}</div>
         ${setSection('winter', getSame('winter'))}
       </div>
     </div>
 
     <div id="tyre-allseason" style="display:${allSeason?'':'none'}">
       <div class="form-grid" style="margin-top:6px;">
-        <div class="form-section-label full">🔄 ${cs?'Celoroční pneumatiky':'All-season tyres'}</div>
+        <div class="form-section-label full">${cs?'Celoroční pneumatiky':'All-season tyres'}</div>
         ${setSection('allseason', getSame('allseason'))}
       </div>
     </div>`;
@@ -2836,61 +3441,182 @@ function switchCarTab(name,btn){
   if(name==='tyres') renderTyreTab(getCar(state.editingCarId));
 }
 
-function openCarModal(carId){
-  state.editingCarId=carId||null;
-  const car=carId?getCar(carId):null;
-  document.getElementById('car-modal-title').textContent=car?(state.lang==='cs'?'Upravit vozidlo':'Edit vehicle'):(state.lang==='cs'?'Nové vozidlo':'New vehicle');
-  document.getElementById('delete-car-btn').style.display=car?'':'none';
-  // Reset tabs
-  document.querySelectorAll('.modal-tab').forEach((b,i)=>b.classList.toggle('active',i===0));
-  document.querySelectorAll('.modal-tab-content').forEach((c,i)=>c.classList.toggle('active',i===0));
-  // Fill basic
-  document.getElementById('c-make').value=car?.make||'';
-  document.getElementById('c-model').value=car?.model||'';
-  document.getElementById('c-year').value=car?.year||'';
-  document.getElementById('c-plate').value=car?.plate||'';
-  document.getElementById('c-vin').value=car?.vin||'';
-  document.getElementById('c-fueltype').value=car?.fuelType||'';
-  // Status toggle
-  const isActive=(car?.status||'active')==='active';
-  const tog=document.getElementById('c-status-toggle');
-  tog.checked=isActive;
-  updateStatusToggleLabel(isActive);
-  tog.onchange=()=>updateStatusToggleLabel(tog.checked);
-  document.getElementById('c-startodo').value=car?.startOdo||'';
-  setDateTriple('c-acquired', car?.acquired||'');
-  setDateTriple('c-decommissioned', car?.decommissioned||'');
-  // Fill docs
-  setDateTriple('c-stk', car?.stk||'');
-  document.getElementById('c-stk-warn').value=car?.stkWarn??30;
-  setDateTriple('c-emission', car?.emission||'');
-  document.getElementById('c-emission-warn').value=car?.emissionWarn??30;
-  setDateTriple('c-pov', car?.pov||'');
-  document.getElementById('c-pov-warn').value=car?.povWarn??30;
-  setDateTriple('c-ins', car?.insurance||'');
-  document.getElementById('c-ins-warn').value=car?.insuranceWarn??30;
-  setDateTriple('c-assist', car?.assist||'');
-  document.getElementById('c-assist-warn').value=car?.assistWarn??30;
-  // Fill service
-  document.getElementById('c-oil-interval').value=car?.oilInterval||'';
-  document.getElementById('c-oil-last').value=car?.oilLastKm||'';
-  document.getElementById('c-oil-warn').value=car?.oilWarn??1000;
-  document.getElementById('c-oil-type').value=car?.oilType||'';
-  document.getElementById('c-coolant-type').value=car?.coolantType||'';
-  document.getElementById('c-note').value=car?.note||'';
-  // Color
-  state.selectedColor=car?.color||'#e8c547';
-  document.querySelectorAll('.color-swatch').forEach(s=>{
-    s.classList.toggle('selected',s.dataset.color===state.selectedColor);
-    s.onclick=()=>{state.selectedColor=s.dataset.color;document.querySelectorAll('.color-swatch').forEach(x=>x.classList.remove('selected'));s.classList.add('selected');};
-  });
-  openModal('car-modal');
+// openCarModal je alias pro zpětnou kompatibilitu (sidebar edit buttony)
+function openCarModal(carId){ openCarEdit(carId); }
+
+function openCarEdit(carId){
+  state.editingCarId = carId || null;
+  state.editReturnPage = state.currentPage || 'fleet';
+  state.openSection = 'basic';
+  // Inicializuj drivetrain stav z existujícího vozidla
+  const _editCar = carId ? getCar(carId) : null;
+  _carEditDrivetrain = {hasAutomatic: _editCar?.hasAutomatic||false, has4x4: _editCar?.has4x4||false};
+  if(carId){
+    // Existující vozidlo → inline edit stránka
+    state.currentCarId = carId;
+    showPage('vehicle-edit');
+  } else {
+    // Nové vozidlo → wizard
+    state.wizardStep = 1;
+    showPage('vehicle-wizard');
+  }
 }
 
 function updateStatusToggleLabel(isActive){
   const lbl=document.getElementById('c-status-text');
   lbl.textContent=isActive?(state.lang==='cs'?'Aktivní':'Active'):(state.lang==='cs'?'Neaktivní':'Inactive');
   lbl.style.color=isActive?'var(--green)':'var(--text3)';
+}
+
+// ── Drivetrain features (automatická převodovka / pohon 4×4) ──
+
+// Uloží aktuální stav přepínačů pohonu (voláno z onchange na togglech)
+function saveCarEditDrivetrain(){
+  const cs=state.lang==='cs';
+  const autoEl=document.getElementById('c-has-automatic');
+  const x4El=document.getElementById('c-has-4x4');
+  const hasAuto=autoEl?.checked||false;
+  const has4x4=x4El?.checked||false;
+  _carEditDrivetrain.hasAutomatic=hasAuto;
+  _carEditDrivetrain.has4x4=has4x4;
+  // Synchronizace i se wizard draftem
+  _wizardDraftData['_hasAutomatic']=hasAuto;
+  _wizardDraftData['_has4x4']=has4x4;
+  // Aktualizace popisků toggles
+  const autoText=document.getElementById('c-has-automatic-text');
+  const x4Text=document.getElementById('c-has-4x4-text');
+  if(autoText){autoText.textContent=hasAuto?(cs?'Ano':'Yes'):(cs?'Ne':'No');autoText.style.color=hasAuto?'var(--green)':'';}
+  if(x4Text){x4Text.textContent=has4x4?(cs?'Ano':'Yes'):(cs?'Ne':'No');x4Text.style.color=has4x4?'var(--green)':'';}
+}
+
+// Vrátí HTML string pro sekci "Základní informace" (včetně drivetrain přepínačů)
+function buildBasicSectionForm(cs){
+  return `<div class='form-grid'>
+  <div class='form-group'>
+    <label class='form-label required'>${cs?'Značka':'Make'}</label>
+    <div class='ac-wrap' id='ac-make-wrap'>
+      <input type='text' class='form-input' id='c-make' placeholder='Škoda' autocomplete='off'
+        oninput="acFilter('make')" onfocus="acFilter('make')"
+        onblur="setTimeout(()=>{const l=document.getElementById('ac-make-list');if(l)l.style.display='none';},150)"
+        onkeydown="acKey(event,'make')">
+      <div class='ac-dropdown' id='ac-make-list' style='display:none'></div>
+    </div>
+  </div>
+  <div class='form-group'>
+    <label class='form-label required'>Model</label>
+    <div class='ac-wrap' id='ac-model-wrap'>
+      <input type='text' class='form-input' id='c-model' placeholder='Octavia' autocomplete='off'
+        oninput="acFilter('model')" onfocus="acFilter('model')"
+        onblur="setTimeout(()=>{const l=document.getElementById('ac-model-list');if(l)l.style.display='none';},150)"
+        onkeydown="acKey(event,'model')">
+      <div class='ac-dropdown' id='ac-model-list' style='display:none'></div>
+    </div>
+  </div>
+  <div class='form-group'><label class='form-label'>${cs?'Rok výroby':'Year'}</label><input type='number' class='form-input' id='c-year' placeholder='2008' min='1900' max='2099'></div>
+  <div class='form-group'><label class='form-label'>SPZ</label><input type='text' class='form-input' id='c-plate' placeholder='1Z3 4567' style='text-transform:uppercase'></div>
+  <div class='form-group full'><label class='form-label'>VIN</label><input type='text' class='form-input' id='c-vin' placeholder='TMBBG61Z982...' style='text-transform:uppercase'></div>
+  <div class='form-group'>
+    <label class='form-label required'>${cs?'Typ paliva':'Fuel type'}</label>
+    <select class='form-select' id='c-fueltype'>
+      <option value='' disabled selected hidden>${cs?'Vyberte':'Select'}</option>
+      <option value='petrol'>${cs?'Benzín':'Petrol'}</option>
+      <option value='diesel'>Diesel</option>
+      <option value='lpg'>LPG</option>
+      <option value='electric'>${cs?'Elektro':'Electric'}</option>
+      <option value='hybrid'>Hybrid</option>
+      <option value='phev'>Plug-in Hybrid (PHEV)</option>
+    </select>
+  </div>
+  <div class='form-group'>
+    <label class='form-label' id='c-status-label'>${cs?'Stav':'Status'}</label>
+    <div class='toggle-wrap' style='margin-top:4px'>
+      <label class='toggle'><input type='checkbox' id='c-status-toggle'><span class='toggle-slider'></span></label>
+      <span class='toggle-label' id='c-status-text'>${cs?'Aktivní':'Active'}</span>
+    </div>
+  </div>
+  <div class='form-group'>
+    <label class='form-label'>${cs?'Automatická převodovka':'Automatic gearbox'}</label>
+    <div class='toggle-wrap' style='margin-top:4px'>
+      <label class='toggle'><input type='checkbox' id='c-has-automatic' onchange='saveCarEditDrivetrain()'><span class='toggle-slider'></span></label>
+      <span class='toggle-label' id='c-has-automatic-text'>${cs?'Ne':'No'}</span>
+    </div>
+  </div>
+  <div class='form-group'>
+    <label class='form-label'>${cs?'Pohon 4×4':'4×4 drive'}</label>
+    <div class='toggle-wrap' style='margin-top:4px'>
+      <label class='toggle'><input type='checkbox' id='c-has-4x4' onchange='saveCarEditDrivetrain()'><span class='toggle-slider'></span></label>
+      <span class='toggle-label' id='c-has-4x4-text'>${cs?'Ne':'No'}</span>
+    </div>
+  </div>
+  <div class='form-group'><label class='form-label'>${cs?'Počáteční km':'Start odometer'}</label><input type='number' class='form-input' id='c-startodo' placeholder='243927'></div>
+  <div class='form-group'>
+    <label class='form-label'>${cs?'Datum pořízení':'Date acquired'}</label>
+    <div class='date-triple' id='c-acquired-wrap'>
+      <input type='number' class='dt-d' id='c-acquired-d' placeholder='DD' min='1' max='31'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-acquired-m' placeholder='MM' min='1' max='12'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-acquired-y' placeholder='RRRR' min='1900' max='2099'>
+    </div>
+  </div>
+  <div class='form-group'>
+    <label class='form-label'>${cs?'Datum vyřazení':'Decommissioned'}</label>
+    <div class='date-triple' id='c-decommissioned-wrap'>
+      <input type='number' class='dt-d' id='c-decommissioned-d' placeholder='DD' min='1' max='31'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-decommissioned-m' placeholder='MM' min='1' max='12'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-decommissioned-y' placeholder='RRRR' min='1900' max='2099'>
+    </div>
+  </div>
+  <div class='form-group full'>
+    <label class='form-label'>${cs?'Barva':'Color'}</label>
+    <div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:4px' id='color-picker'>
+      <span class='color-swatch' style='background:#e8c547' data-color='#e8c547'></span>
+      <span class='color-swatch' style='background:#ff6b35' data-color='#ff6b35'></span>
+      <span class='color-swatch' style='background:#4caf82' data-color='#4caf82'></span>
+      <span class='color-swatch' style='background:#5b8dee' data-color='#5b8dee'></span>
+      <span class='color-swatch' style='background:#b05be8' data-color='#b05be8'></span>
+      <span class='color-swatch' style='background:#e05c5c' data-color='#e05c5c'></span>
+      <span class='color-swatch' style='background:#7a5230' data-color='#7a5230'></span>
+      <span class='color-swatch' style='background:#c8956a' data-color='#c8956a'></span>
+      <span class='color-swatch' style='background:#e8e4d8' data-color='#e8e4d8'></span>
+      <span class='color-swatch' style='background:#2a2a2a;border:1px solid #555' data-color='#2a2a2a'></span>
+      <span class='color-swatch' style='background:#aaa' data-color='#aaaaaa'></span>
+    </div>
+  </div>
+</div>`;
+}
+
+// Vrátí HTML string pro sekci "Servis" (s podmíněnými sekcemi pro převodovku a 4×4)
+function buildServiceSectionForm(cs, hasAutomatic, has4x4){
+  const showAuto=hasAutomatic?'':'none';
+  const show4x4=has4x4?'':'none';
+  return `
+<div class='form-grid'>
+  <div class='form-section-label'>${cs?'Výměna motorového oleje':'Engine oil change'}</div>
+  <div class='form-group'><label class='form-label'>${cs?'Interval (km)':'Interval (km)'}</label><input type='number' class='form-input' id='c-oil-interval' placeholder='10000'></div>
+  <div class='form-group'><label class='form-label'>${cs?'Naposledy při (km)':'Last done (km)'}</label><input type='number' class='form-input' id='c-oil-last' placeholder='245448'></div>
+  <div class='form-group'><label class='form-label'>${cs?'Varovat (km zbývá)':'Warn (km left)'}</label><input type='number' class='form-input' id='c-oil-warn' placeholder='1000' value='1000'></div>
+  <div class='form-group'><label class='form-label'>${cs?'Typ motorového oleje':'Engine oil type'}</label><input type='text' class='form-input' id='c-oil-type' placeholder='5W-30 Longlife'></div>
+  <div class='form-section-label' id='gearbox-section-label' style='display:${showAuto}'>
+    ${cs?'Výměna oleje v převodovce':'Gearbox oil change'}
+    <span style='display:block;font-weight:400;color:var(--text3);font-size:.7rem;margin-top:1px'>${cs?'automatická převodovka':'automatic gearbox'}</span>
+  </div>
+  <div class='form-group' id='c-gearbox-int-grp' style='display:${showAuto}'><label class='form-label'>${cs?'Interval (km)':'Interval (km)'}</label><input type='number' class='form-input' id='c-gearbox-oil-interval' placeholder='60000'></div>
+  <div class='form-group' id='c-gearbox-last-grp' style='display:${showAuto}'><label class='form-label'>${cs?'Naposledy při (km)':'Last done (km)'}</label><input type='number' class='form-input' id='c-gearbox-oil-last' placeholder='245448'></div>
+  <div class='form-group' id='c-gearbox-warn-grp' style='display:${showAuto}'><label class='form-label'>${cs?'Varovat (km zbývá)':'Warn (km left)'}</label><input type='number' class='form-input' id='c-gearbox-oil-warn' value='1000'></div>
+  <div class='form-group' style='display:${showAuto}'></div>
+  <div class='form-section-label' id='x4-section-label' style='display:${show4x4}'>
+    ${cs?'Výměna oleje ve čtyřkolce':'4×4 oil change'}
+    <span style='display:block;font-weight:400;color:var(--text3);font-size:.7rem;margin-top:1px'>${cs?'pohon 4×4':'4×4 drive'}</span>
+  </div>
+  <div class='form-group' id='c-4x4-int-grp' style='display:${show4x4}'><label class='form-label'>${cs?'Interval (km)':'Interval (km)'}</label><input type='number' class='form-input' id='c-4x4-oil-interval' placeholder='60000'></div>
+  <div class='form-group' id='c-4x4-last-grp' style='display:${show4x4}'><label class='form-label'>${cs?'Naposledy při (km)':'Last done (km)'}</label><input type='number' class='form-input' id='c-4x4-oil-last' placeholder='245448'></div>
+  <div class='form-group' id='c-4x4-warn-grp' style='display:${show4x4}'><label class='form-label'>${cs?'Varovat (km zbývá)':'Warn (km left)'}</label><input type='number' class='form-input' id='c-4x4-oil-warn' value='1000'></div>
+  <div class='form-group' style='display:${show4x4}'></div>
+  <div class='form-section-label'>${cs?'Chladící kapalina':'Coolant'}</div>
+  <div class='form-group'><label class='form-label'>${cs?'Typ chladící kapaliny':'Coolant type'}</label><input type='text' class='form-input' id='c-coolant-type' placeholder='G13 / G12+'></div>
+  <div class='form-group'></div>
+  <div class='form-section-label'>${cs?'Poznámka k vozidlu':'Vehicle notes'}</div>
+  <div class='form-group full'><textarea class='form-textarea' id='c-note' rows='3' placeholder='${cs?'Poznámky...':'Notes...'}'></textarea></div>
+</div>`;
 }
 
 function saveCar(){
@@ -2939,6 +3665,15 @@ function saveCar(){
     oilWarn:parseInt(document.getElementById('c-oil-warn').value)||1000,
     oilType:document.getElementById('c-oil-type').value.trim()||null,
     coolantType:document.getElementById('c-coolant-type').value.trim()||null,
+    // Automatická převodovka a pohon 4×4
+    hasAutomatic:document.getElementById('c-has-automatic')?.checked||false,
+    has4x4:document.getElementById('c-has-4x4')?.checked||false,
+    gearboxOilInterval:parseInt(document.getElementById('c-gearbox-oil-interval')?.value)||null,
+    gearboxOilLastKm:parseInt(document.getElementById('c-gearbox-oil-last')?.value)||null,
+    gearboxOilWarn:parseInt(document.getElementById('c-gearbox-oil-warn')?.value)||1000,
+    xferOilInterval:parseInt(document.getElementById('c-4x4-oil-interval')?.value)||null,
+    xferOilLastKm:parseInt(document.getElementById('c-4x4-oil-last')?.value)||null,
+    xferOilWarn:parseInt(document.getElementById('c-4x4-oil-warn')?.value)||1000,
     note:document.getElementById('c-note').value.trim(),
     acquired:getDateTriple('c-acquired')||null,
     decommissioned:getDateTriple('c-decommissioned')||null,
@@ -2959,7 +3694,14 @@ function saveCar(){
     const nc={id:uid(),...data};
     state.cars.push(nc);state.currentCarId=nc.id;
   }
-  saveData();closeModal('car-modal');renderAll();
+  saveData();
+  // Clear wizard draft
+  _wizardDraftData = {};
+  // Navigate back
+  const returnTo = state.editReturnPage || 'fleet';
+  state.editingCarId = null;
+  showPage(returnTo);
+  showToast(state.lang==='cs'?'Vozidlo uloženo':'Vehicle saved','success');
 }
 
 function deleteCar(){
@@ -2969,8 +3711,11 @@ function deleteCar(){
   state.reminders=state.reminders.filter(r=>r.carId!==state.editingCarId);
   state.cars=state.cars.filter(c=>c.id!==state.editingCarId);
   state.currentCarId=state.cars[0]?.id||null;
-  if(!state.currentCarId) state.currentPage='dashboard';
-  saveData();closeModal('car-modal');renderAll();
+  _wizardDraftData={};
+  state.editingCarId=null;
+  saveData();
+  showPage('fleet');
+  showToast(state.lang==='cs'?'Vozidlo smazáno':'Vehicle deleted','success');
 }
 
 // ─── REMINDERS ───────────────────────────────────────────────
@@ -3065,59 +3810,106 @@ function renderSettings(){
 
   el.innerHTML=`
 
-    <div class="section-title">${cs?'Jazyk rozhraní':'Interface language'}</div>
-    <div class="settings-card" style="max-width:480px;margin-bottom:28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-      <div style="flex:1;">
-        <div class="settings-card-title" style="margin-bottom:2px;">${cs?'Přepnout jazyk':'Switch language'}</div>
-        <div style="font-size:.8rem;color:var(--text2);">${cs?'Čeština / English':'Czech / English'}</div>
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button class="lang-btn ${cs?'active':''}" onclick="setLang('cs')" title="Přepnout do češtiny">CS</button>
-        <button class="lang-btn ${!cs?'active':''}" onclick="setLang('en')" title="Switch to English">EN</button>
-      </div>
-    </div>
+    <!-- ── Two-column layout: left = preferences, right = system/info ── -->
+    <div class="settings-two-col">
 
-    <div class="section-title">${cs?'Připomínky':'Reminders'}</div>
-    <div class="settings-card" style="max-width:480px;margin-bottom:28px;">
-      <div class="settings-card-title" style="margin-bottom:6px;">${cs?'Přezutí pneumatik':'Tyre change reminders'}</div>
-      <div class="settings-card-desc" style="margin-bottom:12px;">${cs
-        ?'Automaticky upozorní 30 dní před 1.\u00a011. (zimní) a před 31.\u00a03. (letní) pro každé aktivní vozidlo.'
-        :'Automatically alerts 30 days before 1 Nov (winter) and 31 Mar (summer) for each active vehicle.'}</div>
-      <div class="toggle-wrap">
-        <label class="toggle">
-          <input type="checkbox" id="setting-tire-reminders" ${state.settings.tireReminders?'checked':''}
-            onchange="state.settings.tireReminders=this.checked;saveData();renderPage();">
-          <span class="toggle-slider"></span>
-        </label>
-        <span class="toggle-label" style="color:${state.settings.tireReminders?'var(--green)':'var(--text2)'}">
-          ${state.settings.tireReminders?(cs?'Zapnuto':'Enabled'):(cs?'Vypnuto':'Disabled')}
-        </span>
+      <!-- LEFT column: Vzhled · Jazyk · Připomínky -->
+      <div>
+        <div class="section-title">${cs?'Vzhled':'Appearance'}</div>
+        <div class="settings-card settings-col-card">
+          <div class="settings-card-title" style="margin-bottom:6px;">${cs?'Barevné téma':'Color theme'}</div>
+          <div class="settings-card-desc" style="margin-bottom:14px;">${cs
+            ?'Tmavé téma je výchozí. Světlé (Outdoor) téma je optimalizované pro čitelnost na přímém slunci.'
+            :'Dark theme is the default. Light (Outdoor) theme is optimized for readability in direct sunlight.'}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button onclick="setTheme('dark')" class="btn ${(state.settings.theme||'dark')==='dark'?'btn-primary':'btn-ghost'}" style="flex:1;justify-content:center;min-width:120px;">
+              ${cs?'Tmavé':'Dark'}
+            </button>
+            <button onclick="setTheme('bright')" class="btn ${state.settings.theme==='bright'?'btn-primary':'btn-ghost'}" style="flex:1;justify-content:center;min-width:120px;">
+              ${cs?'Světlé (Outdoor)':'Light (Outdoor)'}
+            </button>
+          </div>
+        </div>
+
+        <div class="section-title">${cs?'Jazyk rozhraní':'Interface language'}</div>
+        <div class="settings-card settings-col-card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+          <div style="flex:1;">
+            <div class="settings-card-title" style="margin-bottom:2px;">${cs?'Přepnout jazyk':'Switch language'}</div>
+            <div style="font-size:.8rem;color:var(--text2);">${cs?'Čeština / English':'Czech / English'}</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="lang-btn ${cs?'active':''}" onclick="setLang('cs')" title="Přepnout do češtiny">CS</button>
+            <button class="lang-btn ${!cs?'active':''}" onclick="setLang('en')" title="Switch to English">EN</button>
+          </div>
+        </div>
+
+        <div class="section-title">${cs?'Připomínky':'Reminders'}</div>
+        <div class="settings-card settings-col-card">
+          <div class="settings-card-title" style="margin-bottom:6px;">${cs?'Přezutí pneumatik':'Tyre change reminders'}</div>
+          <div class="settings-card-desc" style="margin-bottom:12px;">${cs
+            ?'Automaticky upozorní 30 dní před 1.\u00a011. (zimní) a před 31.\u00a03. (letní) pro každé aktivní vozidlo.'
+            :'Automatically alerts 30 days before 1 Nov (winter) and 31 Mar (summer) for each active vehicle.'}</div>
+          <div class="toggle-wrap">
+            <label class="toggle">
+              <input type="checkbox" id="setting-tire-reminders" ${state.settings.tireReminders?'checked':''}
+                onchange="state.settings.tireReminders=this.checked;saveData();renderPage();">
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label" style="color:${state.settings.tireReminders?'var(--green)':'var(--text2)'}">
+              ${state.settings.tireReminders?(cs?'Zapnuto':'Enabled'):(cs?'Vypnuto':'Disabled')}
+            </span>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <div class="section-title">${cs?'Instalace aplikace':'App installation'}</div>
-    <div class="settings-card" id="pwa-install-card" style="max-width:480px;margin-bottom:28px;">
-      <div class="settings-card-title">${cs?'Nainstalovat jako aplikaci':'Install as app'}</div>
-      <div class="settings-card-desc">${cs
-        ?'Nainstalujte MyCars jako PWA aplikaci. Po instalaci bude dostupná jako nativní aplikace na vašem zařízení — bez prohlížeče, s ikonou na ploše a plnou offline podporou.'
-        :'Install MyCars as a PWA. After installation it will be available as a native-like app on your device — no browser chrome, home screen icon, full offline support.'}</div>
-      ${location.protocol === 'file:'
-        ? `<div style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.82rem;color:var(--text2);line-height:1.6;">
-            ${cs
-              ?'<strong style="color:var(--text)">Spuštěno přes file://</strong><br>Pro PWA instalaci otevřete aplikaci přes HTTP server nebo sdílenou složku přes LAN. Přes file:// funguje vše ostatní normálně.'
-              :'<strong style="color:var(--text)">Running via file://</strong><br>To install as a PWA, open the app via an HTTP server or LAN share. Everything else works normally over file://.'}
-           </div>`
-        : `<button id="pwa-install-btn" class="btn btn-primary" onclick="triggerPwaInstall()" style="width:100%;justify-content:center;margin-top:4px;display:none">
-            ↓ ${cs?'Nainstalovat MyCars':'Install MyCars'}
-           </button>
-           <div id="pwa-install-hint" style="margin-top:8px;font-size:.78rem;color:var(--text3)">
-             ${cs
-               ?'Tlačítko se zobrazí, jakmile prohlížeč potvrdí, že jsou splněna kritéria pro instalaci PWA.'
-               :'The button appears once the browser confirms PWA install criteria are met.'}
-           </div>`
-      }
-    </div>
+      <!-- RIGHT column: Instalace · Statistika · O aplikaci -->
+      <div>
+        <div class="section-title">${cs?'Instalace aplikace':'App installation'}</div>
+        <div class="settings-card settings-col-card" id="pwa-install-card">
+          <div class="settings-card-title">${cs?'Nainstalovat jako aplikaci':'Install as app'}</div>
+          <div class="settings-card-desc">${cs
+            ?'Nainstalujte MyCars jako PWA aplikaci. Po instalaci bude dostupná jako nativní aplikace na vašem zařízení — bez prohlížeče, s ikonou na ploše a plnou offline podporou.'
+            :'Install MyCars as a PWA. After installation it will be available as a native-like app on your device — no browser chrome, home screen icon, full offline support.'}</div>
+          ${location.protocol === 'file:'
+            ? `<div style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.82rem;color:var(--text2);line-height:1.6;">
+                ${cs
+                  ?'<strong style="color:var(--text)">Spuštěno přes file://</strong><br>Pro PWA instalaci otevřete aplikaci přes HTTP server nebo sdílenou složku přes LAN. Přes file:// funguje vše ostatní normálně.'
+                  :'<strong style="color:var(--text)">Running via file://</strong><br>To install as a PWA, open the app via an HTTP server or LAN share. Everything else works normally over file://.'}
+               </div>`
+            : `<button id="pwa-install-btn" class="btn btn-primary" onclick="triggerPwaInstall()" style="width:100%;justify-content:center;margin-top:4px;display:none">
+                ↓ ${cs?'Nainstalovat MyCars':'Install MyCars'}
+               </button>
+               <div id="pwa-install-hint" style="margin-top:8px;font-size:.78rem;color:var(--text3)">
+                 ${cs
+                   ?'Tlačítko se zobrazí, jakmile prohlížeč potvrdí, že jsou splněna kritéria pro instalaci PWA.'
+                   :'The button appears once the browser confirms PWA install criteria are met.'}
+               </div>`
+          }
+        </div>
 
+        <div class="section-title">${cs?'Statistika využití':'Usage statistics'}</div>
+        <div class="settings-card settings-col-card">
+          <div class="settings-info-row"><span>${cs?'Aktivních vozidel':'Active vehicles'}</span><span>${activeCars}</span></div>
+          <div class="settings-info-row"><span>${cs?'Neaktivních vozidel':'Inactive vehicles'}</span><span>${inactiveCars}</span></div>
+          <div class="settings-info-row"><span>${cs?'Servisních záznamů':'Service records'}</span><span>${totalRecords}</span></div>
+          <div class="settings-info-row"><span>${cs?'Záznamů tankování':'Fuel entries'}</span><span>${totalFuels}</span></div>
+        </div>
+
+        <div class="section-title">${cs?'O aplikaci':'About'}</div>
+        <div class="settings-card settings-col-card">
+          <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
+          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.11.0</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260429-007</span></div>
+          <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
+          <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
+          <div class="settings-info-row"><span>${cs?'Dokumentace':'Documentation'}</span><span><a href="README.md" target="_blank" style="color:var(--accent);text-decoration:none;">README.md ↗</a></span></div>
+          <div class="settings-info-row"><span>${cs?'Licence':'Licence'}</span><span><a href="https://www.gnu.org/licenses/gpl-3.0-standalone.html" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;">GNU GPL v3 ↗</a></span></div>
+        </div>
+      </div>
+
+    </div><!-- /settings-two-col -->
+
+    <!-- Full width: Data & import -->
     <div class="section-title">${cs?'Data a import':'Data & import'}</div>
     <div class="settings-grid" style="margin-bottom:28px;">
       <div class="settings-card">
@@ -3140,31 +3932,11 @@ function renderSettings(){
         <div class="settings-card-desc">${cs?'Smaže záznamy servisu a tankování. Vozidla a jejich nastavení zůstanou zachována.':'Deletes service records and fuel entries. Vehicles and their settings will be kept.'}</div>
         <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:4px;border-color:var(--amber);color:var(--amber);" onclick="if(confirm('${cs?'Smazat všechny záznamy servisu a tankování? Vozidla zůstanou.':'Delete all service records and fuel entries? Vehicles will be kept.'}')){state.records=[];state.fuels=[];state.reminders=[];saveData();renderAll();showToast('${cs?'Provozní data smazána':'Operational data deleted'}','success');}">${cs?'Smazat záznamy a tankování':'Delete records & fuel'}</button>
       </div>
-
       <div class="settings-card">
         <div class="settings-card-title" style="color:var(--red)">${cs?'Smazat veškerá data':'Delete all data'}</div>
         <div class="settings-card-desc">${cs?'Nevratně smaže všechna vozidla, záznamy, tankování a připomínky. Tuto akci nelze vzít zpět.':'Permanently deletes all vehicles, records, fuel entries and reminders. This cannot be undone.'}</div>
         <button class="btn btn-danger" onclick="if(confirm('${cs?'Opravdu smazat veškerá data? Tuto akci nelze vzít zpět.':'Delete all data? This cannot be undone.'}')){state.cars=[];state.records=[];state.fuels=[];state.reminders=[];state.currentCarId=null;saveData();renderAll();showToast('${cs?'Data smazána':'Data deleted'}','success');}" style="width:100%;justify-content:center;margin-top:4px;">${cs?'Smazat vše':'Delete all'}</button>
       </div>
-    </div>
-
-    <div class="section-title">${cs?'Statistika využití':'Usage statistics'}</div>
-    <div class="settings-card" style="max-width:480px;margin-bottom:28px;">
-      <div class="settings-info-row"><span>${cs?'Aktivních vozidel':'Active vehicles'}</span><span>${activeCars}</span></div>
-      <div class="settings-info-row"><span>${cs?'Neaktivních vozidel':'Inactive vehicles'}</span><span>${inactiveCars}</span></div>
-      <div class="settings-info-row"><span>${cs?'Servisních záznamů':'Service records'}</span><span>${totalRecords}</span></div>
-      <div class="settings-info-row"><span>${cs?'Záznamů tankování':'Fuel entries'}</span><span>${totalFuels}</span></div>
-    </div>
-
-    <div class="section-title">${cs?'O aplikaci':'About'}</div>
-    <div class="settings-card" style="max-width:480px;">
-      <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-      <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.10.1</span></div>
-      <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260423-002</span></div>
-      <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
-      <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
-      <div class="settings-info-row"><span>${cs?'Dokumentace':'Documentation'}</span><span><a href="README.md" target="_blank" style="color:var(--accent);text-decoration:none;">README.md ↗</a></span></div>
-      <div class="settings-info-row"><span>${cs?'Licence':'Licence'}</span><span><a href="https://www.gnu.org/licenses/gpl-3.0-standalone.html" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;">GNU GPL v3 ↗</a></span></div>
     </div>`;
 }
 
@@ -3232,6 +4004,11 @@ function acKey(event, field) {
   if (acIndex[field] >= 0) items[acIndex[field]].scrollIntoView({ block: 'nearest' });
 }
 
+// Close dropdowns on Escape key
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') closeCswMenu();
+});
+
 // Close dropdowns when clicking outside
 document.addEventListener('click', e => {
   ['make','model'].forEach(f => {
@@ -3251,6 +4028,29 @@ document.addEventListener('click', e => {
 });
 
 loadData();setLang(state.lang);setupDatePickers();
+
+// ─── TABLE SCROLL INDICATOR ───────────────────────────────────
+// Přidá třídu .scrollable na .table-scroll pokud obsah přesahuje šířku (zobrazí gradient)
+function updateTableScrollIndicators(){
+  document.querySelectorAll('.table-scroll').forEach(el=>{
+    el.classList.toggle('scrollable', el.scrollWidth > el.clientWidth + 4);
+  });
+}
+// Observer na resize — reaguje na změnu velikosti okna
+const _tableScrollObserver = new ResizeObserver(updateTableScrollIndicators);
+// Pozorujeme #content-scroll aby observer zachytil i dynamicky renderované tabulky
+const _contentScrollEl = document.getElementById('content-scroll');
+if(_contentScrollEl) _tableScrollObserver.observe(_contentScrollEl);
+// Volat také po každém renderu stránky (hook do renderPage)
+const _origRenderPage = renderPage;
+renderPage = function(){ _origRenderPage.apply(this, arguments); setTimeout(updateTableScrollIndicators, 50); };
+
+// ─── DATE-TRIPLE: inputmode pro mobilní klávesnici ─────────────
+// Všechny date-triple inputy v statickém HTML — dynamicky vygenerované dostávají
+// inputmode přes initDateTripleNav (voláno z openModal)
+document.querySelectorAll('.date-triple input').forEach(inp=>{
+  inp.setAttribute('inputmode','numeric');
+});
 
 // ─── CSV IMPORT ───────────────────────────────────────────────
 
@@ -3279,7 +4079,7 @@ function csvTypeChanged(){
       <code style="color:var(--accent);">Datum, Stav tachometru, Popis, Součástky, Jednotková cena, Celková cena, Kategorie</code><br>
       Datum DD.MM.RRRR · Ceny v Kč · Kategorie nepovinná → automaticky zařazena do nové kategorie`;
   } else {
-    hint.innerHTML = `<strong style="color:var(--text);display:block;margin-bottom:4px;">Očekávaný formát sloupců — Tankování:</strong>
+    hint.innerHTML = `<strong style="color:var(--text);display:block;margin-bottom:4px;">Očekávaný formát sloupců — tankování:</strong>
       <code style="color:var(--accent);">Datum, Typ paliva, Tankováno litrů, Cena za litr, Celková cena, Stav tachometru, …, Plná nádrž, Poznámka</code><br>
       Datum DD.MM.RRRR · Čísla s čárkou jako desetinným oddělovačem · Plná nádrž: Ano/Ne`;
   }
@@ -3463,7 +4263,7 @@ function renderCsvPreview(type, rows, errors){
     (warnCount ? ` · <span style="color:var(--accent)">${warnCount} s varováním</span>` : '');
 
   const errEl = document.getElementById('csv-preview-errors');
-  errEl.innerHTML = errors.map(e=>`<div class="form-error" style="margin-bottom:3px;">⚠ ${e}</div>`).join('');
+  errEl.innerHTML = errors.map(e=>`<div class="form-error" style="margin-bottom:3px;">${e}</div>`).join('');
 
   const thead = document.getElementById('csv-preview-head');
   const tbody = document.getElementById('csv-preview-body');
@@ -3479,7 +4279,7 @@ function renderCsvPreview(type, rows, errors){
         <td class="td-right td-mono">${fmtMoney(r.price)}</td>
         <td class="td-right td-mono">${fmtMoney(r.qty*r.price)}</td>
         <td><span class="cat-badge" style="background:${CAT_COLORS[r.cat]||'#555'}22;color:${CAT_COLORS[r.cat]||'#aaa'}">${r.cat}</span></td>
-        <td>${r._warn?`<span style="color:var(--accent);font-size:.7rem;">⚠ ${r._warn}</span>`:''}</td>
+        <td>${r._warn?`<span style="color:var(--accent);font-size:.7rem;">${r._warn}</span>`:''}</td>
       </tr>`).join('');
   } else {
     thead.innerHTML = `<tr><th>Datum</th><th>Tachometr</th><th>Palivo</th><th class="td-right">Litry</th><th class="td-right">Celkem</th><th>Plná</th><th>Poznámka</th><th></th></tr>`;
@@ -3492,7 +4292,7 @@ function renderCsvPreview(type, rows, errors){
         <td class="td-right td-mono">${fmtMoney(r.cost)}</td>
         <td>${r.fullTank?'<span style="color:var(--green)">✔</span>':'—'}</td>
         <td class="td-muted">${r.note||''}</td>
-        <td>${r._warn?`<span style="color:var(--accent);font-size:.7rem;">⚠ ${r._warn}</span>`:''}</td>
+        <td>${r._warn?`<span style="color:var(--accent);font-size:.7rem;">${r._warn}</span>`:''}</td>
       </tr>`).join('');
   }
 

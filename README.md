@@ -1,6 +1,6 @@
 # MyCars — Vehicle Maintenance Tracker
 
-**Version:** 3.10.1 · **Build:** 20260423-002  
+**Version:** 3.11.0 · **Build:** 20260429-007  
 **Author:** kraah  
 **Type:** Single-file offline web application
 
@@ -28,20 +28,20 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 ## Pages
 
 | Page | Description |
-|---|---|
+| --- | --- |
 | **Dashboard** | Vehicle status, document expiry alerts, last refuel, key statistics |
 | **Records** | Service records with 5 summary stat cards, full-text search, category filter |
 | **Fuel log** | Fuel entries with per-tank consumption, average price/litre |
 | **Analytics** | Expense charts, monthly trends, and categorized stats (Costs, Service, Fuel) |
 | **Reminders** | Km-based and date-based reminders with status indicators |
-| **Settings** | Language, JSON backup, CSV import, data management, app info |
+| **Settings** | Appearance (theme), language, tyre reminders, JSON backup, CSV import, data management, app info |
 
 ---
 
 ## Vehicle Profile Fields
 
 | Field | Required | Notes |
-|---|---|---|
+| --- | --- | --- |
 | Make | yes | e.g. Škoda, VW, Audi |
 | Model | yes | e.g. Octavia, Golf |
 | Year | no | Manufacturing year |
@@ -53,7 +53,7 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 | Acquisition date | no | Date the vehicle was purchased |
 | Decommission date | no | Date the vehicle was retired |
 | Colour | no | Visual identifier dot in the sidebar |
-| Tyres | no | Summer / winter / all-season sets, each with **front and rear axle** parameters: width, aspect ratio, rim diameter, load index, speed index, tyre pressure (low/high load). A "Front = rear" toggle hides the rear fields when both axles share the same specification. |
+| Tyres | no | Summer / winter / all-season sets, each with **front and rear axle** parameters: width, aspect ratio, rim diameter, load index, speed index, tyre pressure (low/high load). A “Front = rear” toggle hides the rear fields when both axles share the same specification. Each set also has an optional **manufacture date** field (free text, e.g. `2023` or DOT week/year code `2350`). |
 | Documents | no | STK, Emissions, Liability insurance, Comprehensive insurance — each with expiry date + warning threshold (days) |
 | Oil service | no | Interval (km), last done at (km), warning threshold (km remaining) |
 | Notes | no | Free text |
@@ -65,13 +65,13 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 The application uses a fixed set of categories to organize expenses. Each category has a corresponding Czech name used in the interface when the language is set to Czech.
 
 | Category | Typical items |
-|---|---|
-| **Vehicle purchase**<br>*(Nákup vozidla)* | Acquisition cost — excluded from cost/km and monthly chart |
-| **Administration**<br>*(Administrativa)* | Insurance (liability/comprehensive), MOT/STK, registration transfer, fees, fines |
-| **Fluids & consumables**<br>*(Provozní náplně)* | Engine oil, washer fluid, coolant, brake fluid, AdBlue |
-| **Service & repairs**<br>*(Servis a opravy)* | All mechanical repairs, filters, brakes, engine parts, timing belt, diagnostics, labour |
-| **Tyres & wheels**<br>*(Pneumatiky a kola)* | Tyre purchase, fitting, balancing, rims, seasonal change, alignment |
-| **Equipment & appearance**<br>*(Vybavení a vzhled)* | Car cosmetics, cleaning, floor mats, accessories, paint repair, interior |
+| --- | --- |
+| **Vehicle purchase** *(Nákup vozidla)* | Acquisition cost — excluded from cost/km and monthly chart |
+| **Administration** *(Administrativa)* | Insurance (liability/comprehensive), MOT/STK, registration transfer, fees, fines |
+| **Fluids & consumables** *(Provozní náplně)* | Engine oil, washer fluid, coolant, brake fluid, AdBlue |
+| **Service & repairs** *(Servis a opravy)* | All mechanical repairs, filters, brakes, engine parts, timing belt, diagnostics, labour |
+| **Tyres & wheels** *(Pneumatiky a kola)* | Tyre purchase, fitting, balancing, rims, seasonal change, alignment |
+| **Equipment & appearance** *(Vybavení a vzhled)* | Car cosmetics, cleaning, floor mats, accessories, paint repair, interior |
 
 > **Vehicle purchase** is intentionally isolated from all cost-per-km and monthly trend calculations so it does not distort running-cost analysis.
 
@@ -80,7 +80,7 @@ The application uses a fixed set of categories to organize expenses. Each catego
 ## Fuel Types
 
 | Vehicle type | Available fuel types |
-|---|---|
+| --- | --- |
 | Petrol | Natural 95, Natural 95+, Natural 98, Natural 100 |
 | Diesel | Diesel, Diesel Premium |
 | LPG | LPG |
@@ -97,7 +97,8 @@ All calculations are centralised in shared helper functions so every page (Dashb
 
 The app uses the **full-tank method** rather than a simple total-litres ÷ total-km ratio.
 
-**Algorithm:**
+#### Algorithm
+
 1. Filter fuel entries where `fullTank = true`, sorted by odometer.
 2. For each consecutive pair of full-tank entries `[A, B]`:
    - `kmDiff = B.odo − A.odo`
@@ -109,7 +110,7 @@ This correctly handles partial top-ups between full fills.
 
 ### Cost per km
 
-```
+```text
 costPerKm = (serviceCost + fuelCost) ÷ kmDriven
 ```
 
@@ -119,13 +120,13 @@ costPerKm = (serviceCost + fuelCost) ÷ kmDriven
 
 ### Fuel-only cost per km
 
-```
+```text
 fuelCostPerKm = totalFuelCost ÷ kmDriven
 ```
 
 ### Average price per litre
 
-```
+```text
 avgPricePerLitre = totalFuelCost ÷ totalLitres
 ```
 
@@ -133,7 +134,7 @@ avgPricePerLitre = totalFuelCost ÷ totalLitres
 
 `monthCount` = number of calendar months that contain at least one record or fuel entry.
 
-```
+```text
 avgPerMonth      = totalCost ÷ monthCount         (incl. vehicle purchase)
 servicePerMonth  = serviceCost ÷ monthCount
 fuelPerMonth     = fuelCost ÷ monthCount
@@ -155,13 +156,16 @@ avgKmPerYear     = kmDriven ÷ (monthCount ÷ 12)
 Two reminder types:
 
 **Km-based** (e.g. oil change every 10 000 km)
+
 - Fields: name, interval (km), last done at (km), warn when X km remaining
 - When creating a km reminder, the app pre-fills interval and last-done from the vehicle oil service profile
 
 **Date-based** (e.g. MOT expiry)
+
 - Fields: name, date
 
-**Automatic (Seasonal)**
+### Automatic (Seasonal)
+
 - The app can automatically remind you to change tyres (Summer/Winter)
 - Enabled in **Settings** → **Tyre change reminders**
 - Alerts 30 days before **Nov 1** (Winter side) and **Mar 31** (Summer side) for all active vehicles
@@ -188,7 +192,7 @@ Active vehicles first (alphabetical A→Z), then inactive vehicles (alphabetical
 ### Data management options
 
 | Action | Deletes | Keeps |
-|---|---|---|
+| --- | --- | --- |
 | Delete operational data | All records, fuel entries, reminders | Vehicles and their profiles |
 | Delete everything | All data | — |
 
@@ -203,7 +207,7 @@ Import historical data exported from spreadsheets (e.g. Google Sheets).
 **Encoding:** UTF-8 · **Delimiter:** comma (`,`)
 
 | Column | Required | Format | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `Datum` | recommended | `DD.MM.YYYY` | Empty date → row imported with warning flag |
 | `Stav tachometru` | no | number, `\xa0` thousands separator accepted | |
 | `Popis` | **yes** | text | Description / item name |
@@ -212,12 +216,12 @@ Import historical data exported from spreadsheets (e.g. Google Sheets).
 | `Celková cena` | **yes** | decimal with comma | Total price |
 | `Kategorie` | no | text | Auto-mapped to current categories (see below) |
 
-**Automatic category mapping**
+#### Automatic category mapping
 
 Old or unknown category names are mapped at import time:
 
 | Keywords in category name | Target category |
-|---|---|
+| --- | --- |
 | nákup, vehicle purchase | Vehicle purchase |
 | pojištění, insurance, pov, stk, mot, poplatky, fees, přepis, pokuta | Administration |
 | olej, oil, chladič, coolant, ostřikovač, washer, brzdová kapalina | Fluids & consumables |
@@ -225,7 +229,8 @@ Old or unknown category names are mapped at import time:
 | vybavení, equipment, koberec, roletka, autokosmetika, lak, interiér, karoserie | Equipment & appearance |
 | *(anything else)* | Service & repairs |
 
-**Example:**
+#### Example
+
 ```csv
 Datum,Stav tachometru,Popis,Součástky,Jednotková cena,Celková cena,Kategorie
 5.9.2022,245 448,Oil change Castrol,7,"231,43","1 620,01",Olej
@@ -240,7 +245,7 @@ Datum,Stav tachometru,Popis,Součástky,Jednotková cena,Celková cena,Kategorie
 **Encoding:** UTF-8 · **Delimiter:** comma (`,`)
 
 | Column | Required | Format | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `Datum` | recommended | `DD.MM.YYYY` | |
 | `Typ paliva` | no | text | See mapping below |
 | `Tankováno litrů` | **yes** | decimal with comma | |
@@ -252,10 +257,10 @@ Datum,Stav tachometru,Popis,Součástky,Jednotková cena,Celková cena,Kategorie
 | `Plná nádrž` | no | `Ano` / `Ne` | Whether tank was completely filled |
 | `Poznámka` | no | text | |
 
-**Fuel type mapping**
+#### Fuel type mapping
 
 | CSV value | Internal type |
-|---|---|
+| --- | --- |
 | `Natural 95`, `E10`, `95` | Natural 95 |
 | `Natural 95+`, `95+` | Natural 95+ |
 | `Natural 98`, `98` | Natural 98 |
@@ -268,7 +273,8 @@ Datum,Stav tachometru,Popis,Součástky,Jednotková cena,Celková cena,Kategorie
 
 > **Important for consumption accuracy:** Mark entries as full tank (`Plná nádrž: Ano`) wherever possible. The app's full-tank method only creates consumption segments between full fills — entries without this flag are included in litre totals but do not anchor new segments.
 
-**Example:**
+#### Example (fuel entries)
+
 ```csv
 Datum,Typ paliva,Tankováno litrů,Cena za litr,Celková cena,Stav tachometru,Km/tankování,Prům. spotřeba,Plná nádrž,Poznámka
 4.7.2022,Natural 95,"42,00","45,00","1 890,00",245 448,—,—,Ano,
@@ -281,7 +287,7 @@ Datum,Typ paliva,Tankováno litrů,Cena za litr,Celková cena,Stav tachometru,Km
 ## Analytics — All Stat Cards
 
 | Card | Formula | Notes |
-|---|---|---|
+| --- | --- | --- |
 | Total expenses | service + fuel + vehicle purchase | All-time |
 | Vehicle purchase | Records in "Vehicle purchase" category | Hidden if zero |
 | Cost per km | (service + fuel) ÷ km driven | Excludes purchase |
@@ -297,19 +303,31 @@ Datum,Typ paliva,Tankováno litrů,Cena za litr,Celková cena,Stav tachometru,Km
 
 ## Technical Details
 
-| | |
-|---|---|
+| Property | Value |
+| --- | --- |
 | **Stack** | Plain HTML + CSS + JavaScript, zero dependencies |
 | **Storage** | `localStorage` — key `mycars_v3` |
 | **Fonts** | Outfit + JetBrains Mono (Google Fonts CDN) |
 | **Protocol** | Works over `file://` and HTTP |
 | **Languages** | Czech / English |
-| **Mobile** | Responsive — sidebar becomes slide-in drawer on screens ≤ 768px |
+| **Themes** | Dark (default) · Light/Outdoor — toggle in Settings, persisted in `localStorage` |
+| **Mobile** | Responsive — sidebar becomes slide-in drawer on screens ≤ 768px; modals become bottom sheets on screens ≤ 600px |
 | **Touch targets** | Minimum 44 × 44 px on all interactive elements |
-| **WCAG** | Text contrast ratios ≥ 4.5:1 |
-| **Codebase** | ~2 500 lines, single file |
+| **WCAG** | Text contrast ratios ≥ 4.5:1 on both dark and light themes |
+| **Codebase** | ~4 300 lines, single file |
 
 ### localStorage data structure
+
+The `settings` object inside the stored JSON:
+
+```json
+"settings": {
+  "tireReminders": true,
+  "theme": "dark"
+}
+```
+
+`theme` accepts `"dark"` (default) or `"bright"` (Outdoor/sunlight mode).
 
 ```json
 {
@@ -368,4 +386,5 @@ Datum,Typ paliva,Tankováno litrů,Cena za litr,Celková cena,Stav tachometru,Km
 
 `same: true` → rear axle is identical to front (rear field is null, only front is stored).  
 `same: false` → rear object contains its own independent parameters.  
+`mfgDate` → optional free-text manufacture date string per set (e.g. `"2023"` or DOT code `"2350"`).  
 **Legacy format** (parameters directly on set root, pre-3.10.1) is automatically detected and treated as `same: true`.
