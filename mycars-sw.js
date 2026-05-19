@@ -1,6 +1,6 @@
 /**
  * MyCars — Service Worker
- * Version: 3.12.0 · Build: 20260519-001
+ * Version: 3.12.0 · Build: 20260519-010
  *
  * Strategy: Cache-first for the app shell (HTML, SW itself).
  * On activation, old caches are purged so updates take effect
@@ -16,7 +16,7 @@
  *           GPL §7 attribution, SW APP_SHELL fix for GitHub Pages
  */
 
-const CACHE_NAME = 'mycars-v2';
+const CACHE_NAME = 'mycars-v3';
 
 // Everything we want available offline
 const APP_SHELL = [
