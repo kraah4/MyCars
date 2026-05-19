@@ -97,7 +97,12 @@
 
   var png=c.toDataURL('image/png');
   var l=document.getElementById('ati');if(l)l.href=png;
-  var f=document.getElementById('fav');if(f)f.href=png;
+  // Force favicon cache bust: remove old link, insert fresh one
+  var f=document.getElementById('fav');
+  if(f)f.parentNode.removeChild(f);
+  var nf=document.createElement('link');
+  nf.rel='icon';nf.type='image/png';nf.href=png;
+  document.head.appendChild(nf);
 })();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -4045,7 +4050,7 @@ function renderSettings(){
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
           <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.12.0</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260519-009</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260519-010</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           <div class="settings-info-row"><span>${cs?'Dokumentace':'Documentation'}</span><span><a href="README.md" target="_blank" style="color:var(--accent);text-decoration:none;">README.md ↗</a></span></div>
