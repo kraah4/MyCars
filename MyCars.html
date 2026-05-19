@@ -94,10 +94,12 @@
   ctx.strokeStyle='rgba(160,195,255,0.45)';ctx.lineWidth=1.5;
   p911(ctx);ctx.stroke();
 
-  var l=document.getElementById('ati');if(l)l.href=c.toDataURL('image/png');
+  var png=c.toDataURL('image/png');
+  var l=document.getElementById('ati');if(l)l.href=png;
+  var f=document.getElementById('fav');if(f)f.href=png;
 })();
 </script>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23141418'/%3E%3Cpath d='M5 19l2.5-6.5c.3-.8 1-1.5 2-1.5h13c1 0 1.7.7 2 1.5L27 19v4H5v-4z' fill='%233b82f6'/%3E%3Ccircle cx='9.5' cy='23' r='2.5' fill='%23141418'/%3E%3Ccircle cx='22.5' cy='23' r='2.5' fill='%23141418'/%3E%3C/svg%3E">
+<link rel="icon" type="image/png" id="fav">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -4043,7 +4045,7 @@ function renderSettings(){
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
           <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.12.0</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260519-005</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260519-006</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           <div class="settings-info-row"><span>${cs?'Dokumentace':'Documentation'}</span><span><a href="README.md" target="_blank" style="color:var(--accent);text-decoration:none;">README.md ↗</a></span></div>
