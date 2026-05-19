@@ -703,7 +703,7 @@
   .csw-trigger.open { border-color:var(--accent); border-left-color:var(--csw-car-color, var(--accent)) }
   .csw-arrow { color:var(--text2); font-size:.72rem; margin-left:4px; transition:transform .15s; flex-shrink:0 }
   .csw-trigger.open .csw-arrow { transform:rotate(180deg) }
-  .csw-menu { position:absolute; top:calc(100% + 4px); left:0; min-width:250px; max-width:380px; background:var(--surface3); border:1px solid var(--border2); border-radius:var(--radius); z-index:200; box-shadow:0 10px 32px rgba(0,0,0,.55); max-height:380px; overflow-y:auto }
+  .csw-menu { position:absolute; top:calc(100% + 4px); left:0; min-width:250px; max-width:380px; background:var(--surface3); border:1px solid var(--border2); border-radius:var(--radius); z-index:201; box-shadow:0 10px 32px rgba(0,0,0,.55); max-height:380px; overflow-y:auto }
   /* FIXED: was .63rem → .68rem */
   .csw-menu-label { padding:8px 14px 4px; font-size:.68rem; font-weight:700; color:var(--text3); letter-spacing:.09em; text-transform:uppercase }
   .csw-menu-item { display:flex; align-items:center; gap:9px; padding:10px 14px; cursor:pointer; font-size:.875rem; color:var(--text); transition:background .1s }
@@ -715,6 +715,9 @@
   /* FIXED: was .7rem → .75rem */
   .csw-plate { font-size:.75rem; color:var(--text2); font-family:var(--font-mono); flex-shrink:0 }
   @media(max-width:768px) { #car-switcher { padding:5px 16px } }
+  /* ── Car switcher backdrop ─────────────────────── */
+  #csw-backdrop { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0); pointer-events:none; transition:background .2s }
+  #csw-backdrop.open { background:rgba(0,0,0,.45); pointer-events:auto }
 
   /* ── Autocomplete ───────────────────────────────── */
   .ac-wrap { position: relative; width: 100% }
@@ -891,6 +894,7 @@
     </div>
 
     <div id="car-switcher" style="display:none"></div>
+    <div id="csw-backdrop" onclick="closeCswMenu()"></div>
     <div id="content-scroll"><div id="content" class="content-inner"></div></div>
   </main>
 </div>
@@ -1620,18 +1624,22 @@ function renderCarSwitcher(){
 function toggleCswMenu(){
   const menu=document.getElementById('csw-menu');
   const trigger=document.getElementById('csw-trigger');
+  const bd=document.getElementById('csw-backdrop');
   if(!menu||!trigger) return;
   const isOpen=menu.style.display==='none';
   menu.style.display=isOpen?'block':'none';
   trigger.classList.toggle('open',isOpen);
   trigger.setAttribute('aria-expanded',String(isOpen));
+  if(bd) bd.classList.toggle('open',isOpen);
 }
 
 function closeCswMenu(){
   const menu=document.getElementById('csw-menu');
   const trigger=document.getElementById('csw-trigger');
+  const bd=document.getElementById('csw-backdrop');
   if(menu) menu.style.display='none';
   if(trigger){trigger.classList.remove('open');trigger.setAttribute('aria-expanded','false');}
+  if(bd) bd.classList.remove('open');
 }
 
 function selectAnalyticsCar(val){
@@ -4049,8 +4057,8 @@ function renderSettings(){
         <div class="section-title">${cs?'O aplikaci':'About'}</div>
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.12.0</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260519-010</span></div>
+          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.12.1</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260519-011</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           <div class="settings-info-row"><span>${cs?'Dokumentace':'Documentation'}</span><span><a href="README.md" target="_blank" style="color:var(--accent);text-decoration:none;">README.md ↗</a></span></div>
