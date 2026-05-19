@@ -4058,7 +4058,7 @@ function renderSettings(){
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
           <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.12.1</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260519-011</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260519-012</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           <div class="settings-info-row"><span>${cs?'Dokumentace':'Documentation'}</span><span><a href="README.md" target="_blank" style="color:var(--accent);text-decoration:none;">README.md ↗</a></span></div>
@@ -4069,7 +4069,7 @@ function renderSettings(){
     </div><!-- /settings-two-col -->
 
     <!-- Full width: Data & import -->
-    <div class="section-title">${cs?'Data a import':'Data & import'}</div>
+    <div class="section-title">${cs?'Import a export dat':'Data import & export'}</div>
     <div class="settings-grid" style="margin-bottom:28px;">
       <div class="settings-card">
         <div class="settings-card-title">${cs?'Export dat (JSON)':'Export data (JSON)'}</div>
@@ -4086,6 +4086,11 @@ function renderSettings(){
         <div class="settings-card-desc">${cs?'Importuje servisní záznamy nebo tankování z CSV souboru. Podporuje formát exportu z Google Sheets.':'Imports service records or fuel entries from a CSV file. Supports Google Sheets export format.'}</div>
         <button class="btn btn-fuel" onclick="openCsvImportModal()" style="width:100%;justify-content:center;margin-top:4px;">CSV ${cs?'import':'import'}</button>
       </div>
+    </div>
+
+    <!-- Full width: Delete data -->
+    <div class="section-title">${cs?'Mazání dat':'Delete data'}</div>
+    <div class="settings-grid" style="margin-bottom:28px;">
       <div class="settings-card">
         <div class="settings-card-title" style="color:var(--amber)">${cs?'Smazat provozní data':'Delete operational data'}</div>
         <div class="settings-card-desc">${cs?'Smaže záznamy servisu a tankování. Vozidla a jejich nastavení zůstanou zachována.':'Deletes service records and fuel entries. Vehicles and their settings will be kept.'}</div>
