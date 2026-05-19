@@ -31,7 +31,8 @@
 <meta name="apple-mobile-web-app-title" content="MyCars">
 <link rel="apple-touch-icon" id="ati" sizes="180x180">
 <script>
-// Generate 180×180 PNG apple-touch-icon via canvas (iOS requires PNG, not SVG)
+// Generate 180×180 PNG apple-touch-icon — three overlapping car silhouettes:
+// BMW X5 (back, faintest) · Audi A6 (middle) · Porsche 911 (front, brightest)
 (function(){
   var c=document.createElement('canvas'),ctx=c.getContext('2d');
   c.width=c.height=180;
@@ -46,57 +47,52 @@
   ctx.lineTo(38,180);ctx.quadraticCurveTo(0,180,0,142);
   ctx.lineTo(0,38);ctx.quadraticCurveTo(0,0,38,0);ctx.closePath();ctx.fill();
 
-  // Wheels drawn first — body will cover top half naturally
-  [52,128].forEach(function(wx){
-    ctx.fillStyle='#181928';
-    ctx.beginPath();ctx.arc(wx,122,20,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='rgba(108,143,255,0.7)';ctx.lineWidth=2.5;
-    ctx.beginPath();ctx.arc(wx,122,13,0,Math.PI*2);ctx.stroke();
-    // 3 spokes
-    for(var a=0;a<3;a++){
-      var ang=a*Math.PI/3;
-      ctx.beginPath();
-      ctx.moveTo(wx+Math.cos(ang)*4,122+Math.sin(ang)*4);
-      ctx.lineTo(wx+Math.cos(ang)*12,122+Math.sin(ang)*12);ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(wx+Math.cos(ang+Math.PI)*4,122+Math.sin(ang+Math.PI)*4);
-      ctx.lineTo(wx+Math.cos(ang+Math.PI)*12,122+Math.sin(ang+Math.PI)*12);ctx.stroke();
-    }
-    ctx.fillStyle='#6c8fff';
-    ctx.beginPath();ctx.arc(wx,122,4,0,Math.PI*2);ctx.fill();
-  });
+  var gl=132; // ground line (wheel centre y)
 
-  // Car body with wheel arch cutouts
-  ctx.fillStyle='#5b7dff';
-  ctx.beginPath();
-  ctx.moveTo(22,122);
-  ctx.lineTo(22,106);
-  ctx.lineTo(38,84);
-  ctx.lineTo(54,66);
-  ctx.lineTo(84,58);
-  ctx.lineTo(116,58);
-  ctx.lineTo(136,66);
-  ctx.lineTo(153,86);
-  ctx.lineTo(158,106);
-  ctx.lineTo(158,122);
-  ctx.arc(128,122,24,0,Math.PI,true);  // front wheel arch
-  ctx.lineTo(76,122);
-  ctx.arc(52,122,24,0,Math.PI,true);   // rear wheel arch
-  ctx.closePath();ctx.fill();
+  // ── BMW X5 — SUV, tallest roofline ───────────────
+  function x5(x){
+    x.beginPath();
+    x.moveTo(18,gl);x.lineTo(18,112);
+    x.lineTo(34,90);x.lineTo(48,67);x.lineTo(63,57);
+    x.lineTo(120,57);x.lineTo(141,66);x.lineTo(156,88);
+    x.lineTo(162,110);x.lineTo(162,gl);
+    x.arc(130,gl,23,0,Math.PI,true);x.lineTo(73,gl);
+    x.arc(50,gl,23,0,Math.PI,true);x.closePath();
+  }
 
-  // Windows
-  ctx.fillStyle='rgba(170,205,255,0.4)';
-  ctx.beginPath(); // rear window
-  ctx.moveTo(42,88);ctx.lineTo(57,69);ctx.lineTo(82,62);ctx.lineTo(82,89);ctx.closePath();ctx.fill();
-  ctx.beginPath(); // windshield
-  ctx.moveTo(87,62);ctx.lineTo(116,62);ctx.lineTo(134,69);ctx.lineTo(149,89);ctx.lineTo(87,89);ctx.closePath();ctx.fill();
+  // ── Audi A6 — classic 3-box sedan, trunk notch ───
+  function a6(x){
+    x.beginPath();
+    x.moveTo(18,gl);x.lineTo(18,115);
+    x.lineTo(24,106);x.lineTo(38,101); // trunk notch
+    x.lineTo(51,86);x.lineTo(63,69);x.lineTo(78,63);
+    x.lineTo(114,63);x.lineTo(134,70);x.lineTo(149,88);
+    x.lineTo(159,111);x.lineTo(162,gl);
+    x.arc(128,gl,21,0,Math.PI,true);x.lineTo(71,gl);
+    x.arc(50,gl,21,0,Math.PI,true);x.closePath();
+  }
 
-  // B-pillar
-  ctx.fillStyle='#0d0e1a';ctx.fillRect(83,62,5,27);
+  // ── Porsche 911 — fastback, rear engine hump ─────
+  function p911(x){
+    x.beginPath();
+    x.moveTo(18,gl);x.lineTo(18,122);
+    x.lineTo(27,113);x.lineTo(37,107); // rear engine hump
+    x.lineTo(51,86);x.lineTo(80,73);x.lineTo(118,73);
+    x.lineTo(136,80);x.lineTo(151,96);
+    x.lineTo(160,113);x.lineTo(162,122);x.lineTo(162,gl);
+    x.arc(128,gl,19,0,Math.PI,true);x.lineTo(71,gl);
+    x.arc(50,gl,21,0,Math.PI,true); // wider rear arch
+    x.closePath();
+  }
 
-  // Subtle body highlight line
-  ctx.strokeStyle='rgba(100,140,255,0.3)';ctx.lineWidth=2;
-  ctx.beginPath();ctx.moveTo(24,105);ctx.lineTo(156,105);ctx.stroke();
+  // Layer back→front with increasing opacity; overlapping areas compound brighter
+  ctx.fillStyle='rgba(108,143,255,0.27)'; x5(ctx);  ctx.fill();
+  ctx.fillStyle='rgba(108,143,255,0.47)'; a6(ctx);  ctx.fill();
+  ctx.fillStyle='rgba(108,143,255,0.82)'; p911(ctx);ctx.fill();
+
+  // Subtle outline on 911 to define its edges against the other layers
+  ctx.strokeStyle='rgba(160,195,255,0.45)';ctx.lineWidth=1.5;
+  p911(ctx);ctx.stroke();
 
   var l=document.getElementById('ati');if(l)l.href=c.toDataURL('image/png');
 })();
