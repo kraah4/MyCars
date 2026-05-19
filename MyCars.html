@@ -33,22 +33,71 @@
 <script>
 // Generate 180×180 PNG apple-touch-icon via canvas (iOS requires PNG, not SVG)
 (function(){
-  var c=document.createElement('canvas');c.width=c.height=180;
-  var x=c.getContext('2d'),r=34,s=180/512;
-  x.fillStyle='#0f1018';
-  x.beginPath();x.moveTo(r,0);x.lineTo(180-r,0);x.quadraticCurveTo(180,0,180,r);
-  x.lineTo(180,180-r);x.quadraticCurveTo(180,180,180-r,180);
-  x.lineTo(r,180);x.quadraticCurveTo(0,180,0,180-r);
-  x.lineTo(0,r);x.quadraticCurveTo(0,0,r,0);x.closePath();x.fill();
-  x.fillStyle='#6c8fff';
-  x.beginPath();x.moveTo(80*s,304*s);x.lineTo(120*s,200*s);
-  x.bezierCurveTo(125*s,187*s,136*s,176*s,152*s,176*s);
-  x.lineTo(360*s,176*s);
-  x.bezierCurveTo(376*s,176*s,387*s,187*s,392*s,200*s);
-  x.lineTo(432*s,304*s);x.lineTo(432*s,368*s);x.lineTo(80*s,368*s);x.closePath();x.fill();
-  x.fillStyle='#07080d';
-  x.beginPath();x.arc(152*s,368*s,40*s,0,Math.PI*2);x.fill();
-  x.beginPath();x.arc(360*s,368*s,40*s,0,Math.PI*2);x.fill();
+  var c=document.createElement('canvas'),ctx=c.getContext('2d');
+  c.width=c.height=180;
+
+  // Background — gradient rounded rect
+  var g=ctx.createLinearGradient(0,0,0,180);
+  g.addColorStop(0,'#131420');g.addColorStop(1,'#07080d');
+  ctx.fillStyle=g;
+  ctx.beginPath();
+  ctx.moveTo(38,0);ctx.lineTo(142,0);ctx.quadraticCurveTo(180,0,180,38);
+  ctx.lineTo(180,142);ctx.quadraticCurveTo(180,180,142,180);
+  ctx.lineTo(38,180);ctx.quadraticCurveTo(0,180,0,142);
+  ctx.lineTo(0,38);ctx.quadraticCurveTo(0,0,38,0);ctx.closePath();ctx.fill();
+
+  // Wheels drawn first — body will cover top half naturally
+  [52,128].forEach(function(wx){
+    ctx.fillStyle='#181928';
+    ctx.beginPath();ctx.arc(wx,122,20,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(108,143,255,0.7)';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.arc(wx,122,13,0,Math.PI*2);ctx.stroke();
+    // 3 spokes
+    for(var a=0;a<3;a++){
+      var ang=a*Math.PI/3;
+      ctx.beginPath();
+      ctx.moveTo(wx+Math.cos(ang)*4,122+Math.sin(ang)*4);
+      ctx.lineTo(wx+Math.cos(ang)*12,122+Math.sin(ang)*12);ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(wx+Math.cos(ang+Math.PI)*4,122+Math.sin(ang+Math.PI)*4);
+      ctx.lineTo(wx+Math.cos(ang+Math.PI)*12,122+Math.sin(ang+Math.PI)*12);ctx.stroke();
+    }
+    ctx.fillStyle='#6c8fff';
+    ctx.beginPath();ctx.arc(wx,122,4,0,Math.PI*2);ctx.fill();
+  });
+
+  // Car body with wheel arch cutouts
+  ctx.fillStyle='#5b7dff';
+  ctx.beginPath();
+  ctx.moveTo(22,122);
+  ctx.lineTo(22,106);
+  ctx.lineTo(38,84);
+  ctx.lineTo(54,66);
+  ctx.lineTo(84,58);
+  ctx.lineTo(116,58);
+  ctx.lineTo(136,66);
+  ctx.lineTo(153,86);
+  ctx.lineTo(158,106);
+  ctx.lineTo(158,122);
+  ctx.arc(128,122,24,0,Math.PI,true);  // front wheel arch
+  ctx.lineTo(76,122);
+  ctx.arc(52,122,24,0,Math.PI,true);   // rear wheel arch
+  ctx.closePath();ctx.fill();
+
+  // Windows
+  ctx.fillStyle='rgba(170,205,255,0.4)';
+  ctx.beginPath(); // rear window
+  ctx.moveTo(42,88);ctx.lineTo(57,69);ctx.lineTo(82,62);ctx.lineTo(82,89);ctx.closePath();ctx.fill();
+  ctx.beginPath(); // windshield
+  ctx.moveTo(87,62);ctx.lineTo(116,62);ctx.lineTo(134,69);ctx.lineTo(149,89);ctx.lineTo(87,89);ctx.closePath();ctx.fill();
+
+  // B-pillar
+  ctx.fillStyle='#0d0e1a';ctx.fillRect(83,62,5,27);
+
+  // Subtle body highlight line
+  ctx.strokeStyle='rgba(100,140,255,0.3)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(24,105);ctx.lineTo(156,105);ctx.stroke();
+
   var l=document.getElementById('ati');if(l)l.href=c.toDataURL('image/png');
 })();
 </script>
@@ -125,6 +174,58 @@
   html.theme-bright thead tr { background: var(--surface2) }
   /* Bright: inactive car opacity — min .65 so text contrast stays ≥ 4.5:1 even when dimmed */
   html.theme-bright .car-item.inactive-car { opacity: .65 }
+
+  /* ── Glass / Frosted theme ─────────────────────── */
+  html.theme-glass {
+    --bg:       transparent;
+    --surface:  rgba(255,255,255,0.07);
+    --surface2: rgba(255,255,255,0.05);
+    --surface3: rgba(255,255,255,0.04);
+    --border:   rgba(255,255,255,0.11);
+    --border2:  rgba(255,255,255,0.22);
+    --accent-dim: rgba(108,143,255,.20);
+    --green-dim:  rgba(52,211,153,.18);
+    --red-dim:    rgba(248,113,113,.18);
+    --amber-dim:  rgba(251,191,36,.18);
+  }
+  /* Fixed gradient background — visible through all glass surfaces */
+  html.theme-glass body {
+    background:
+      radial-gradient(ellipse at 15% 20%, rgba(108,143,255,0.28) 0%, transparent 52%),
+      radial-gradient(ellipse at 85% 80%, rgba(167,139,250,0.22) 0%, transparent 50%),
+      radial-gradient(ellipse at 60% 10%, rgba(99,102,241,0.15) 0%, transparent 45%),
+      #07080d;
+    background-attachment: fixed;
+  }
+  /* Frosted glass effect on key surfaces */
+  html.theme-glass #sidebar,
+  html.theme-glass #topbar,
+  html.theme-glass .modal,
+  html.theme-glass .stat-card,
+  html.theme-glass .settings-card {
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+  }
+  html.theme-glass #sidebar {
+    box-shadow: 4px 0 32px rgba(0,0,0,.35), inset -1px 0 0 rgba(255,255,255,.08);
+  }
+  html.theme-glass #topbar {
+    box-shadow: 0 1px 0 rgba(255,255,255,.08), 0 4px 24px rgba(0,0,0,.2);
+  }
+  html.theme-glass .modal {
+    box-shadow: 0 24px 80px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.12);
+  }
+  html.theme-glass .modal-overlay { background: rgba(0,0,0,.5) }
+  html.theme-glass thead tr { background: rgba(255,255,255,.04) }
+  html.theme-glass .car-item.inactive-car { opacity: .6 }
+  /* Fallback for browsers without backdrop-filter support */
+  @supports not (backdrop-filter: blur(1px)) {
+    html.theme-glass #sidebar,
+    html.theme-glass #topbar,
+    html.theme-glass .modal,
+    html.theme-glass .stat-card,
+    html.theme-glass .settings-card { background: rgba(15,16,24,0.85) }
+  }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
   html { font-size: 16px }
@@ -1282,10 +1383,12 @@ function saveData(){
 
 // ─── LANG ────────────────────────────────────────────────────
 function applyTheme(){
-  document.documentElement.classList.toggle('theme-bright', state.settings.theme==='bright');
+  const t = state.settings.theme || 'dark';
+  document.documentElement.classList.toggle('theme-bright', t === 'bright');
+  document.documentElement.classList.toggle('theme-glass',  t === 'glass');
   // Update meta theme-color for browser chrome
   const meta=document.querySelector('meta[name="theme-color"]');
-  if(meta) meta.content=state.settings.theme==='bright'?'#ffffff':'#0f1018';
+  if(meta) meta.content = t === 'bright' ? '#ffffff' : t === 'glass' ? '#0d0a1e' : '#0f1018';
 }
 
 function setTheme(t){
@@ -3861,14 +3964,17 @@ function renderSettings(){
         <div class="settings-card settings-col-card">
           <div class="settings-card-title" style="margin-bottom:6px;">${cs?'Barevné téma':'Color theme'}</div>
           <div class="settings-card-desc" style="margin-bottom:14px;">${cs
-            ?'Tmavé téma je výchozí. Světlé (Outdoor) téma je optimalizované pro čitelnost na přímém slunci.'
-            :'Dark theme is the default. Light (Outdoor) theme is optimized for readability in direct sunlight.'}</div>
+            ?'Tmavé téma je výchozí. Světlé (Outdoor) je optimalizované pro přímé slunce. Sklo (Glass) používá průhledné prvky s gradientovým pozadím.'
+            :'Dark theme is the default. Light (Outdoor) is optimized for direct sunlight. Glass uses translucent surfaces over a gradient background.'}</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button onclick="setTheme('dark')" class="btn ${(state.settings.theme||'dark')==='dark'?'btn-primary':'btn-ghost'}" style="flex:1;justify-content:center;min-width:120px;">
+            <button onclick="setTheme('dark')" class="btn ${(state.settings.theme||'dark')==='dark'?'btn-primary':'btn-ghost'}" style="flex:1;justify-content:center;min-width:100px;">
               ${cs?'Tmavé':'Dark'}
             </button>
-            <button onclick="setTheme('bright')" class="btn ${state.settings.theme==='bright'?'btn-primary':'btn-ghost'}" style="flex:1;justify-content:center;min-width:120px;">
+            <button onclick="setTheme('bright')" class="btn ${state.settings.theme==='bright'?'btn-primary':'btn-ghost'}" style="flex:1;justify-content:center;min-width:100px;">
               ${cs?'Světlé (Outdoor)':'Light (Outdoor)'}
+            </button>
+            <button onclick="setTheme('glass')" class="btn ${state.settings.theme==='glass'?'btn-primary':'btn-ghost'}" style="flex:1;justify-content:center;min-width:100px;">
+              ${cs?'Sklo (Glass)':'Glass'}
             </button>
           </div>
         </div>
@@ -3940,8 +4046,8 @@ function renderSettings(){
         <div class="section-title">${cs?'O aplikaci':'About'}</div>
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.11.0</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260429-007</span></div>
+          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.12.0</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260519-005</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           <div class="settings-info-row"><span>${cs?'Dokumentace':'Documentation'}</span><span><a href="README.md" target="_blank" style="color:var(--accent);text-decoration:none;">README.md ↗</a></span></div>

@@ -1,8 +1,10 @@
 # MyCars — Vehicle Maintenance Tracker
 
-**Version:** 3.11.0 · **Build:** 20260429-007  
+**Version:** 3.12.0 · **Build:** 20260519-005
 **Author:** kraah  
-**Type:** Single-file offline web application
+**License:** GNU GPL v3 (with §7 attribution requirement — see `LICENSE`)  
+**Live:** https://kraah4.github.io/MyCars/MyCars.html  
+**Type:** Single-file offline web application (PWA)
 
 ---
 
@@ -16,10 +18,22 @@ The entire application is a single `MyCars.html` file that works over `file://` 
 
 ## Quick Start
 
+### Online (GitHub Pages)
+
+Open **https://kraah4.github.io/MyCars/MyCars.html** in any browser.
+
+**iPhone / iPad:** Safari → Share → *Add to Home Screen* — installs as a standalone PWA with offline support and a home screen icon.
+
+**Android / Chrome:** Browser menu → *Install app* or *Add to Home Screen*.
+
+### Local
+
 1. Open `MyCars.html` in any modern browser (Chrome, Firefox, Safari, Edge, Vivaldi)
 2. Click **Add vehicle** in the left sidebar
 3. Fill in make, model, and fuel type — all other fields are optional
 4. Start adding service records (**New record**) and fuel entries (**New fuel entry**)
+
+> **Note:** Service Worker (offline cache) only activates over HTTP/HTTPS. When opening the file directly via `file://`, the app works fully but without offline caching.
 
 The app supports both **Czech** and **English** — switch via Settings → Interface language.
 
@@ -308,13 +322,15 @@ Datum,Typ paliva,Tankováno litrů,Cena za litr,Celková cena,Stav tachometru,Km
 | **Stack** | Plain HTML + CSS + JavaScript, zero dependencies |
 | **Storage** | `localStorage` — key `mycars_v3` |
 | **Fonts** | Outfit + JetBrains Mono (Google Fonts CDN) |
-| **Protocol** | Works over `file://` and HTTP |
+| **Protocol** | Works over `file://` and HTTP/HTTPS |
 | **Languages** | Czech / English |
-| **Themes** | Dark (default) · Light/Outdoor — toggle in Settings, persisted in `localStorage` |
+| **Themes** | Dark (default) · Light/Outdoor · Glass/Frosted — toggle in Settings, persisted in `localStorage` |
 | **Mobile** | Responsive — sidebar becomes slide-in drawer on screens ≤ 768px; modals become bottom sheets on screens ≤ 600px |
 | **Touch targets** | Minimum 44 × 44 px on all interactive elements |
-| **WCAG** | Text contrast ratios ≥ 4.5:1 on both dark and light themes |
-| **Codebase** | ~4 300 lines, single file |
+| **WCAG** | Text contrast ratios ≥ 4.5:1 on all three themes |
+| **PWA** | Installable on iOS 16.4+ (Safari → Add to Home Screen) and Android/Chrome |
+| **Service Worker** | Cache-first, offline-capable after first load; update detection with in-app toast notification |
+| **Codebase** | ~4 400 lines, single file |
 
 ### localStorage data structure
 
@@ -327,7 +343,7 @@ The `settings` object inside the stored JSON:
 }
 ```
 
-`theme` accepts `"dark"` (default) or `"bright"` (Outdoor/sunlight mode).
+`theme` accepts `"dark"` (default), `"bright"` (Outdoor/sunlight mode), or `"glass"` (frosted glass mode with gradient background).
 
 ```json
 {
@@ -388,3 +404,25 @@ The `settings` object inside the stored JSON:
 `same: false` → rear object contains its own independent parameters.  
 `mfgDate` → optional free-text manufacture date string per set (e.g. `"2023"` or DOT code `"2350"`).  
 **Legacy format** (parameters directly on set root, pre-3.10.1) is automatically detected and treated as `same: true`.
+
+---
+
+## PWA — Service Worker & Updates
+
+The Service Worker (`mycars-sw.js`) uses a **cache-first** strategy for the app shell.
+
+- On first load over HTTPS, `MyCars.html` and `manifest.json` are cached.
+- Subsequent loads are served instantly from cache — no network required.
+- The browser checks `mycars-sw.js` for changes on every navigation. When the file changes (e.g. after a new release), the new SW installs in the background and purges the old cache.
+- The app displays a toast: *"Aktualizace k dispozici — zavřete a znovu otevřete aplikaci"* / *"Update available — close and reopen the app"*.
+- After closing all tabs and reopening, the new version is active.
+
+**For developers:** Bump `CACHE_NAME` in `mycars-sw.js` with every release (e.g. `mycars-v2` → `mycars-v3`). This ensures stale caches are purged on all devices.
+
+---
+
+## License
+
+GNU General Public License v3.0 — see [`LICENSE`](LICENSE).
+
+**Additional term (GPL §7(b)):** All copies and modified versions must preserve the author attribution `Author / Autor: kraah` in the Settings / About section of the application's user interface. Modified versions must additionally be marked as changed per GPL §5(a).
