@@ -1,3 +1,22 @@
+<!--
+  MyCars — Evidence vozidel / Vehicle Maintenance Tracker
+  Copyright (C) 2024–2026  kraah
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details: https://www.gnu.org/licenses/
+
+  ADDITIONAL TERM (GPL §7(b)): You must preserve the author attribution
+  "Author / Autor: kraah" in the Settings / About section of any copy
+  or modified version of this work. Modified versions must additionally
+  be marked as changed per GPL §5(a).
+-->
 <!DOCTYPE html>
 <html lang="cs">
 <head>
@@ -10,6 +29,29 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MyCars">
+<link rel="apple-touch-icon" id="ati" sizes="180x180">
+<script>
+// Generate 180×180 PNG apple-touch-icon via canvas (iOS requires PNG, not SVG)
+(function(){
+  var c=document.createElement('canvas');c.width=c.height=180;
+  var x=c.getContext('2d'),r=34,s=180/512;
+  x.fillStyle='#0f1018';
+  x.beginPath();x.moveTo(r,0);x.lineTo(180-r,0);x.quadraticCurveTo(180,0,180,r);
+  x.lineTo(180,180-r);x.quadraticCurveTo(180,180,180-r,180);
+  x.lineTo(r,180);x.quadraticCurveTo(0,180,0,180-r);
+  x.lineTo(0,r);x.quadraticCurveTo(0,0,r,0);x.closePath();x.fill();
+  x.fillStyle='#6c8fff';
+  x.beginPath();x.moveTo(80*s,304*s);x.lineTo(120*s,200*s);
+  x.bezierCurveTo(125*s,187*s,136*s,176*s,152*s,176*s);
+  x.lineTo(360*s,176*s);
+  x.bezierCurveTo(376*s,176*s,387*s,187*s,392*s,200*s);
+  x.lineTo(432*s,304*s);x.lineTo(432*s,368*s);x.lineTo(80*s,368*s);x.closePath();x.fill();
+  x.fillStyle='#07080d';
+  x.beginPath();x.arc(152*s,368*s,40*s,0,Math.PI*2);x.fill();
+  x.beginPath();x.arc(360*s,368*s,40*s,0,Math.PI*2);x.fill();
+  var l=document.getElementById('ati');if(l)l.href=c.toDataURL('image/png');
+})();
+</script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23141418'/%3E%3Cpath d='M5 19l2.5-6.5c.3-.8 1-1.5 2-1.5h13c1 0 1.7.7 2 1.5L27 19v4H5v-4z' fill='%233b82f6'/%3E%3Ccircle cx='9.5' cy='23' r='2.5' fill='%23141418'/%3E%3Ccircle cx='22.5' cy='23' r='2.5' fill='%23141418'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>

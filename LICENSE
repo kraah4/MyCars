@@ -236,10 +236,8 @@ terms of section 4, provided that you also meet all of these conditions:
 works, which are not by their nature extensions of the covered work,
 and which are not combined with it such as to form a larger program,
 in or on a volume of a storage or distribution medium, is called an
-"aggregate" if the compilation and its resulting copyright are not
-used to limit the access or legal rights of the compilation's users
-beyond what the individual works permit.  Inclusion of a covered work
-in an aggregate does not cause this License to apply to the other
+"aggregate" if the compilation and its resulting copyright does not
+cause this License to apply to the other
 parts of the aggregate.
 
   6. Conveying Non-Source Forms.
@@ -318,7 +316,7 @@ modification has been made.
   If you convey an object code work under this section in, or with, or
 specifically for use in, a User Product, and the conveying occurs as
 part of a transaction in which the right of possession and use of the
-User Product is transferred to the recipient in perpetuity or for a
+User Product is transferred to the recipient in perpetiy or for a
 fixed term (regardless of how the transaction is characterized), the
 Corresponding Source conveyed under this section must be accompanied
 by the Installation Information.  But this requirement does not apply
@@ -535,7 +533,7 @@ or that patent license was granted, prior to 28 March 2007.
 
   Nothing in this License shall be construed as excluding or limiting
 any implied license or other defenses to infringement that may
-otherwise be available to you under applicable patent law.
+otherwise be available to you under applicable law.
 
   12. No Surrender of Others' Freedom.
 
@@ -576,10 +574,10 @@ Foundation.  If the Program does not specify a version number of the
 GNU General Public License, you may choose any version ever published
 by the Free Software Foundation.
 
-  If the Program specifies that a proxy can decide which future
-versions of the GNU General Public License can be used, that proxy's
-public statement of acceptance of a version permanently authorizes you
-to choose that version for the Program.
+  If the Program specifies that a proxy can decide which future versions
+of the GNU General Public License can be used, that proxy's public
+statement of acceptance of a version permanently authorizes you to
+choose that version for the Program.
 
   Later license versions may give you additional or different
 permissions.  However, no additional obligations are imposed on any
@@ -631,8 +629,8 @@ to attach them to the start of each source file to most effectively
 state the exclusion of warranty; and each file should have at least
 the "copyright" line and a pointer to where the full notice is found.
 
-    <one line to give the program's name and a brief idea of what it does.>
-    Copyright (C) <year>  <name of author>
+    MyCars — Evidence vozidel / Vehicle Maintenance Tracker
+    Copyright (C) 2024–2026  kraah
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -647,28 +645,26 @@ the "copyright" line and a pointer to where the full notice is found.
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-Also add information on how to contact you by electronic and paper mail.
+───────────────────────────────────────────────────────────────────────────────
+ADDITIONAL TERMS UNDER GNU GPL VERSION 3, SECTION 7
+───────────────────────────────────────────────────────────────────────────────
 
-  If the program does terminal interaction, make it output a short
-notice like this when it starts in an interactive mode:
+As permitted by section 7 of the GNU General Public License version 3,
+the copyright holder (kraah) adds the following additional term to this
+license, applicable to the entire Program:
 
-    <program>  Copyright (C) <year>  <name of author>
-    This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
-    This is free software, and you are welcome to redistribute it
-    under certain conditions; type `show c' for details.
+  Attribution preservation (GPL §7(b)):
 
-The hypothetical commands `show w' and `show c' should show the appropriate
-parts of the General Public License.  Of course, your program's commands
-might be different; for a GUI interface, you would use an "about box".
+  You must preserve, in all copies and in all modified or derived versions
+  of this work, the author attribution notice as it appears in the
+  application's Settings / About section:
 
-  You should also get your employer (if you work as a programmer) or school,
-if any, to sign a "copyright disclaimer" for the program, if necessary.
-For more information on this, and how to apply and follow the GNU GPL, see
-<https://www.gnu.org/licenses/>.
+      Author / Autor:  kraah
+      License / Licence:  GNU GPL v3
 
-  The GNU General Public License does not permit incorporating your program
-into proprietary programs.  If your program is a subroutine library, you
-may consider it more useful to permit linking proprietary applications with
-the library.  If this is what you want to do, use the GNU Lesser General
-Public License instead of this License.  But first, please read
-<https://www.gnu.org/licenses/why-not-lgpl.html>.
+  This notice must remain visible and unaltered in any interactive user
+  interface that the work provides.  If you produce a modified version,
+  you must additionally mark it as changed (per GPL §5(a)) so that users
+  can clearly distinguish it from the original work by kraah.
+
+───────────────────────────────────────────────────────────────────────────────

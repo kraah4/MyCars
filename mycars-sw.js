@@ -16,7 +16,6 @@ const CACHE_NAME = 'mycars-v1';
 
 // Everything we want available offline
 const APP_SHELL = [
-  './',           // resolves to MyCars.html when served as index
   './MyCars.html',
   './manifest.json',
 ];
