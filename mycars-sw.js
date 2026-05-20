@@ -1,6 +1,6 @@
 /**
  * MyCars — Service Worker
- * Version: 3.12.1 · Build: 20260519-012
+ * Version: 3.12.2 · Build: 20260520-013
  *
  * Strategy: Cache-first for the app shell (HTML, SW itself).
  * On activation, old caches are purged so updates take effect
@@ -12,15 +12,23 @@
  * after the first visit.
  *
  * ── Release notes ────────────────────────────────────────────
+ * 20260520: Remove unsafe-inline CSP (event delegation refactor),
+ *           extract JS to mycars.js, glass theme nav transitions,
+ *           page content fade animation, dropdown option fix
  * 20260519: Glass theme, improved apple-touch-icon, iOS fixes,
  *           GPL §7 attribution, SW APP_SHELL fix for GitHub Pages
  */
 
-const CACHE_NAME = 'mycars-v3';
+const CACHE_NAME = 'mycars-v4';
+const FONTS_CACHE = 'mycars-fonts-v1';
+// Maximum age of a cached Google Fonts response before it must be re-validated
+// from the network (mitigates serving a compromised cached asset indefinitely).
+const FONTS_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 // Everything we want available offline
 const APP_SHELL = [
   './MyCars.html',
+  './mycars.js',
   './manifest.json',
 ];
 
@@ -39,7 +47,7 @@ self.addEventListener('activate', event => {
     caches.keys()
       .then(keys => Promise.all(
         keys
-          .filter(key => key !== CACHE_NAME)
+          .filter(key => key !== CACHE_NAME && key !== FONTS_CACHE)
           .map(key => caches.delete(key))
       ))
       .then(() => self.clients.claim()) // take control of open tabs
@@ -50,17 +58,43 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Google Fonts: network-first, cache as fallback (fonts work offline after first load)
+  // Google Fonts: network-first with bounded cache TTL.
+  // Cached responses are tagged with a timestamp and discarded when older
+  // than FONTS_MAX_AGE_MS to limit exposure to a potentially compromised
+  // upstream font CDN.
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
-    event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-          return response;
-        })
-        .catch(() => caches.match(event.request))
-    );
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(event.request);
+        // Cachujeme jen ne-opaque, úspěšné odpovědi — opaque cross-origin
+        // odpovědi nelze ověřit (status=0) a měly by se neukládat.
+        if (response && response.ok && response.type !== 'opaque') {
+          const cache = await caches.open(FONTS_CACHE);
+          // Tag with timestamp via custom header on a cloned response
+          const headers = new Headers(response.headers);
+          headers.set('x-sw-cached-at', String(Date.now()));
+          const body = await response.clone().blob();
+          const tagged = new Response(body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers,
+          });
+          cache.put(event.request, tagged);
+        }
+        return response;
+      } catch {
+        const cache = await caches.open(FONTS_CACHE);
+        const cached = await cache.match(event.request);
+        if (!cached) return Response.error();
+        const ts = parseInt(cached.headers.get('x-sw-cached-at') || '0', 10);
+        if (ts && (Date.now() - ts) > FONTS_MAX_AGE_MS) {
+          // Stale beyond TTL — drop and fail closed
+          cache.delete(event.request);
+          return Response.error();
+        }
+        return cached;
+      }
+    })());
     return;
   }
 
