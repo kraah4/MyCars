@@ -109,6 +109,7 @@ let state = {
   selectedColor:'#e8c547',
   settings:{ tireReminders:true, theme:'dark' },
   analyticsCarId:null,  // null = all active | '__all__' = all incl. inactive | carId = single car
+  analyticsTab:'overview', // 'overview' | 'compare'
   remindersCarId:null,   // null = all active | carId = single car
   cars:[], records:[], reminders:[], fuels:[]
 };
@@ -316,8 +317,17 @@ function safeId(id){return /^[A-Za-z0-9_\-]{1,64}$/.test(id||'') ? id : '';}
 // ── Car color dot helper ──────────────────────────────────────
 // Barvy které potřebují ring místo glow (tmavé / nevýrazné na tmavém pozadí)
 const DOT_RING_COLORS = new Set(['#7a5230','#c8956a','#e8e4d8','#2a2a2a','#aaaaaa','#888','#aaa']);
+// Vrací true pokud je hex barva příliš tmavá na tmavém pozadí (luminance < ~31 %)
+function _isColorDark(hex){
+  const h=(hex||'').replace('#','').toLowerCase();
+  if(!/^[0-9a-f]{3,6}$/.test(h)) return false;
+  const f=h.length===3?h.split('').map(x=>x+x).join(''):h;
+  const r=parseInt(f.slice(0,2),16),g=parseInt(f.slice(2,4),16),b=parseInt(f.slice(4,6),16);
+  return (r*299+g*587+b*114)/1000 < 80;
+}
 function carDotClass(color){
-  return DOT_RING_COLORS.has((color||'#888').toLowerCase())
+  const c=(color||'#888').toLowerCase();
+  return DOT_RING_COLORS.has(c)||_isColorDark(c)
     ? 'car-color-dot-ring' : 'car-color-dot-glow';
 }
 // cssClass = třída elementu (fleet-card-dot / csw-dot / car-header-dot / car-dot)
@@ -332,20 +342,40 @@ function getCar(id){return state.cars.find(c=>c.id===id)}
 function getCarRecords(carId){return state.records.filter(r=>r.carId===carId)}
 function getCarFuels(carId){return state.fuels.filter(f=>f.carId===carId)}
 // Sdílená funkce — spotřeba metodou plné nádrže (použita v tankování i analytice)
+// Segmenty kratší než MIN_SEGMENT_KM nebo s hodnotou > MAX_CONSUMPTION jsou přeskočeny
+// jako chybná data (duplicitní záznam, špatně zadaný odometr apod.)
+const _MIN_SEG_KM = 5;       // minimální délka segmentu v km
+const _MAX_CONS   = 40;      // sanity cap l/100km — nad tím jde téměř jistě o chybu zadání
 function calcConsumptions(carId){
   const allFuels=getCarFuels(carId);
-  const fullFuels=[...allFuels].filter(f=>f.fullTank).sort((a,b)=>a.odo-b.odo);
+  // Pouze plné nádrže s platným odometrem > 0
+  const fullFuels=[...allFuels].filter(f=>f.fullTank&&f.odo>0).sort((a,b)=>a.odo-b.odo);
   const result=[];
   for(let i=1;i<fullFuels.length;i++){
     const kmDiff=fullFuels[i].odo-fullFuels[i-1].odo;
-    const liters=allFuels.filter(f=>f.odo>fullFuels[i-1].odo&&f.odo<=fullFuels[i].odo).reduce((s,f)=>s+(f.liters||0),0);
-    if(kmDiff>0&&liters>0) result.push({odo:fullFuels[i].odo,val:liters/kmDiff*100});
+    if(kmDiff<_MIN_SEG_KM) continue; // příliš krátký segment → přeskočit
+    const liters=allFuels.filter(f=>f.odo>fullFuels[i-1].odo&&f.odo<=fullFuels[i].odo)
+                         .reduce((s,f)=>s+(f.liters||0),0);
+    if(liters<=0) continue;
+    const val=liters/kmDiff*100;
+    if(val>_MAX_CONS) continue; // nesmyslně vysoká hodnota → chyba dat, přeskočit
+    result.push({odo:fullFuels[i].odo,val});
   }
   return result;
 }
 function avgConsumptionVal(carId){
-  const c=calcConsumptions(carId);
-  return c.length?c.reduce((s,x)=>s+x.val,0)/c.length:0;
+  // Vážený průměr (správná metoda plné nádrže): celkem litrů ÷ celkem km
+  // mezi první a poslední plnou nádrží — odolné vůči krátkým segmentům.
+  const allFuels=getCarFuels(carId);
+  const fullFuels=[...allFuels].filter(f=>f.fullTank&&f.odo>0).sort((a,b)=>a.odo-b.odo);
+  if(fullFuels.length<2) return 0;
+  const firstOdo=fullFuels[0].odo;
+  const lastOdo=fullFuels[fullFuels.length-1].odo;
+  const kmTotal=lastOdo-firstOdo;
+  if(kmTotal<_MIN_SEG_KM) return 0;
+  const litersTotal=allFuels.filter(f=>f.odo>firstOdo&&f.odo<=lastOdo)
+                            .reduce((s,f)=>s+(f.liters||0),0);
+  return litersTotal>0?litersTotal/kmTotal*100:0;
 }
 function getMaxOdo(carId){
   const recs=getCarRecords(carId); const fuels=getCarFuels(carId);
@@ -758,6 +788,11 @@ function selectRemindersCar(val){
   if(val&&val!=='__all__active'&&val!=='__all__') state.currentCarId=val;
   closeCswMenu();
   renderCarSwitcher();
+  renderPage();
+}
+
+function setAnalyticsTab(tab){
+  state.analyticsTab=tab;
   renderPage();
 }
 
@@ -1888,11 +1923,25 @@ function renderAnalytics(){
     ?state.cars
     :state.analyticsCarId?[getCar(state.analyticsCarId)].filter(Boolean):allActiveCars;
 
+  // Tab bar — vložíme před obsah; compare tab jen pokud máme ≥2 auta celkem
+  const canCompare=state.cars.length>=2;
+  const tab=state.analyticsTab||'overview';
+  const tabBarHtml=`<div class="analytics-tabs">
+    <button class="analytics-tab${tab==='overview'?' active':''}" data-action="setAnalyticsTab" data-tab="overview">${cs?'Přehled':'Overview'}</button>
+    ${canCompare?`<button class="analytics-tab${tab==='compare'?' active':''}" data-action="setAnalyticsTab" data-tab="compare">${cs?'Porovnání':'Compare'}</button>`:''}
+  </div>`;
+
+  // Route na správný obsah
+  if(tab==='compare'&&canCompare){
+    renderAnalyticsCompareContent(el, tabBarHtml, cs);
+    return;
+  }
+
   // Agregace dat přes vybraná vozidla
   const recs=selectedCars.flatMap(c=>getCarRecords(c.id));
   const fuels=selectedCars.flatMap(c=>getCarFuels(c.id));
   if(!recs.length&&!fuels.length){
-    el.innerHTML=`<div class="empty"><div class="empty-icon">— —</div><p>${t('no_records')}</p><div style="display:flex;gap:10px;justify-content:center;margin-top:16px;"><button class="btn btn-ghost" data-action="openRecordModal">${cs?'Přidat záznam':'Add record'}</button><button class="btn btn-fuel" data-action="openFuelModal">${cs?'Přidat tankování':'Add fuel entry'}</button></div></div>`;return;
+    el.innerHTML=tabBarHtml+`<div class="empty"><div class="empty-icon">— —</div><p>${t('no_records')}</p><div style="display:flex;gap:10px;justify-content:center;margin-top:16px;"><button class="btn btn-ghost" data-action="openRecordModal">${cs?'Přidat záznam':'Add record'}</button><button class="btn btn-fuel" data-action="openFuelModal">${cs?'Přidat tankování':'Add fuel entry'}</button></div></div>`;return;
   }
 
   // Výpočty — agregované přes vybraná vozidla
@@ -1943,7 +1992,7 @@ function renderAnalytics(){
   const sortedCats=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
   const maxCat=sortedCats[0]?.[1]||1;
 
-  el.innerHTML=`
+  el.innerHTML=tabBarHtml+`
     <div class="two-col">
       <div>
         <div class="section-title">${t('spending_by_cat')}</div>
@@ -2126,6 +2175,238 @@ function renderAnalytics(){
     </div>`;
   // Smart tooltip positioning — runs after DOM is painted
   requestAnimationFrame(positionChartTooltips);
+}
+
+// ─── ANALYTICS — POROVNÁNÍ VOZIDEL ───────────────────────────
+function renderAnalyticsCompareContent(el, tabBarHtml, cs){
+  // Vybereme auta k porovnání: respektujeme výběr v car switcheru.
+  // null = všechna aktivní, '__all__' = všechna vč. neaktivních, carId = jen to jedno (=> hint)
+  const allActive=state.cars.filter(c=>c.status!=='inactive');
+  const comparePool=state.analyticsCarId==='__all__'
+    ?state.cars
+    :state.analyticsCarId&&state.analyticsCarId!=='__all__'
+      ?state.cars  // uživatel vybral jedno auto → stejně porovnáme všechna (hint níže)
+      :allActive;
+
+  if(comparePool.length<2){
+    el.innerHTML=tabBarHtml+`<div class="empty"><div class="empty-icon">⇌</div><p>${cs?'Pro porovnání potřebujete alespoň 2 vozidla.':'Add at least 2 vehicles to use comparison.'}</p></div>`;
+    return;
+  }
+
+  // Pokud uživatel vybral jedno konkrétní auto, zobrazíme hint
+  const singleSelectedHint=(state.analyticsCarId&&state.analyticsCarId!=='__all__'&&state.analyticsCarId!==null)
+    ?`<div style="font-size:.78rem;color:var(--text3);margin-bottom:16px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border)">`
+     +(cs?'Porovnání zobrazuje všechna vozidla. Pro výběr skupiny použijte přepínač vozidla výše.':'Comparison shows all vehicles. Use the vehicle switcher above to limit to active / all.')
+     +`</div>`
+    :'';
+
+  // Spočítáme metriky pro každé auto — hodnota null = data nejsou k dispozici
+  const carStats=comparePool.map(car=>{
+    const km=getKmDriven(car.id);
+    const svcCost=getServiceCost(car.id);
+    const fuelCost=getTotalFuelCost(car.id);
+    const totalCost=svcCost+fuelCost;
+    const liters=getTotalLiters(car.id);
+    const avgC=avgConsumptionVal(car.id);
+    const fuels=getCarFuels(car.id);
+    // Počet aktivních měsíců = unikátní YYYY-MM ve všech záznamech a tankováních
+    const allDates=[...getCarRecords(car.id).map(r=>r.date),...fuels.map(f=>f.date)].filter(Boolean);
+    const monthCount=new Set(allDates.map(d=>d.slice(0,7))).size||1;
+    // Nájezd za posledních 12 měsíců
+    const _cutoff=new Date(); _cutoff.setFullYear(_cutoff.getFullYear()-1);
+    const _cutoffStr=_cutoff.toISOString().slice(0,10);
+    const _odoEntries=[
+      ...getCarRecords(car.id).filter(r=>r.odo&&r.date).map(r=>({date:r.date,odo:+r.odo})),
+      ...fuels.filter(f=>f.odo&&f.date).map(f=>({date:f.date,odo:+f.odo}))
+    ].sort((a,b)=>a.date.localeCompare(b.date));
+    const _maxOdoAll=_odoEntries.length?Math.max(..._odoEntries.map(e=>e.odo)):0;
+    const _before=_odoEntries.filter(e=>e.date<_cutoffStr);
+    const _odoAt12Start=_before.length?Math.max(..._before.map(e=>e.odo)):(getCar(car.id)?.startOdo||0);
+    const km12m=(_maxOdoAll>0&&_maxOdoAll>_odoAt12Start)?_maxOdoAll-_odoAt12Start:null;
+    return{
+      car,
+      km:                km>0?km:null,
+      totalCost:         totalCost>0?totalCost:null,
+      costPerKm:         km>0&&totalCost>0?totalCost/km:null,
+      fuelCostPerKm:     km>0&&fuelCost>0?fuelCost/km:null,
+      avgConsumption:    avgC>0?avgC:null,
+      avgCostPerMonth:   totalCost>0?totalCost/monthCount:null,
+      avgServicePerMonth: svcCost>0?svcCost/monthCount:null,
+      avgPricePerLiter:  liters>0&&fuelCost>0?fuelCost/liters:null,
+      km12m,
+    };
+  });
+
+  // Helper: sestaví ranking kartu pro jednu metriku
+  // lowerIsBetter=true → nejnižší hodnota = zelená (lepší)
+  // lowerIsBetter=false → neutrální (informativní), výšší = teplá barva
+  function buildRankingCard(titleCs, titleEn, hintCs, hintEn, getValue, formatVal, lowerIsBetter){
+    const title=cs?titleCs:titleEn;
+
+    // Rozděl na auta s daty a bez
+    const withData=carStats.filter(s=>getValue(s)!=null).sort((a,b)=>{
+      const va=getValue(a), vb=getValue(b);
+      return lowerIsBetter?(va-vb):(vb-va); // best first
+    });
+    const noData=carStats.filter(s=>getValue(s)==null);
+
+    if(!withData.length) return ''; // metrika nemá žádná data → kartu nezobrazíme
+
+    const maxVal=Math.max(...withData.map(s=>getValue(s)));
+
+    const rowsHtml=withData.map((s,i)=>{
+      const val=getValue(s);
+      const barPct=maxVal>0?(val/maxVal*100).toFixed(1):0;
+      // Barevná třída: best = první, worst = poslední (jen pokud ≥2 auta s daty)
+      let cls='cmp-mid';
+      if(withData.length>=2){
+        if(i===0) cls='cmp-best';
+        else if(i===withData.length-1) cls='cmp-worst';
+      } else {
+        cls='cmp-best';
+      }
+      const rankLabel=i===0?'#1':`#${i+1}`;
+      const plate=s.car.plate?`<span class="cmp-row-plate">${esc(s.car.plate)}</span>`:'';
+      const carName=esc(`${s.car.make||''} ${s.car.model||''}`.trim()||s.car.id);
+      return `<div class="cmp-row ${cls}">
+        <span class="cmp-rank">${rankLabel}</span>
+        ${carDotHtml(s.car.color||null,'cmp-dot')}
+        <span class="cmp-row-name" title="${carName}${s.car.plate?' · '+esc(s.car.plate):''}">${carName}${plate}</span>
+        <div class="cmp-bar-wrap"><div class="cmp-bar-fill" style="width:${barPct}%"></div></div>
+        <span class="cmp-row-val">${formatVal(val)}</span>
+      </div>`;
+    }).join('');
+
+    // Auta bez dat na konci, šedě
+    const naRowsHtml=noData.map(s=>{
+      const carName=esc(`${s.car.make||''} ${s.car.model||''}`.trim()||s.car.id);
+      const plate=s.car.plate?`<span class="cmp-row-plate">${esc(s.car.plate)}</span>`:'';
+      return `<div class="cmp-row cmp-na">
+        <span class="cmp-rank">—</span>
+        ${carDotHtml(s.car.color||null,'cmp-dot')}
+        <span class="cmp-row-name">${carName}${plate}</span>
+        <span class="cmp-row-val">—</span>
+      </div>`;
+    }).join('');
+
+    return `<div class="cmp-card">
+      <div class="cmp-card-title">${esc(title)}</div>
+      ${rowsHtml}${naRowsHtml}
+    </div>`;
+  }
+
+  // Definice metrik — pořadí = vizuální pořadí karet
+  const fmtKm=v=>`${fmtNum(v)} km`;
+  const fmtCzkKm=v=>`${fmtNum(v,2)} Kč/km`;
+  const fmtConsumption=v=>`${fmtNum(v,1)} l/100km`;
+  const fmtCzk=v=>fmtMoney(v);
+  const fmtLiter=v=>`${fmtNum(v,2)} Kč/l`;
+
+  const rankingCardsHtml=[
+    buildRankingCard('Průměrná spotřeba','Avg. consumption',
+      'nižší = lepší','lower = better',
+      s=>s.avgConsumption, fmtConsumption, true),
+    buildRankingCard('Cena za km (vše)','Cost per km (total)',
+      'nižší = lepší · servis + palivo','lower = better · service + fuel',
+      s=>s.costPerKm, fmtCzkKm, true),
+    buildRankingCard('Cena za km (palivo)','Fuel cost per km',
+      'nižší = lepší','lower = better',
+      s=>s.fuelCostPerKm, fmtCzkKm, true),
+    buildRankingCard('Průměrná cena za litr','Avg. price per litre',
+      'nižší = lepší','lower = better',
+      s=>s.avgPricePerLiter, fmtLiter, true),
+    buildRankingCard('Celkové průměrné náklady / měsíc','Total avg. cost / month',
+      '','',
+      s=>s.avgCostPerMonth, fmtCzk, true),
+    buildRankingCard('Průměrné náklady za servis','Avg. service cost / month',
+      '','',
+      s=>s.avgServicePerMonth, fmtCzk, true),
+    buildRankingCard('Celkové náklady','Total costs',
+      'servis + palivo · bez nákupu','service + fuel · excl. purchase',
+      s=>s.totalCost, fmtCzk, true),
+    buildRankingCard('Celkový nájezd','Total mileage',
+      'informativní','informational',
+      s=>s.km, fmtKm, false),
+    buildRankingCard('Nájezd za posledních 12 měsíců','Mileage (last 12 months)',
+      'informativní','informational',
+      s=>s.km12m, fmtKm, false),
+  ].filter(Boolean).join('');
+
+  // ── Srovnávací tabulka (detail) ──────────────────────────
+  // Sloupce = metriky, řádky = auta
+  const tableCols=[
+    {key:'km',         labelCs:'Nájezd',          labelEn:'Mileage',        fmt:fmtKm,          lower:false},
+    {key:'totalCost',  labelCs:'Náklady celkem',   labelEn:'Total costs',    fmt:fmtCzk,         lower:true},
+    {key:'costPerKm',  labelCs:'Kč/km (vše)',      labelEn:'Cost/km (all)',  fmt:fmtCzkKm,       lower:true},
+    {key:'fuelCostPerKm',labelCs:'Kč/km (palivo)', labelEn:'Fuel cost/km',  fmt:fmtCzkKm,       lower:true},
+    {key:'avgConsumption',labelCs:'l/100km',        labelEn:'l/100km',       fmt:fmtConsumption, lower:true},
+    {key:'avgCostPerMonth',labelCs:'Kč/měsíc',     labelEn:'Cost/month',    fmt:fmtCzk,         lower:true},
+    {key:'avgServicePerMonth',labelCs:'Servis/měsíc', labelEn:'Service/month', fmt:fmtCzk,       lower:true},
+  ];
+
+  // Pro každý sloupec najdi min/max (jen z aut s daty)
+  const colMinMax=tableCols.map(col=>{
+    const vals=carStats.map(s=>s[col.key]).filter(v=>v!=null);
+    return{min:vals.length?Math.min(...vals):null, max:vals.length?Math.max(...vals):null};
+  });
+
+  const _sk=_cmpTableSort.key, _sd=_cmpTableSort.dir;
+  const _arrow=k=>_sk===k?(_sd===1?' ▲':' ▼'):'';
+  const theadHtml='<tr>'
+    +`<th data-action="cmpTableSort" data-key="_name">${cs?'Vozidlo':'Vehicle'}${_arrow('_name')}</th>`
+    +tableCols.map(col=>`<th data-action="cmpTableSort" data-key="${col.key}">${cs?col.labelCs:col.labelEn}${_arrow(col.key)}</th>`).join('')
+    +'</tr>';
+
+  // Seřazení řádků dle aktivního sloupce
+  const sortedPool=_sk==null?[...comparePool]:[...comparePool].sort((a,b)=>{
+    if(_sk==='_name'){
+      const na=`${a.make||''} ${a.model||''}`.trim().toLowerCase();
+      const nb=`${b.make||''} ${b.model||''}`.trim().toLowerCase();
+      return _sd*(na<nb?-1:na>nb?1:0);
+    }
+    const sa=carStats.find(x=>x.car.id===a.id);
+    const sb=carStats.find(x=>x.car.id===b.id);
+    const va=sa?sa[_sk]:null, vb=sb?sb[_sk]:null;
+    if(va==null&&vb==null) return 0;
+    if(va==null) return 1;
+    if(vb==null) return -1;
+    return _sd*(va-vb);
+  });
+
+  const tbodyHtml=sortedPool.map(car=>{
+    const s=carStats.find(x=>x.car.id===car.id);
+    const carName=`${car.make||''} ${car.model||''}`.trim()||car.id;
+    const cellsHtml=tableCols.map((col,ci)=>{
+      const val=s?s[col.key]:null;
+      if(val==null) return `<td class="cell-na">—</td>`;
+      const mm=colMinMax[ci];
+      let cls='';
+      if(mm.min!=null&&mm.max!=null&&mm.min!==mm.max){
+        const isBest=col.lower?(val===mm.min):(val===mm.max);
+        const isWorst=col.lower?(val===mm.max):(val===mm.min);
+        if(isBest) cls='cell-best';
+        else if(isWorst) cls='cell-worst';
+      }
+      return `<td class="${cls}">${col.fmt(val)}</td>`;
+    }).join('');
+    return `<tr><td>${carDotHtml(car.color||null,'cmp-dot')}${esc(carName)}${car.plate?` <span style="font-size:.7rem;color:var(--text3);font-family:var(--font-mono)">${esc(car.plate)}</span>`:''}</td>${cellsHtml}</tr>`;
+  }).join('');
+
+  const tableHtml=`<div class="cmp-table-section">
+    <div class="section-title">${cs?'Tabulka porovnání':'Comparison table'}</div>
+    <div class="cmp-table-wrap">
+      <table class="cmp-table">
+        <thead>${theadHtml}</thead>
+        <tbody>${tbodyHtml}</tbody>
+      </table>
+    </div>
+  </div>`;
+
+  el.innerHTML=tabBarHtml
+    +singleSelectedHint
+    +`<div class="section-title" style="margin-bottom:16px">${cs?'Pořadí podle metriky':'Ranking by metric'}</div>`
+    +`<div class="cmp-grid">${rankingCardsHtml}</div>`
+    +tableHtml;
 }
 
 // Position bar tooltips so they never overflow the chart container
@@ -3086,14 +3367,14 @@ function renderSettings(){
         <div class="settings-card settings-col-card">
           <div class="settings-card-title" style="margin-bottom:6px;">${cs?'Barevné téma':'Color theme'}</div>
           <div class="settings-card-desc" style="margin-bottom:14px;">${cs
-            ?'Tmavé téma je výchozí. Světlé (Outdoor) je optimalizované pro přímé slunce. Sklo používá průhledné prvky s gradientovým pozadím.'
-            :'Dark theme is the default. Light (Outdoor) is optimized for direct sunlight. Glass uses translucent surfaces over a gradient background.'}</div>
+            ?'Tmavé téma je výchozí. Světlé je optimalizované pro přímé slunce. Sklo používá průhledné prvky s gradientovým pozadím.'
+            :'Dark theme is the default. Light is optimized for direct sunlight. Glass uses translucent surfaces over a gradient background.'}</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button data-action="setTheme" data-theme="dark" class="btn ${(state.settings.theme||'dark')==='dark'?'btn-primary':'btn-ghost'}" style="flex:1;justify-content:center;min-width:100px;">
               ${cs?'Tmavé':'Dark'}
             </button>
             <button data-action="setTheme" data-theme="bright" class="btn ${state.settings.theme==='bright'?'btn-primary':'btn-ghost'}" style="flex:1;justify-content:center;min-width:100px;">
-              ${cs?'Světlé (Outdoor)':'Light (Outdoor)'}
+              ${cs?'Světlé':'Light'}
             </button>
             <button data-action="setTheme" data-theme="glass" class="btn ${state.settings.theme==='glass'?'btn-primary':'btn-ghost'}" style="flex:1;justify-content:center;min-width:100px;">
               ${cs?'Sklo':'Glass'}
@@ -3168,8 +3449,8 @@ function renderSettings(){
         <div class="section-title">${cs?'O aplikaci':'About'}</div>
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.12.2</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260520-013</span></div>
+          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.13.3</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260520-017</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           ${(()=>{
@@ -3339,38 +3620,72 @@ document.querySelectorAll('.date-triple input').forEach(inp=>{
 
 // ─── CSV IMPORT ───────────────────────────────────────────────
 
+function cmpTableSort(key){
+  if(_cmpTableSort.key===key){
+    _cmpTableSort.dir=_cmpTableSort.dir===1?-1:1;
+  } else {
+    _cmpTableSort={key, dir:1};
+  }
+  renderAnalytics();
+}
+
 let csvParsedRows = []; // výsledek parsování, čeká na potvrzení
+let _cmpTableSort  = {key: null, dir: 1}; // stav řazení tabulky porovnání
 
 function openCsvImportModal(){
   if(!state.cars.length){showToast('Nejprve přidej vozidlo','error');return;}
-  // Naplnit select vozidel
-  const sel = document.getElementById('csv-car');
-  sel.innerHTML = state.cars.map(c=>`<option value="${esc(c.id)}" ${c.id===state.currentCarId?'selected':''}>${esc(c.make||'')} ${esc(c.model||'')} ${c.plate?'('+esc(c.plate)+')':''}</option>`).join('');
+  // Naplnit datalist vozidel
+  const dl = document.getElementById('csv-car-list');
+  dl.innerHTML = state.cars.map(c=>{
+    const label=`${c.make||''} ${c.model||''}${c.plate?' ('+c.plate+')':''}`.trim();
+    return `<option value="${esc(label)}"></option>`;
+  }).join('');
+  // Necháme prázdné – uživatel si vybere sám
+  const searchEl = document.getElementById('csv-car-search');
+  if(searchEl) searchEl.value='';
   // Reset do kroku 1
   document.getElementById('csv-step-1').style.display = '';
   document.getElementById('csv-step-2').style.display = 'none';
   document.getElementById('csv-import-btn').style.display = 'none';
   document.getElementById('csv-filename').textContent = 'Žádný soubor nevybrán';
+  // Reset typu na placeholder
+  const typeEl = document.getElementById('csv-type');
+  typeEl.value = '';
   csvTypeChanged();
   csvParsedRows = [];
   openModal('csv-modal');
 }
 
+// Resolves typed car label → car ID; returns null when no exact match
+function _getCsvCarId(){
+  const q=(document.getElementById('csv-car-search').value||'').trim().toLowerCase();
+  return state.cars.find(c=>{
+    const label=`${c.make||''} ${c.model||''}${c.plate?' ('+c.plate+')':''}`.trim().toLowerCase();
+    return label===q;
+  })?.id||null;
+}
+
 function csvTypeChanged(){
   const type = document.getElementById('csv-type').value;
   const hint = document.getElementById('csv-format-hint');
+  if(!type){
+    hint.innerHTML = `<span style="color:var(--text3)">Vyberte typ importu pro zobrazení očekávaného formátu.</span>`;
+    return;
+  }
   if(type === 'records'){
     hint.innerHTML = `<strong style="color:var(--text);display:block;margin-bottom:4px;">Očekávaný formát sloupců — Servisní záznamy:</strong>
       <code style="color:var(--accent);">Datum, Stav tachometru, Popis, Součástky, Jednotková cena, Celková cena, Kategorie</code><br>
       Datum DD.MM.RRRR · Ceny v Kč · Kategorie nepovinná → automaticky zařazena do nové kategorie`;
   } else {
-    hint.innerHTML = `<strong style="color:var(--text);display:block;margin-bottom:4px;">Očekávaný formát sloupců — tankování:</strong>
+    hint.innerHTML = `<strong style="color:var(--text);display:block;margin-bottom:4px;">Očekávaný formát sloupců — Tankování:</strong>
       <code style="color:var(--accent);">Datum, Typ paliva, Tankováno litrů, Cena za litr, Celková cena, Stav tachometru, …, Plná nádrž, Poznámka</code><br>
       Datum DD.MM.RRRR · Čísla s čárkou jako desetinným oddělovačem · Plná nádrž: Ano/Ne`;
   }
 }
 
 function handleCsvFile(event){
+  const type = document.getElementById('csv-type').value;
+  if(!type){ showToast('Nejprve vyberte typ importu','error'); event.target.value=''; return; }
   const file = event.target.files[0];
   if(!file) return;
   document.getElementById('csv-filename').textContent = file.name;
@@ -3541,8 +3856,19 @@ function renderCsvPreview(type, rows, errors){
 
   const okCount  = rows.filter(r=>r._ok).length;
   const warnCount= rows.filter(r=>!r._ok).length;
+  const carId    = _getCsvCarId();
+  const existingCount = carId && type==='records'
+    ? state.records.filter(r=>r.carId===carId).length
+    : state.fuels.filter(f=>f.carId===carId).length;
+
+  const overwriteWarn = existingCount>0
+    ? `<div style="margin-bottom:8px;padding:9px 13px;border-radius:var(--radius-sm);background:var(--red-dim);border:1px solid var(--red);color:var(--red);font-size:.8rem;">
+        ⚠ Importem se smažou <strong>${existingCount}</strong> stávající ${type==='records'?'záznamy':'tankování'} tohoto vozidla a nahradí se novými.
+       </div>`
+    : '';
 
   document.getElementById('csv-preview-info').innerHTML =
+    overwriteWarn +
     `Nalezeno <strong>${rows.length}</strong> řádků — ` +
     `<span style="color:var(--green)">${okCount} OK</span>` +
     (warnCount ? ` · <span style="color:var(--accent)">${warnCount} s varováním</span>` : '');
@@ -3589,11 +3915,15 @@ function renderCsvPreview(type, rows, errors){
 
 function confirmCsvImport(){
   const type  = document.getElementById('csv-type').value;
-  const carId = document.getElementById('csv-car').value;
+  const carId = _getCsvCarId();
   const validRows = csvParsedRows.filter(r=>r._ok);
+  if(!carId){ showToast('Vyberte vozidlo ze seznamu','error'); return; }
   if(!validRows.length){ showToast('Žádné platné řádky','error'); return; }
 
   if(type === 'records'){
+    // Smazat stávající servisní záznamy pro toto vozidlo před importem
+    const deletedCount = state.records.filter(r=>r.carId===carId).length;
+    state.records = state.records.filter(r=>r.carId!==carId);
     validRows.forEach(r=>{
       state.records.push({
         id: uid(), carId,
@@ -3604,8 +3934,11 @@ function confirmCsvImport(){
         createdAt: new Date().toISOString(),
       });
     });
-    showToast(`Importováno ${validRows.length} záznamů`, 'success');
+    showToast(`Importováno ${validRows.length} záznamů${deletedCount?` (smazáno ${deletedCount} stávajících)`:''}`, 'success');
   } else {
+    // Smazat stávající tankování pro toto vozidlo před importem
+    const deletedCount = state.fuels.filter(f=>f.carId===carId).length;
+    state.fuels = state.fuels.filter(f=>f.carId!==carId);
     validRows.forEach(r=>{
       state.fuels.push({
         id: uid(), carId,
@@ -3616,7 +3949,7 @@ function confirmCsvImport(){
         createdAt: new Date().toISOString(),
       });
     });
-    showToast(`Importováno ${validRows.length} tankování`, 'success');
+    showToast(`Importováno ${validRows.length} tankování${deletedCount?` (smazáno ${deletedCount} stávajících)`:''}`, 'success');
   }
 
   saveData();
@@ -3878,6 +4211,10 @@ document.addEventListener('click', function _clickDispatch(e) {
     case 'selectRecord':        selectRecord(d.id); break;
     case 'selectAnalyticsCar':  selectAnalyticsCar(d.id); break;
     case 'selectRemindersCar':  selectRemindersCar(d.id); break;
+    case 'setAnalyticsTab':     setAnalyticsTab(d.tab); break;
+    case 'cmpTableSort':         cmpTableSort(d.key); break;
+    case 'cmpTableSort':         cmpTableSort(d.key); break;
+    case 'cmpTableSort':         cmpTableSort(d.key); break;
     case 'switchCar':           switchCar(d.id); break;
     // UI toggles
     case 'toggleSidebar':       toggleSidebar(); break;

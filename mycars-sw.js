@@ -1,6 +1,6 @@
 /**
  * MyCars — Service Worker
- * Version: 3.12.2 · Build: 20260520-013
+ * Version: 3.13.3 · Build: 20260520-017
  *
  * Strategy: Cache-first for the app shell (HTML, SW itself).
  * On activation, old caches are purged so updates take effect
@@ -10,16 +10,9 @@
  * Network requests (Google Fonts) are handled with a
  * network-first + cache-fallback strategy so fonts work offline
  * after the first visit.
- *
- * ── Release notes ────────────────────────────────────────────
- * 20260520: Remove unsafe-inline CSP (event delegation refactor),
- *           extract JS to mycars.js, glass theme nav transitions,
- *           page content fade animation, dropdown option fix
- * 20260519: Glass theme, improved apple-touch-icon, iOS fixes,
- *           GPL §7 attribution, SW APP_SHELL fix for GitHub Pages
  */
 
-const CACHE_NAME = 'mycars-v4';
+const CACHE_NAME = 'mycars-v5';
 const FONTS_CACHE = 'mycars-fonts-v1';
 // Maximum age of a cached Google Fonts response before it must be re-validated
 // from the network (mitigates serving a compromised cached asset indefinitely).

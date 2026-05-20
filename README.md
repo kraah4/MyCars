@@ -1,6 +1,6 @@
 # MyCars — Vehicle Maintenance Tracker
 
-**Version:** 3.12.0 · **Build:** 20260519-005
+**Version:** 3.13.3 · **Build:** 20260520-017
 **Author:** kraah  
 **License:** GNU GPL v3 (with §7 attribution requirement — see `LICENSE`)  
 **Live:** https://kraah4.github.io/MyCars/MyCars.html  
@@ -46,7 +46,7 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 | **Dashboard** | Vehicle status, document expiry alerts, last refuel, key statistics |
 | **Records** | Service records with 5 summary stat cards, full-text search, category filter |
 | **Fuel log** | Fuel entries with per-tank consumption, average price/litre |
-| **Analytics** | Expense charts, monthly trends, and categorized stats (Costs, Service, Fuel) |
+| **Analytics** | Expense charts, monthly trends, and categorized stats (Costs, Service, Fuel). **Comparison tab** ranks all vehicles by avg. consumption, cost/km, avg. monthly cost, avg. service cost, total cost, and mileage; includes a full detail comparison table |
 | **Reminders** | Km-based and date-based reminders with status indicators |
 | **Settings** | Appearance (theme), language, tyre reminders, JSON backup, CSV import, data management, app info |
 
@@ -113,14 +113,14 @@ The app uses the **full-tank method** rather than a simple total-litres ÷ total
 
 #### Algorithm
 
-1. Filter fuel entries where `fullTank = true`, sorted by odometer.
-2. For each consecutive pair of full-tank entries `[A, B]`:
+1. Filter fuel entries where `fullTank = true` **and** `odo > 0`, sorted by odometer.
+2. For each consecutive pair of full-tank entries `[A, B]` where `B.odo − A.odo ≥ 5 km`:
    - `kmDiff = B.odo − A.odo`
    - `liters = sum of all fuel entries with odo > A.odo AND odo ≤ B.odo`
    - `consumption = liters / kmDiff × 100` (l/100 km)
-3. Average consumption = arithmetic mean of all valid segments.
-
-This correctly handles partial top-ups between full fills.
+   - Segments with consumption **> 40 l/100 km** are discarded as data errors
+3. Average consumption = **weighted average**: `totalLitres / totalKm × 100` (between first and last full fill)
+   — robust against outlier short segments that would skew an arithmetic mean.
 
 ### Cost per km
 
@@ -215,6 +215,13 @@ Active vehicles first (alphabetical A→Z), then inactive vehicles (alphabetical
 ## CSV Import
 
 Import historical data exported from spreadsheets (e.g. Google Sheets).
+
+> **Overwrite mode:** importing a CSV file **replaces all existing records of that type** for the selected vehicle. The preview screen shows how many existing records will be deleted before you confirm. Always export a JSON backup first if you want to keep the original data.
+
+### Import modal
+
+- **Vehicle** — searchable filter input above the dropdown (type any part of make, model or plate)
+- **Import type** — must be explicitly selected (starts with placeholder *— Vyberte typ —*) to prevent accidental wrong-type imports
 
 ### Service records CSV
 
@@ -324,13 +331,13 @@ Datum,Typ paliva,Tankováno litrů,Cena za litr,Celková cena,Stav tachometru,Km
 | **Fonts** | Outfit + JetBrains Mono (Google Fonts CDN) |
 | **Protocol** | Works over `file://` and HTTP/HTTPS |
 | **Languages** | Czech / English |
-| **Themes** | Dark (default) · Light/Outdoor · Glass/Frosted — toggle in Settings, persisted in `localStorage` |
+| **Themes** | Dark (default) · Light · Glass/Frosted — toggle in Settings, persisted in `localStorage` |
 | **Mobile** | Responsive — sidebar becomes slide-in drawer on screens ≤ 768px; modals become bottom sheets on screens ≤ 600px |
 | **Touch targets** | Minimum 44 × 44 px on all interactive elements |
 | **WCAG** | Text contrast ratios ≥ 4.5:1 on all three themes |
 | **PWA** | Installable on iOS 16.4+ (Safari → Add to Home Screen) and Android/Chrome |
 | **Service Worker** | Cache-first, offline-capable after first load; update detection with in-app toast notification |
-| **Codebase** | ~4 400 lines, single file |
+| **Codebase** | ~5 000 lines; split into `MyCars.html` (shell, styles) and `mycars.js` (logic) |
 
 ### localStorage data structure
 
@@ -343,7 +350,7 @@ The `settings` object inside the stored JSON:
 }
 ```
 
-`theme` accepts `"dark"` (default), `"bright"` (Outdoor/sunlight mode), or `"glass"` (frosted glass mode with gradient background).
+`theme` accepts `"dark"` (default), `"bright"` (Light mode optimised for direct sunlight), or `"glass"` (frosted glass mode with gradient background).
 
 ```json
 {

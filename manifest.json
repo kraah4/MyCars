@@ -3,6 +3,7 @@
   "short_name": "MyCars",
   "description": "Offline vehicle maintenance and expense tracker",
   "start_url": "./MyCars.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#07080d",
