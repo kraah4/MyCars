@@ -135,7 +135,7 @@ const FUEL_TYPE_LABELS = {
 const T = {
   cs:{
     dashboard:'Přehled',records:'Záznamy',analytics:'Analytika',reminders:'Připomínky',fuel:'Tankování',
-    total_spent:'Celkové výdaje',total_records:'Počet záznamů',cost_per_km:'Cena za km',current_odo:'Aktuální km',
+    total_spent:'Celkové výdaje',total_records:'Počet záznamů',cost_per_km:'Cena za km',current_odo:'Aktuální km',km_this_year:'Letos ujeto',
     recent:'Poslední záznamy',no_car:'Vyberte vozidlo',no_records:'Žádné záznamy',
     new_record:'Nový záznam',edit_record:'Upravit záznam',
     date:'Datum',odo:'Tachometr',desc:'Popis',cat:'Kategorie',qty:'Množství',unit_price:'Jedn. cena',
@@ -156,7 +156,7 @@ const T = {
   },
   en:{
     dashboard:'Dashboard',records:'Records',analytics:'Analytics',reminders:'Reminders',fuel:'Fuel log',
-    total_spent:'Total spent',total_records:'Total records',cost_per_km:'Cost per km',current_odo:'Odometer',
+    total_spent:'Total spent',total_records:'Total records',cost_per_km:'Cost per km',current_odo:'Odometer',km_this_year:'This year',
     recent:'Recent records',no_car:'Select a vehicle',no_records:'No records yet',
     new_record:'New record',edit_record:'Edit record',
     date:'Date',odo:'Odometer',desc:'Description',cat:'Category',qty:'Qty',unit_price:'Unit price',
@@ -388,6 +388,20 @@ function getTotalLiters(carId){return getCarFuels(carId).reduce((s,f)=>s+(f.lite
 function getServiceCost(carId){return getCarRecords(carId).filter(r=>r.cat!=='Nákup vozidla').reduce((s,r)=>s+(r.qty||1)*(r.price||0),0)}
 function getPurchaseCost(carId){return getCarRecords(carId).filter(r=>r.cat==='Nákup vozidla').reduce((s,r)=>s+(r.qty||1)*(r.price||0),0)}
 function getKmDriven(carId){const car=getCar(carId);return car?getMaxOdo(carId)-(car.startOdo||0):0}
+function getKmThisYear(carId){
+  const car=getCar(carId);if(!car) return 0;
+  const year=new Date().getFullYear().toString();
+  const allWithOdo=[
+    ...getCarRecords(carId).filter(r=>r.date&&(r.odo||0)>0).map(r=>({date:r.date,odo:r.odo})),
+    ...getCarFuels(carId).filter(f=>f.date&&(f.odo||0)>0).map(f=>({date:f.date,odo:f.odo})),
+  ];
+  const inYear=allWithOdo.filter(x=>x.date.startsWith(year)).map(x=>x.odo);
+  if(!inYear.length) return 0;
+  const maxInYear=Math.max(...inYear);
+  const before=allWithOdo.filter(x=>x.date<year+'-01-01').map(x=>x.odo);
+  const startOdo=before.length?Math.max(...before):(car.startOdo||0);
+  return Math.max(0,maxInYear-startOdo);
+}
 function getCostPerKm(carId){
   const km=getKmDriven(carId);
   if(km<=0) return 0;
@@ -1417,6 +1431,7 @@ function renderDashboard(){
   const total=getServiceCost(car.id)+getTotalFuelCost(car.id)+getPurchaseCost(car.id);
   const costPerKm=getCostPerKm(car.id);          // BEZ nákupu vozidla
   const avgConsumption=avgConsumptionVal(car.id); // metoda plné nádrže
+  const kmThisYear=getKmThisYear(car.id);
 
   const alerts=buildAlerts(car);
   // Přidat automatické připomínky přezutí do alertů dashboardu
@@ -1482,6 +1497,7 @@ function renderDashboard(){
     <div class="stats-grid">
       <div class="stat-card yellow"><div class="stat-label">${t('total_spent')}</div><div class="stat-value small">${fmtMoney(total)}</div></div>
       <div class="stat-card blue"><div class="stat-label">${t('current_odo')}</div><div class="stat-value">${fmtNum(maxOdo)}</div><div class="stat-sub">km</div></div>
+      <div class="stat-card" style="border-top:2px solid var(--green)"><div class="stat-label">${t('km_this_year')}</div><div class="stat-value">${fmtNum(kmThisYear)}</div><div class="stat-sub">km · ${new Date().getFullYear()}</div></div>
       <div class="stat-card green"><div class="stat-label">${t('cost_per_km')}</div><div class="stat-value small">${fmtMoney(costPerKm)}</div><div class="stat-sub">${fmtNum(kmDriven)} km</div></div>
       <div class="stat-card orange"><div class="stat-label">${t('avg_consumption')}</div><div class="stat-value small">${avgConsumption>0?fmtNum(avgConsumption,1)+' l/100km':'—'}</div></div>
       <div class="stat-card" style="border-top:2px solid var(--green)">
@@ -1952,6 +1968,7 @@ function renderAnalytics(){
   const totalWithoutPurchase=serviceCost+fuelCost;
   // km — pro jedno auto přesně, pro více aut suma
   const kmDriven=selectedCars.reduce((s,c)=>s+getKmDriven(c.id),0);
+  const kmThisYear=selectedCars.reduce((s,c)=>s+getKmThisYear(c.id),0);
   const totalLiters=selectedCars.reduce((s,c)=>s+getTotalLiters(c.id),0);
   // Průměrná cena za litr
   const avgPricePerLiter=totalLiters>0?fuelCost/totalLiters:0;
@@ -2093,6 +2110,11 @@ function renderAnalytics(){
         <div class="stat-label">${cs?'Celkem ujeto':'Total driven'}</div>
         <div class="stat-value small">${fmtNum(kmDriven)}</div>
         <div class="stat-sub">km${!singleCarId?` · ${cs?'suma':'sum'}`:''}</div>
+      </div>
+      <div class="stat-card" style="border-top:2px solid var(--green)" title="${cs?'Počet km ujetých v aktuálním kalendářním roce':'Kilometres driven in the current calendar year'}">
+        <div class="stat-label">${t('km_this_year')}</div>
+        <div class="stat-value small">${fmtNum(kmThisYear)}</div>
+        <div class="stat-sub">km · ${new Date().getFullYear()}${!singleCarId?` · ${cs?'suma':'sum'}`:''}</div>
       </div>
       <div class="stat-card" style="border-top:2px solid var(--amber)" title="${cs?'Průměrný roční nájezd: celkem ujeto ÷ počet let (aktivní měsíce ÷ 12)':'Average annual mileage: total km ÷ years (active months ÷ 12)'}">
         <div class="stat-label">${cs?'Průměr km / rok':'Avg km / year'}</div>
@@ -3449,8 +3471,8 @@ function renderSettings(){
         <div class="section-title">${cs?'O aplikaci':'About'}</div>
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.13.3</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260520-017</span></div>
+          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.13.4</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260526-018</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           ${(()=>{

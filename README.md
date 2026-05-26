@@ -1,6 +1,6 @@
 # MyCars — Vehicle Maintenance Tracker
 
-**Version:** 3.13.3 · **Build:** 20260520-017
+**Version:** 3.13.4 · **Build:** 20260526-003
 **Author:** kraah  
 **License:** GNU GPL v3 (with §7 attribution requirement — see `LICENSE`)  
 **Live:** https://kraah4.github.io/MyCars/MyCars.html  
@@ -43,7 +43,7 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 
 | Page | Description |
 | --- | --- |
-| **Dashboard** | Vehicle status, document expiry alerts, last refuel, key statistics |
+| **Dashboard** | Vehicle status, document expiry alerts, last refuel, key statistics including km driven in the current calendar year |
 | **Records** | Service records with 5 summary stat cards, full-text search, category filter |
 | **Fuel log** | Fuel entries with per-tank consumption, average price/litre |
 | **Analytics** | Expense charts, monthly trends, and categorized stats (Costs, Service, Fuel). **Comparison tab** ranks all vehicles by avg. consumption, cost/km, avg. monthly cost, avg. service cost, total cost, and mileage; includes a full detail comparison table |
@@ -76,16 +76,16 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 
 ## Expense Categories
 
-The application uses a fixed set of categories to organize expenses. Each category has a corresponding Czech name used in the interface when the language is set to Czech.
+The application uses a fixed set of 6 categories to organise expenses.
 
 | Category | Typical items |
 | --- | --- |
-| **Vehicle purchase** *(Nákup vozidla)* | Acquisition cost — excluded from cost/km and monthly chart |
-| **Administration** *(Administrativa)* | Insurance (liability/comprehensive), MOT/STK, registration transfer, fees, fines |
-| **Fluids & consumables** *(Provozní náplně)* | Engine oil, washer fluid, coolant, brake fluid, AdBlue |
-| **Service & repairs** *(Servis a opravy)* | All mechanical repairs, filters, brakes, engine parts, timing belt, diagnostics, labour |
-| **Tyres & wheels** *(Pneumatiky a kola)* | Tyre purchase, fitting, balancing, rims, seasonal change, alignment |
-| **Equipment & appearance** *(Vybavení a vzhled)* | Car cosmetics, cleaning, floor mats, accessories, paint repair, interior |
+| **Vehicle purchase** | Acquisition cost — excluded from cost/km and monthly chart |
+| **Administration** | Insurance (liability/comprehensive), MOT/STK, registration transfer, fees, fines |
+| **Fluids & consumables** | Engine oil, washer fluid, coolant, brake fluid, AdBlue |
+| **Service & repairs** | All mechanical repairs, filters, brakes, engine parts, timing belt, diagnostics, labour |
+| **Tyres & wheels** | Tyre purchase, fitting, balancing, rims, seasonal change, alignment |
+| **Equipment & appearance** | Car cosmetics, cleaning, floor mats, accessories, paint repair, interior |
 
 > **Vehicle purchase** is intentionally isolated from all cost-per-km and monthly trend calculations so it does not distort running-cost analysis.
 
@@ -155,6 +155,16 @@ fuelPerMonth     = fuelCost ÷ monthCount
 avgKmPerYear     = kmDriven ÷ (monthCount ÷ 12)
 ```
 
+### Km driven in current calendar year
+
+```text
+kmThisYear = maxOdo(current year) − maxOdo(before Jan 1 of current year)
+```
+
+- Takes the highest odometer reading from all records and fuel entries dated within the current year
+- Subtracts the highest odometer reading from before January 1 of the current year as the baseline (falls back to the vehicle’s starting odometer if no earlier readings exist)
+- Displayed on the **Dashboard** stat cards and in the **Analytics → Overview → Vehicles** section; for multi-vehicle selections the values are summed
+
 ### Monthly chart (Analytics)
 
 - Y-axis scales to the highest **service + fuel** month (vehicle purchase excluded)
@@ -221,27 +231,29 @@ Import historical data exported from spreadsheets (e.g. Google Sheets).
 ### Import modal
 
 - **Vehicle** — searchable filter input above the dropdown (type any part of make, model or plate)
-- **Import type** — must be explicitly selected (starts with placeholder *— Vyberte typ —*) to prevent accidental wrong-type imports
+- **Import type** — must be explicitly selected (starts with a blank placeholder) to prevent accidental wrong-type imports
 
 ### Service records CSV
 
 **Encoding:** UTF-8 · **Delimiter:** comma (`,`)
 
+> **Note:** Column headers must be in Czech (as listed below) — the importer detects columns by their Czech names.
+
 | Column | Required | Format | Notes |
 | --- | --- | --- | --- |
-| `Datum` | recommended | `DD.MM.YYYY` | Empty date → row imported with warning flag |
-| `Stav tachometru` | no | number, `\xa0` thousands separator accepted | |
-| `Popis` | **yes** | text | Description / item name |
-| `Součástky` | no | number | Quantity, default 1 |
-| `Jednotková cena` | no | decimal with comma, may contain `Kč` / `\xa0` | Unit price |
-| `Celková cena` | **yes** | decimal with comma | Total price |
-| `Kategorie` | no | text | Auto-mapped to current categories (see below) |
+| `Datum` *(Date)* | recommended | `DD.MM.YYYY` | Empty date → row imported with warning flag |
+| `Stav tachometru` *(Odometer)* | no | number, `\xa0` thousands separator accepted | |
+| `Popis` *(Description)* | **yes** | text | Item name / description |
+| `Součástky` *(Quantity)* | no | number | Default 1 |
+| `Jednotková cena` *(Unit price)* | no | decimal with comma, may contain `Kč` / `\xa0` | |
+| `Celková cena` *(Total price)* | **yes** | decimal with comma | |
+| `Kategorie` *(Category)* | no | text | Auto-mapped to current categories (see below) |
 
 #### Automatic category mapping
 
-Old or unknown category names are mapped at import time:
+Category names are matched by keyword at import time. The matcher recognises both Czech and English keywords:
 
-| Keywords in category name | Target category |
+| Keywords in category column | Target category |
 | --- | --- |
 | nákup, vehicle purchase | Vehicle purchase |
 | pojištění, insurance, pov, stk, mot, poplatky, fees, přepis, pokuta | Administration |
@@ -254,9 +266,9 @@ Old or unknown category names are mapped at import time:
 
 ```csv
 Datum,Stav tachometru,Popis,Součástky,Jednotková cena,Celková cena,Kategorie
-5.9.2022,245 448,Oil change Castrol,7,"231,43","1 620,01",Olej
-5.9.2022,245 448,Oil filter MANN,1,"315,00","315,00",Filtry
-5.9.2022,245 448,MOT,1,"3 500,00","3 500,00",STK
+5.9.2022,245 448,Oil change Castrol,7,"231,43","1 620,01",oil
+5.9.2022,245 448,Oil filter MANN,1,"315,00","315,00",
+5.9.2022,245 448,MOT,1,"3 500,00","3 500,00",mot
 ```
 
 ---
@@ -265,18 +277,20 @@ Datum,Stav tachometru,Popis,Součástky,Jednotková cena,Celková cena,Kategorie
 
 **Encoding:** UTF-8 · **Delimiter:** comma (`,`)
 
+> **Note:** Column headers must be in Czech (as listed below) — the importer detects columns by their Czech names.
+
 | Column | Required | Format | Notes |
 | --- | --- | --- | --- |
-| `Datum` | recommended | `DD.MM.YYYY` | |
-| `Typ paliva` | no | text | See mapping below |
-| `Tankováno litrů` | **yes** | decimal with comma | |
-| `Cena za litr` | no | decimal with comma, `Kč`/`\xa0` accepted | |
-| `Celková cena` | **yes** | decimal with comma | |
-| `Stav tachometru` | no | number, `\xa0` thousands separator accepted | |
-| `Km/tankování` | no | ignored | |
-| `Prům. spotřeba` | no | ignored; `Nelze spočítat` accepted | |
-| `Plná nádrž` | no | `Ano` / `Ne` | Whether tank was completely filled |
-| `Poznámka` | no | text | |
+| `Datum` *(Date)* | recommended | `DD.MM.YYYY` | |
+| `Typ paliva` *(Fuel type)* | no | text | See mapping below |
+| `Tankovanó litrů` *(Litres fuelled)* | **yes** | decimal with comma | |
+| `Cena za litr` *(Price per litre)* | no | decimal with comma, `Kč`/`\xa0` accepted | |
+| `Celková cena` *(Total cost)* | **yes** | decimal with comma | |
+| `Stav tachometru` *(Odometer)* | no | number, `\xa0` thousands separator accepted | |
+| `Km/tankovaní` *(Km per fill)* | no | ignored | |
+| `Prům. spotřeba` *(Avg consumption)* | no | ignored; `Nelze spočítat` (Cannot calculate) accepted | |
+| `Plná nádrž` *(Full tank)* | no | `Ano` / `Ne` (Yes / No) | Whether tank was completely filled |
+| `Poznámka` *(Note)* | no | text | |
 
 #### Fuel type mapping
 
@@ -318,6 +332,7 @@ Datum,Typ paliva,Tankováno litrů,Cena za litr,Celková cena,Stav tachometru,Km
 | Service / month | service ÷ active months | |
 | Fuel / month | fuel ÷ active months | |
 | Total driven | maxOdometer − startingOdometer | km |
+| km this year | Max odo in current year − last odo before Jan 1 | Dashboard + Analytics |
 | Avg km / year | km driven ÷ (active months ÷ 12) | |
 
 ---
@@ -395,6 +410,8 @@ The `settings` object inside the stored JSON:
 }
 ```
 
+> **Note:** Expense categories are stored internally in Czech (e.g. `"Provozní náplně"` = Fluids & consumables, `"Servis a opravy"` = Service & repairs). The UI displays translated names based on the selected language.
+
 > Data persists in the browser profile. Clearing browser data or using private/incognito mode will erase it. Use **Settings → Export backup** regularly.
 
 #### Tyre set structure (summer / winter / allseason)
@@ -421,10 +438,10 @@ The Service Worker (`mycars-sw.js`) uses a **cache-first** strategy for the app 
 - On first load over HTTPS, `MyCars.html` and `manifest.json` are cached.
 - Subsequent loads are served instantly from cache — no network required.
 - The browser checks `mycars-sw.js` for changes on every navigation. When the file changes (e.g. after a new release), the new SW installs in the background and purges the old cache.
-- The app displays a toast: *"Aktualizace k dispozici — zavřete a znovu otevřete aplikaci"* / *"Update available — close and reopen the app"*.
+- The app displays a toast: *"Update available — close and reopen the app"*.
 - After closing all tabs and reopening, the new version is active.
 
-**For developers:** Bump `CACHE_NAME` in `mycars-sw.js` with every release (e.g. `mycars-v2` → `mycars-v3`). This ensures stale caches are purged on all devices.
+**For developers:** Bump `CACHE_NAME` in `mycars-sw.js` with every release (e.g. `mycars-v5` → `mycars-v6`). This ensures stale caches are purged on all devices.
 
 ---
 
