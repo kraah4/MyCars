@@ -3471,8 +3471,8 @@ function renderSettings(){
         <div class="section-title">${cs?'O aplikaci':'About'}</div>
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.13.4</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260526-018</span></div>
+          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.13.5</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260527-002</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           ${(()=>{

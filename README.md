@@ -1,6 +1,6 @@
 # MyCars — Vehicle Maintenance Tracker
 
-**Version:** 3.13.4 · **Build:** 20260526-003
+**Version:** 3.13.5 · **Build:** 20260527-002
 **Author:** kraah  
 **License:** GNU GPL v3 (with §7 attribution requirement — see `LICENSE`)  
 **Live:** https://kraah4.github.io/MyCars/MyCars.html  

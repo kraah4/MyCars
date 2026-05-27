@@ -1,6 +1,6 @@
 /**
  * MyCars — Service Worker
- * Version: 3.13.4 · Build: 20260526-003
+ * Version: 3.13.5 · Build: 20260527-002
  *
  * Strategy: Cache-first for the app shell (HTML, SW itself).
  * On activation, old caches are purged so updates take effect
