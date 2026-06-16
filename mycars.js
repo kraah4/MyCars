@@ -1,32 +1,18 @@
-// Generate 180×180 PNG apple-touch-icon + favicon from the new "split-car" SVG.
-// Two stylised car fronts (soft sedan on the left, sport coupé with twin kidneys
-// on the right) separated by a diagonal divider — rasterised once at boot.
+// Generate 180×180 PNG apple-touch-icon + favicon from a typographic wordmark.
+// Design: dark rounded badge (matches app --surface) with stacked "My" (white, light)
+// and "Cars" (accent blue #6c8fff, bold) + subtle underline accent. System font stack
+// — renders natively on every OS (Segoe UI / SF / Roboto), no web-font dependency.
 (function(){
   var svg =
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>"+
-      "<rect width='512' height='512' rx='96' fill='#3a6dff'/>"+
-      "<g fill='none' stroke='#ffffff' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'>"+
-        // LEFT — softer sedan / 3-4 front view
-        "<path d='M85 250Q140 175 230 165L255 165'/>"+
-        "<path d='M255 165L255 250'/>"+
-        "<path d='M50 295Q140 280 240 285'/>"+
-        "<path d='M125 230L92 222L78 235'/>"+
-        "<path d='M55 320Q90 305 155 312L170 322'/>"+
-        "<path d='M75 332L150 326'/>"+
-        "<path d='M70 385Q145 375 230 380'/>"+
-        "<path d='M95 435Q165 432 235 425'/>"+
-        "<path d='M55 355L65 365'/>"+
-        // RIGHT — front with twin-kidney grilles
-        "<path d='M295 230Q360 190 445 200'/>"+
-        "<path d='M335 245L390 235L440 240'/>"+
-        "<path d='M295 270L345 252L368 268'/>"+
-        "<path d='M400 252L450 264L468 285'/>"+
-        "<path d='M315 295L310 405Q310 425 330 428L365 432Q382 432 384 415L384 295Q384 282 370 282L329 282Q315 282 315 295Z'/>"+
-        "<path d='M398 295Q398 282 412 282L453 282Q467 282 467 295L472 405Q472 425 452 428L417 432Q400 432 398 415Z'/>"+
-        "<path d='M295 462L320 445L460 445L482 462'/>"+
-      "</g>"+
-      // diagonal divider
-      "<line x1='455' y1='55' x2='75' y2='475' stroke='#1f2a8f' stroke-width='6' stroke-linecap='round'/>"+
+      "<rect width='512' height='512' rx='96' fill='#0f1018'/>"+
+      "<text x='256' y='240' text-anchor='middle' "+
+            "font-family='system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif' "+
+            "font-size='170' font-weight='400' fill='#ffffff' letter-spacing='-4'>My</text>"+
+      "<text x='256' y='410' text-anchor='middle' "+
+            "font-family='system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif' "+
+            "font-size='170' font-weight='800' fill='#6c8fff' letter-spacing='-6'>Cars</text>"+
+      "<rect x='176' y='440' width='160' height='8' rx='4' fill='#6c8fff' opacity='0.45'/>"+
     "</svg>";
 
   var url = 'data:image/svg+xml;utf8,'+encodeURIComponent(svg);
@@ -3457,8 +3443,8 @@ function renderSettings(){
         <div class="section-title">${cs?'O aplikaci':'About'}</div>
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.13.6</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260616-001</span></div>
+          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.13.8</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260616-003</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           ${(()=>{
