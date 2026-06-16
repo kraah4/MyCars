@@ -1,74 +1,60 @@
-// Generate 180×180 PNG apple-touch-icon — three overlapping car silhouettes:
-// BMW X5 (back, faintest) · Audi A6 (middle) · Porsche 911 (front, brightest)
+// Generate 180×180 PNG apple-touch-icon + favicon from the new "split-car" SVG.
+// Two stylised car fronts (soft sedan on the left, sport coupé with twin kidneys
+// on the right) separated by a diagonal divider — rasterised once at boot.
 (function(){
-  var c=document.createElement('canvas'),ctx=c.getContext('2d');
-  c.width=c.height=180;
+  var svg =
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>"+
+      "<rect width='512' height='512' rx='96' fill='#3a6dff'/>"+
+      "<g fill='none' stroke='#ffffff' stroke-width='7' stroke-linecap='round' stroke-linejoin='round'>"+
+        // LEFT — softer sedan / 3-4 front view
+        "<path d='M85 250Q140 175 230 165L255 165'/>"+
+        "<path d='M255 165L255 250'/>"+
+        "<path d='M50 295Q140 280 240 285'/>"+
+        "<path d='M125 230L92 222L78 235'/>"+
+        "<path d='M55 320Q90 305 155 312L170 322'/>"+
+        "<path d='M75 332L150 326'/>"+
+        "<path d='M70 385Q145 375 230 380'/>"+
+        "<path d='M95 435Q165 432 235 425'/>"+
+        "<path d='M55 355L65 365'/>"+
+        // RIGHT — front with twin-kidney grilles
+        "<path d='M295 230Q360 190 445 200'/>"+
+        "<path d='M335 245L390 235L440 240'/>"+
+        "<path d='M295 270L345 252L368 268'/>"+
+        "<path d='M400 252L450 264L468 285'/>"+
+        "<path d='M315 295L310 405Q310 425 330 428L365 432Q382 432 384 415L384 295Q384 282 370 282L329 282Q315 282 315 295Z'/>"+
+        "<path d='M398 295Q398 282 412 282L453 282Q467 282 467 295L472 405Q472 425 452 428L417 432Q400 432 398 415Z'/>"+
+        "<path d='M295 462L320 445L460 445L482 462'/>"+
+      "</g>"+
+      // diagonal divider
+      "<line x1='455' y1='55' x2='75' y2='475' stroke='#1f2a8f' stroke-width='6' stroke-linecap='round'/>"+
+    "</svg>";
 
-  // Background — gradient rounded rect
-  var g=ctx.createLinearGradient(0,0,0,180);
-  g.addColorStop(0,'#131420');g.addColorStop(1,'#07080d');
-  ctx.fillStyle=g;
-  ctx.beginPath();
-  ctx.moveTo(38,0);ctx.lineTo(142,0);ctx.quadraticCurveTo(180,0,180,38);
-  ctx.lineTo(180,142);ctx.quadraticCurveTo(180,180,142,180);
-  ctx.lineTo(38,180);ctx.quadraticCurveTo(0,180,0,142);
-  ctx.lineTo(0,38);ctx.quadraticCurveTo(0,0,38,0);ctx.closePath();ctx.fill();
+  var url = 'data:image/svg+xml;utf8,'+encodeURIComponent(svg);
 
-  var gl=132; // ground line (wheel centre y)
+  var img = new Image();
+  img.onload = function(){
+    var c=document.createElement('canvas'); c.width=c.height=180;
+    var ctx=c.getContext('2d');
+    ctx.drawImage(img,0,0,180,180);
+    var png;
+    try { png=c.toDataURL('image/png'); }
+    catch(e){ png=url; } // fallback to SVG if canvas tainted
 
-  // ── BMW X5 — SUV, tallest roofline ───────────────
-  function x5(x){
-    x.beginPath();
-    x.moveTo(18,gl);x.lineTo(18,112);
-    x.lineTo(34,90);x.lineTo(48,67);x.lineTo(63,57);
-    x.lineTo(120,57);x.lineTo(141,66);x.lineTo(156,88);
-    x.lineTo(162,110);x.lineTo(162,gl);
-    x.arc(130,gl,23,0,Math.PI,true);x.lineTo(73,gl);
-    x.arc(50,gl,23,0,Math.PI,true);x.closePath();
-  }
-
-  // ── Audi A6 — classic 3-box sedan, trunk notch ───
-  function a6(x){
-    x.beginPath();
-    x.moveTo(18,gl);x.lineTo(18,115);
-    x.lineTo(24,106);x.lineTo(38,101); // trunk notch
-    x.lineTo(51,86);x.lineTo(63,69);x.lineTo(78,63);
-    x.lineTo(114,63);x.lineTo(134,70);x.lineTo(149,88);
-    x.lineTo(159,111);x.lineTo(162,gl);
-    x.arc(128,gl,21,0,Math.PI,true);x.lineTo(71,gl);
-    x.arc(50,gl,21,0,Math.PI,true);x.closePath();
-  }
-
-  // ── Porsche 911 — fastback, rear engine hump ─────
-  function p911(x){
-    x.beginPath();
-    x.moveTo(18,gl);x.lineTo(18,122);
-    x.lineTo(27,113);x.lineTo(37,107); // rear engine hump
-    x.lineTo(51,86);x.lineTo(80,73);x.lineTo(118,73);
-    x.lineTo(136,80);x.lineTo(151,96);
-    x.lineTo(160,113);x.lineTo(162,122);x.lineTo(162,gl);
-    x.arc(128,gl,19,0,Math.PI,true);x.lineTo(71,gl);
-    x.arc(50,gl,21,0,Math.PI,true); // wider rear arch
-    x.closePath();
-  }
-
-  // Layer back→front with increasing opacity; overlapping areas compound brighter
-  ctx.fillStyle='rgba(108,143,255,0.27)'; x5(ctx);  ctx.fill();
-  ctx.fillStyle='rgba(108,143,255,0.47)'; a6(ctx);  ctx.fill();
-  ctx.fillStyle='rgba(108,143,255,0.82)'; p911(ctx);ctx.fill();
-
-  // Subtle outline on 911 to define its edges against the other layers
-  ctx.strokeStyle='rgba(160,195,255,0.45)';ctx.lineWidth=1.5;
-  p911(ctx);ctx.stroke();
-
-  var png=c.toDataURL('image/png');
-  var l=document.getElementById('ati');if(l)l.href=png;
-  // Force favicon cache bust: remove old link, insert fresh one
-  var f=document.getElementById('fav');
-  if(f)f.parentNode.removeChild(f);
-  var nf=document.createElement('link');
-  nf.rel='icon';nf.type='image/png';nf.href=png;
-  document.head.appendChild(nf);
+    var l=document.getElementById('ati'); if(l) l.href=png;
+    // Force favicon cache bust: remove old link, insert fresh one
+    var f=document.getElementById('fav');
+    if(f) f.parentNode.removeChild(f);
+    var nf=document.createElement('link');
+    nf.rel='icon'; nf.type=(png===url?'image/svg+xml':'image/png'); nf.href=png;
+    document.head.appendChild(nf);
+  };
+  img.onerror=function(){
+    // Last-resort: use the SVG data URL directly
+    var l=document.getElementById('ati'); if(l) l.href=url;
+    var f=document.getElementById('fav');
+    if(f){ f.type='image/svg+xml'; f.href=url; }
+  };
+  img.src=url;
 })();
 
 // ─── FUEL TYPES ──────────────────────────────────────────────
@@ -3082,7 +3068,7 @@ function buildBasicSectionForm(cs){
   </div>
   <div class='form-group'><label class='form-label'>${cs?'Rok výroby':'Year'}</label><input type='number' class='form-input' id='c-year' placeholder='2008' min='1900' max='2099'></div>
   <div class='form-group'><label class='form-label'>SPZ</label><input type='text' class='form-input' id='c-plate' maxlength='16' placeholder='1Z3 4567' style='text-transform:uppercase'></div>
-  <div class='form-group full'><label class='form-label'>VIN</label><input type='text' class='form-input' id='c-vin' maxlength='32' placeholder='TMBBG61Z982...' style='text-transform:uppercase'></div>
+  <div class='form-group full'><label class='form-label'>VIN</label><div style='display:flex;gap:6px;align-items:center'><input type='text' class='form-input' id='c-vin' maxlength='32' placeholder='TMBBG61Z982...' style='text-transform:uppercase;flex:1'><button type='button' class='row-btn' data-action='copyVin' title='${cs?'Kopírovat VIN':'Copy VIN'}'>📋</button></div></div>
   <div class='form-group'>
     <label class='form-label required'>${cs?'Typ paliva':'Fuel type'}</label>
     <select class='form-select' id='c-fueltype'>
@@ -3471,8 +3457,8 @@ function renderSettings(){
         <div class="section-title">${cs?'O aplikaci':'About'}</div>
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.13.5</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260527-002</span></div>
+          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.13.6</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260616-001</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           ${(()=>{
@@ -4251,6 +4237,14 @@ document.addEventListener('click', function _clickDispatch(e) {
     case 'setLang':             setLang(d.lang); break;
     case 'setTheme':            setTheme(d.theme); break;
     case 'triggerPwaInstall':   triggerPwaInstall(); break;
+    case 'copyVin': {
+      const vin = document.getElementById('c-vin')?.value?.trim();
+      if (!vin) { showToast(state.lang==='cs'?'VIN není vyplněn':'VIN is empty','error'); break; }
+      navigator.clipboard.writeText(vin)
+        .then(()  => showToast(state.lang==='cs'?'VIN zkopírován':'VIN copied','success'))
+        .catch(() => showToast(state.lang==='cs'?'Kopírování selhalo':'Copy failed','error'));
+      break;
+    }
   }
 });
 

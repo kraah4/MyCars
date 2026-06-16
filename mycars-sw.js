@@ -1,6 +1,6 @@
 /**
  * MyCars — Service Worker
- * Version: 3.13.5 · Build: 20260527-002
+ * Version: 3.13.6 · Build: 20260616-001
  *
  * Strategy: Cache-first for the app shell (HTML, SW itself).
  * On activation, old caches are purged so updates take effect
@@ -12,7 +12,7 @@
  * after the first visit.
  */
 
-const CACHE_NAME = 'mycars-v6';
+const CACHE_NAME = 'mycars-v7';
 const FONTS_CACHE = 'mycars-fonts-v1';
 // Maximum age of a cached Google Fonts response before it must be re-validated
 // from the network (mitigates serving a compromised cached asset indefinitely).
