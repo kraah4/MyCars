@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"chat.tools.terminal.autoApprove": {
+			"pageFadeIn'": true,
+			"offsetWidth'": true,
+			"/^python _tools\\\\inspect\\.py$/": {
+				"approve": true,
+				"matchCommandLine": true
+			}
+		}
+	}
+}

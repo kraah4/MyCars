@@ -466,6 +466,22 @@
   .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 20px; font-size: .75rem; font-weight: 500 }
   .status-badge.active { background: var(--green-dim); color: var(--green) }
   .status-badge.inactive { background: var(--surface3); color: var(--text3) }
+  /* Nový 5-stavový enum (v3.15.0) */
+  .status-badge.st-operational    { background: var(--green-dim); color: var(--green) }
+  .status-badge.st-storage        { background: rgba(108,143,255,.12); color: var(--accent) }
+  .status-badge.st-in_restoration { background: var(--amber-dim); color: var(--amber) }
+  .status-badge.st-for_sale       { background: rgba(255,107,53,.14); color: #ff6b35 }
+  .status-badge.st-sold           { background: rgba(120,113,108,.18); color: #a8a29e }
+  .status-badge.st-decommissioned { background: var(--surface3); color: var(--text3) }
+  /* Klasifikace vozidla */
+  .class-badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 20px; font-size: .72rem; font-weight: 500; white-space: nowrap }
+  .class-badge.youngtimer      { background: rgba(232,197,71,.12); color: #e8c547 }
+  .class-badge.historic        { background: rgba(108,143,255,.14); color: var(--accent) }
+  .class-badge.veteran         { background: rgba(176,91,71,.18); color: #c89570 }
+  .class-badge.for-sale-price  { background: rgba(255,107,53,.10); color: #ff6b35 }
+  /* Archivovaná karta — ztlumená */
+  .fleet-card.archived { opacity: .65 }
+  .fleet-card.archived:hover { opacity: .95 }
 
   /* ── Row actions ────────────────────────────── */
   .row-actions { display: flex; gap: 4px; opacity: 0; transition: opacity .15s }
@@ -633,6 +649,45 @@
   .reminder-status.warn { color: var(--amber) }
   .reminder-status.due { color: var(--red) }
 
+  /* ── Service / Job cards ───────────────────── */
+  .jobs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-bottom: 24px }
+  .job-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; display: flex; flex-direction: column; gap: 10px }
+  .job-card.in_progress { border-left: 3px solid var(--accent) }
+  .job-card.planned     { border-left: 3px solid var(--amber) }
+  .job-card.done        { border-left: 3px solid var(--green); opacity: .85 }
+  .job-card.cancelled   { border-left: 3px solid var(--text3); opacity: .65 }
+  /* Zakázka pro vyřazené vozidlo — viditelné ztlumení */
+  .job-card.archived    { opacity: .65 }
+  .job-card.archived:hover { opacity: .9 }
+  .job-card-head { display: flex; align-items: flex-start; gap: 10px }
+  .job-card-title { flex: 1; min-width: 0 }
+  .job-car { font-size: .95rem; font-weight: 600; letter-spacing: -.01em }
+  .job-shop { font-size: .78rem; color: var(--text2); margin-top: 2px }
+  .job-status-pill { font-size: .7rem; font-weight: 700; padding: 3px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: .04em; flex-shrink: 0 }
+  .job-status-pill.planned     { background: var(--amber-dim); color: var(--amber) }
+  .job-status-pill.in_progress { background: var(--accent-dim); color: var(--accent) }
+  .job-status-pill.done        { background: var(--green-dim); color: var(--green) }
+  .job-status-pill.cancelled   { background: var(--surface3); color: var(--text3) }
+  .job-dates { font-size: .75rem; color: var(--text2); font-family: var(--font-mono) }
+  .job-tasks { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px }
+  .job-tasks li { font-size: .82rem; color: var(--text); display: flex; align-items: center; gap: 8px }
+  .job-tasks li.done { color: var(--text3); text-decoration: line-through }
+  .job-tasks input[type="checkbox"] { accent-color: var(--accent); cursor: pointer }
+  .job-cost { font-size: .8rem; color: var(--text2); font-family: var(--font-mono) }
+  .job-cost strong { color: var(--text); font-weight: 600 }
+  .job-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--border) }
+  .job-actions .btn { font-size: .76rem; padding: 6px 11px; min-height: 32px }
+  .job-section-collapse { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; padding: 6px 0 }
+  .job-section-collapse .chev { transition: transform .2s; color: var(--text3); font-size: .7rem }
+  .job-section-collapse.collapsed .chev { transform: rotate(-90deg) }
+  .job-task-row { display: flex; align-items: center; gap: 8px }
+  .job-task-row input.form-input { flex: 1 }
+  .job-task-row .row-btn { flex-shrink: 0 }
+
+  /* In-service badge on fleet card */
+  .fleet-doc-pill.in_service { background: var(--accent-dim); color: var(--accent); border-color: rgba(108,143,255,.25); font-weight: 600 }
+  .fleet-doc-pill.scheduled  { background: var(--amber-dim); color: var(--amber); border-color: rgba(251,191,36,.25); font-weight: 600 }
+
   /* ── Tabs ───────────────────────────────────── */
   .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 22px }
   .tab { padding: 10px 20px; border: none; background: none; color: var(--text2); font-family: var(--font); font-size: .875rem; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s; font-weight: 400 }
@@ -741,7 +796,7 @@
   .fleet-row-val.ok { color: var(--green) }
   .fleet-row-val.warn { color: var(--amber) }
   .fleet-row-val.due { color: var(--red) }
-  .fleet-card-footer { padding: 11px 20px; background: var(--surface2); border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center }
+  .fleet-card-footer { padding: 11px 20px; background: var(--surface2); border-top: 1px solid var(--border); display: flex; align-items: center; gap: 6px; flex-wrap: wrap }
   /* FIXED: was .68rem → .72rem */
   .fleet-card-footer .status-badge { font-size: .72rem }
 
@@ -810,7 +865,7 @@
   .settings-info-row span:last-child { font-family: var(--font-mono); font-size: .8rem; color: var(--text) }
 
   /* ── Vehicle Edit Page — accordion sections ──────────────── */
-  .edit-accordion { display: flex; flex-direction: column; gap: 10px; margin-bottom: 110px }
+  .edit-accordion { display: flex; flex-direction: column; gap: 10px }
   .edit-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .15s }
   .edit-section:has(.edit-section-body.open) { border-color: var(--border2) }
   .edit-section-head { display: flex; align-items: center; gap: 10px; padding: 16px 18px; cursor: pointer; user-select: none; transition: background .12s; min-height: 52px }
@@ -822,10 +877,22 @@
   .edit-section-chevron.open { transform: rotate(90deg); color: var(--accent) }
   .edit-section-body { border-top: 1px solid var(--border); padding: 22px 18px; display: none }
   .edit-section-body.open { display: block }
-  /* Sticky save bar */
-  .edit-sticky-bar { position: fixed; bottom: 0; left: var(--sidebar-w); right: 0; background: var(--surface); border-top: 2px solid var(--border2); padding: 12px 24px; display: flex; gap: 10px; align-items: center; z-index: 90; box-shadow: 0 -4px 24px rgba(0,0,0,.35) }
-  @media (max-width: 768px) { .edit-sticky-bar { left: 0; padding: 10px 16px } }
-  .edit-sticky-spacer { flex: 1 }
+  /* Sticky save bar — žije UVNITŘ .content-inner jako position:sticky, takže
+     sdílí přesně stejnou šířku (vč. odsazení scrollbaru) jako .edit-section karty.
+     Tím jsou tlačítka zarovnaná na pixel s levým/pravým okrajem obsahu.
+     Negativní bottom margin „sní" spodní padding .content-inner (26px desktop /
+     20px mobile), aby bar při scrollu úplně dolů přilnul přesně k dolní hraně. */
+  .edit-sticky-bar { position: sticky; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; margin: 16px 0 -26px; padding: 10px 16px; z-index: 90; box-shadow: 0 -4px 24px rgba(0,0,0,.28) }
+  .edit-sticky-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100% }
+  .edit-sticky-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
+  .edit-sticky-right { margin-left: auto }
+  @media (max-width: 768px) {
+    .edit-sticky-bar { padding: 10px 12px; margin: 12px 0 -20px }
+    .edit-sticky-inner { gap: 10px }
+    .edit-sticky-bar .btn { padding: 8px 12px; min-height: 40px; font-size: .82rem }
+  }
+  /* Tiny extra room under the form, before the sticky bar starts */
+  .edit-accordion-outer { padding-bottom: 12px }
 
   /* Topbar: na mid breakpointu (768–900px) schovat texty tlačítek, zobrazit jen ikony */
   @media (max-width: 900px) and (min-width: 769px) {
@@ -841,6 +908,10 @@
   @media (max-width: 480px) {
     .reminders-grid { grid-template-columns: 1fr }
     .reminder-card { padding: 14px 16px }
+  }
+  @media (max-width: 480px) {
+    .jobs-grid { grid-template-columns: 1fr }
+    .job-card { padding: 14px 16px }
   }
   .wizard-wrap { max-width: 660px; margin: 0 auto; padding-bottom: 110px }
   .wizard-progress { display: flex; align-items: center; margin-bottom: 28px }
@@ -876,17 +947,17 @@
     .records-detail { display: flex }
   }
 
-  /* ── Car edit page: 2-column grid on wide screens ──────── */
+  /* ── Car edit page: full-width single-column layout on wide screens ──── */
+  /* Na úzkých obrazovkách zůstává accordion (sbalitelné sekce, max-width 720px),
+     na širokých jsou všechny sekce vždy otevřené pod sebou v plné šířce. */
   .edit-accordion-outer { max-width: 720px; margin: 0 auto }
   @media (min-width: 1200px) {
     .edit-accordion-outer { max-width: none }
-    .edit-accordion { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 80px; align-items: start }
-    .edit-section-body { display: block !important } /* all sections always visible */
+    .edit-section-body { display: block !important } /* všechny sekce vždy viditelné */
     .edit-section-head { cursor: default }
     .edit-section-head:hover { background: transparent }
     .edit-section-chevron { display: none }
     .edit-section-summary { display: none }
-    #section-tyres { grid-column: 1 / -1 }
     .edit-section:has(.edit-section-body.open) { border-color: var(--border) }
   }
 </style>
@@ -904,6 +975,7 @@
       <button class="nav-btn active" data-action="showPage" data-page="fleet" id="nav-fleet" title="Přehled vozů"><span data-cs="Přehled vozů" data-en="Fleet">Přehled vozů</span></button>
       <button class="nav-btn" data-action="showPage" data-page="dashboard" id="nav-dashboard" title="Přehled"><span data-cs="Detail vozu" data-en="Vehicle">Detail vozu</span></button>
       <button class="nav-btn" data-action="showPage" data-page="records" id="nav-records" title="Záznamy"><span data-cs="Záznamy" data-en="Records">Záznamy</span></button>
+      <button class="nav-btn" data-action="showPage" data-page="service" id="nav-service" title="Plánovaný servis"><span data-cs="Servis" data-en="Service">Servis</span></button>
       <button class="nav-btn" data-action="showPage" data-page="fuel" id="nav-fuel" title="Tankování"><span data-cs="Tankování" data-en="Fuel log">Tankování</span></button>
       <button class="nav-btn" data-action="showPage" data-page="analytics" id="nav-analytics" title="Analytika"><span data-cs="Analytika" data-en="Analytics">Analytika</span></button>
       <button class="nav-btn" data-action="showPage" data-page="reminders" id="nav-reminders" title="Připomínky"><span data-cs="Připomínky" data-en="Reminders">Připomínky</span></button>
@@ -1055,6 +1127,45 @@
     <div class="modal-foot">
       <button class="btn btn-ghost" data-action="closeModal" data-id="reminder-modal">Zrušit</button>
       <button class="btn btn-primary" data-action="saveReminder">Uložit</button>
+    </div>
+  </div>
+</div>
+
+<!-- JOB / SERVICE MODAL -->
+<div class="modal-overlay" id="job-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="job-modal-title" data-cs="Naplánovat servis" data-en="Schedule service">Naplánovat servis</h2>
+      <button class="modal-close" data-action="closeModal" data-id="job-modal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label required" data-cs="Vozidlo" data-en="Vehicle">Vozidlo</label><select class="form-select" id="j-car"></select></div>
+        <div class="form-group"><label class="form-label required" data-cs="Stav" data-en="Status">Stav</label>
+          <select class="form-select" id="j-status">
+            <option value="planned" data-cs="Naplánováno" data-en="Planned">Naplánováno</option>
+            <option value="in_progress" data-cs="V servisu" data-en="At shop">V servisu</option>
+            <option value="done" data-cs="Hotovo" data-en="Done">Hotovo</option>
+            <option value="cancelled" data-cs="Zrušeno" data-en="Cancelled">Zrušeno</option>
+          </select>
+        </div>
+        <div class="form-group full"><label class="form-label" data-cs="Servis / dílna" data-en="Shop / mechanic">Servis / dílna</label><input type="text" class="form-input" id="j-shop" maxlength="200" placeholder="Auto Novák" list="j-shop-list"><datalist id="j-shop-list"></datalist></div>
+        <div class="form-group"><label class="form-label required" data-cs="Začátek" data-en="Start">Začátek</label><div class="date-triple" id="j-start-wrap"><input type="number" class="dt-d" id="j-start-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="j-start-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="j-start-y" placeholder="RRRR" min="1900" max="2099"></div></div>
+        <div class="form-group"><label class="form-label" data-cs="Konec" data-en="End">Konec</label><div class="date-triple" id="j-end-wrap"><input type="number" class="dt-d" id="j-end-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="j-end-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="j-end-y" placeholder="RRRR" min="1900" max="2099"></div></div>
+        <div class="form-group"><label class="form-label" data-cs="Odhadovaná cena (Kč)" data-en="Estimated cost (CZK)">Odhadovaná cena (Kč)</label><input type="number" class="form-input" id="j-cost" step="1" min="0" placeholder="8500"></div>
+        <div class="form-group"></div>
+        <div class="form-group full">
+          <label class="form-label" data-cs="Úkony" data-en="Tasks">Úkony</label>
+          <div id="j-tasks-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+          <button type="button" class="btn btn-ghost" data-action="addJobTask" style="margin-top:8px;font-size:.82rem;align-self:flex-start;">+ <span data-cs="Přidat úkon" data-en="Add task">Přidat úkon</span></button>
+        </div>
+        <div class="form-group full"><label class="form-label" data-cs="Poznámka" data-en="Note">Poznámka</label><textarea class="form-textarea" id="j-note" rows="2" maxlength="2000"></textarea></div>
+      </div>
+      <div id="job-errors" style="margin-top:8px;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" data-action="closeModal" data-id="job-modal" data-cs="Zrušit" data-en="Cancel">Zrušit</button>
+      <button class="btn btn-primary" data-action="saveJob" data-cs="Uložit" data-en="Save">Uložit</button>
     </div>
   </div>
 </div>

@@ -1,6 +1,49 @@
 {
-  "exportedAt": "2026-03-24T13:25:03.105949Z",
+  "exportedAt": "2026-06-17T13:10:47Z",
+  "savedAt": "2026-06-17T13:10:47Z",
+  "lang": "cs",
+  "settings": {
+    "tireReminders": true,
+    "theme": "dark"
+  },
   "cars": [
+    {
+      "id": "c_skoda_1000mb",
+      "make": "Škoda",
+      "model": "1000 MB",
+      "year": 1967,
+      "plate": "VET 1967",
+      "vin": "MB001000XX67",
+      "fuelType": "petrol",
+      "status": "in_restoration",
+      "classification": "veteran",
+      "startOdo": 89450,
+      "color": "#a86b3d",
+      "acquired": "2024-04-12",
+      "decommissioned": null,
+      "note": "Veterán po dědečkovi — kompletní renovace karoserie a interiéru, motor po GO.",
+      "tyres": {
+        "summer": {
+          "same": true,
+          "front": {
+            "width": 165,
+            "aspect": 80,
+            "rim": 13,
+            "load": 83,
+            "speed": "T",
+            "plow": 1.6,
+            "phigh": 1.8
+          },
+          "rear": null,
+          "mfgDate": "2124"
+        },
+        "winter": null,
+        "allseason": null
+      },
+      "tyreAllSeason": false,
+      "stk": "2027-06-01",
+      "ins": "2026-05-01"
+    },
     {
       "id": "c_audi_a4",
       "make": "Audi",
@@ -9,20 +52,46 @@
       "plate": "1AA 1234",
       "vin": "WAUZZZ8K0FA001234",
       "fuelType": "diesel",
-      "status": "active",
+      "status": "operational",
       "startOdo": 145000,
       "color": "#5b8dee",
       "acquired": "2023-02-10",
-      "sold": null,
       "note": "Rodinné kombi, hlavní vůz.",
       "tyres": {
-        "summer": { "same": true, "front": { "width": 235, "aspect": 45, "rim": 17, "load": 97, "speed": "W", "plow": 2.2, "phigh": 2.5 }, "rear": null, "mfgDate": "2350" },
-        "winter": { "same": true, "front": { "width": 225, "aspect": 50, "rim": 17, "load": 94, "speed": "H", "plow": 2.0, "phigh": 2.3 }, "rear": null, "mfgDate": "4522" },
+        "summer": {
+          "same": true,
+          "front": {
+            "width": 235,
+            "aspect": 45,
+            "rim": 17,
+            "load": 97,
+            "speed": "W",
+            "plow": 2.2,
+            "phigh": 2.5
+          },
+          "rear": null,
+          "mfgDate": "2350"
+        },
+        "winter": {
+          "same": true,
+          "front": {
+            "width": 225,
+            "aspect": 50,
+            "rim": 17,
+            "load": 94,
+            "speed": "H",
+            "plow": 2.0,
+            "phigh": 2.3
+          },
+          "rear": null,
+          "mfgDate": "4522"
+        },
         "allseason": null
       },
       "tyreAllSeason": false,
       "stk": "2027-05-15",
-      "ins": "2026-06-01"
+      "ins": "2026-06-01",
+      "classification": "standard"
     },
     {
       "id": "c_honda_civic",
@@ -32,15 +101,17 @@
       "plate": "7HH 7777",
       "vin": "JHMFK8H400020002",
       "fuelType": "petrol",
-      "status": "active",
+      "status": "for_sale",
       "startOdo": 15000,
       "color": "#e05c5c",
       "acquired": "2022-05-20",
-      "sold": null,
-      "note": "Víkendovka.",
+      "note": "Víkendovka, nyní na prodej (rodina roste).",
       "tyres": false,
       "stk": "2027-04-10",
-      "ins": "2026-03-15"
+      "ins": "2026-03-15",
+      "classification": "youngtimer",
+      "salePrice": 720000,
+      "saleAdUrl": "https://www.sauto.cz/osobni/detail/honda/civic/type-r"
     },
     {
       "id": "c_bmw_5",
@@ -50,20 +121,54 @@
       "plate": "5B5 5555",
       "vin": "WBA1234567890ABCD",
       "fuelType": "diesel",
-      "status": "active",
+      "status": "operational",
       "startOdo": 80000,
       "color": "#4caf82",
       "acquired": "2023-11-15",
-      "sold": null,
       "note": "Pracovní auto.",
       "tyres": {
-        "summer": { "same": false, "front": { "width": 245, "aspect": 40, "rim": 18, "load": 97, "speed": "W", "plow": 2.3, "phigh": 2.6 }, "rear": { "width": 275, "aspect": 35, "rim": 18, "load": 99, "speed": "W", "plow": 2.5, "phigh": 2.8 }, "mfgDate": "3123" },
-        "winter": { "same": true, "front": { "width": 225, "aspect": 55, "rim": 17, "load": 97, "speed": "H", "plow": 2.1, "phigh": 2.4 }, "rear": null, "mfgDate": "4822" },
+        "summer": {
+          "same": false,
+          "front": {
+            "width": 245,
+            "aspect": 40,
+            "rim": 18,
+            "load": 97,
+            "speed": "W",
+            "plow": 2.3,
+            "phigh": 2.6
+          },
+          "rear": {
+            "width": 275,
+            "aspect": 35,
+            "rim": 18,
+            "load": 99,
+            "speed": "W",
+            "plow": 2.5,
+            "phigh": 2.8
+          },
+          "mfgDate": "3123"
+        },
+        "winter": {
+          "same": true,
+          "front": {
+            "width": 225,
+            "aspect": 55,
+            "rim": 17,
+            "load": 97,
+            "speed": "H",
+            "plow": 2.1,
+            "phigh": 2.4
+          },
+          "rear": null,
+          "mfgDate": "4822"
+        },
         "allseason": null
       },
       "tyreAllSeason": false,
       "stk": "2026-11-15",
-      "ins": "2026-11-15"
+      "ins": "2026-11-15",
+      "classification": "standard"
     },
     {
       "id": "c_lexus_is",
@@ -73,13 +178,14 @@
       "plate": "2L2 2222",
       "vin": "JTHBK262002000004",
       "fuelType": "petrol",
-      "status": "inactive",
+      "status": "sold",
       "startOdo": 120000,
       "color": "#aaaaaa",
       "acquired": "2015-06-10",
-      "sold": "2023-02-09",
       "note": "Staré spolehlivé.",
-      "tyres": false
+      "tyres": false,
+      "classification": "youngtimer",
+      "decommissioned": "2023-02-09"
     },
     {
       "id": "c_audi_q7",
@@ -89,13 +195,14 @@
       "plate": "7Q7 7777",
       "vin": "WAUZZZ4L12345678",
       "fuelType": "diesel",
-      "status": "inactive",
+      "status": "sold",
       "startOdo": 110000,
       "color": "#2a2a2a",
       "acquired": "2018-03-30",
-      "sold": "2022-11-15",
       "note": "Tank.",
-      "tyres": true
+      "tyres": true,
+      "classification": "standard",
+      "decommissioned": "2022-11-15"
     },
     {
       "id": "c_bmw_3",
@@ -105,13 +212,14 @@
       "plate": "3B3 3333",
       "vin": "WBA320I123456789",
       "fuelType": "petrol",
-      "status": "inactive",
+      "status": "decommissioned",
       "startOdo": 90000,
       "color": "#5b8dee",
       "acquired": "2016-01-20",
-      "sold": "2021-08-30",
-      "note": "První bavorák.",
-      "tyres": false
+      "note": "Totální škoda po nehodě (zezadu vzata kamionem).",
+      "tyres": false,
+      "classification": "standard",
+      "decommissioned": "2021-09-15"
     },
     {
       "id": "c_alfa_giulia",
@@ -121,13 +229,14 @@
       "plate": "5A5 5555",
       "vin": "ZAREA200005000007",
       "fuelType": "petrol",
-      "status": "inactive",
+      "status": "sold",
       "startOdo": 20000,
       "color": "#e05c5c",
       "acquired": "2019-07-15",
-      "sold": "2021-08-30",
       "note": "Srdcovka.",
-      "tyres": false
+      "tyres": false,
+      "classification": "standard",
+      "decommissioned": "2021-08-30"
     },
     {
       "id": "c_vw_transporter",
@@ -137,13 +246,31 @@
       "plate": "6V6 6666",
       "vin": "WV1ZZZ7H12345678",
       "fuelType": "diesel",
-      "status": "inactive",
+      "status": "sold",
       "startOdo": 20000,
       "color": "#7a5230",
       "acquired": "2017-10-10",
-      "sold": "2020-05-05",
       "note": "Dodávka.",
-      "tyres": true
+      "tyres": true,
+      "classification": "standard",
+      "decommissioned": "2020-05-05"
+    },
+    {
+      "id": "c_skoda_110r",
+      "make": "Škoda",
+      "model": "110 R Coupé",
+      "year": 1978,
+      "plate": "HST 110R",
+      "vin": "S110R780000777",
+      "fuelType": "petrol",
+      "status": "sold",
+      "classification": "historic",
+      "startOdo": 132500,
+      "color": "#e8c547",
+      "acquired": "2019-09-01",
+      "decommissioned": "2024-08-15",
+      "note": "Sběratelská 110 R, prodáno do soukromé sbírky.",
+      "tyres": false
     }
   ],
   "records": [
@@ -1190,6 +1317,102 @@
       "price": 800,
       "note": "Nahodilá událost",
       "createdAt": "2020-03-20T00:00:00Z"
+    },
+    {
+      "id": "r_c_skoda_1000mb_buy",
+      "carId": "c_skoda_1000mb",
+      "date": "2024-04-12",
+      "odo": 89450,
+      "desc": "Koupě vozidla od rodiny",
+      "cat": "Nákup vozidla",
+      "qty": 1,
+      "price": 65000,
+      "note": "Import/Koupě — veterán k renovaci",
+      "createdAt": "2024-04-12T00:00:00Z"
+    },
+    {
+      "id": "r_c_skoda_1000mb_paint",
+      "carId": "c_skoda_1000mb",
+      "date": "2024-09-20",
+      "odo": 89450,
+      "desc": "Lakování karoserie (kompletně)",
+      "cat": "Vybavení a vzhled",
+      "qty": 1,
+      "price": 84500,
+      "note": "Po opískování a opravách plechů",
+      "createdAt": "2024-09-20T00:00:00Z"
+    },
+    {
+      "id": "r_c_skoda_1000mb_engine_go",
+      "carId": "c_skoda_1000mb",
+      "date": "2025-03-11",
+      "odo": 89450,
+      "desc": "Generální oprava motoru",
+      "cat": "Servis a opravy",
+      "qty": 1,
+      "price": 47800,
+      "note": "Repas — vložky válců, ojnice, kliková",
+      "createdAt": "2025-03-11T00:00:00Z"
+    },
+    {
+      "id": "r_c_skoda_1000mb_interior",
+      "carId": "c_skoda_1000mb",
+      "date": "2025-11-04",
+      "odo": 89450,
+      "desc": "Renovace interiéru — sedadla a koberce",
+      "cat": "Vybavení a vzhled",
+      "qty": 1,
+      "price": 28900,
+      "note": "Původní vzor čalounění",
+      "createdAt": "2025-11-04T00:00:00Z"
+    },
+    {
+      "id": "r_c_skoda_1000mb_ins_2026",
+      "carId": "c_skoda_1000mb",
+      "date": "2026-05-02",
+      "odo": 89450,
+      "desc": "Pojištění veterán (POV)",
+      "cat": "Administrativa",
+      "qty": 1,
+      "price": 1450,
+      "note": "Veteránský tarif",
+      "createdAt": "2026-05-02T00:00:00Z"
+    },
+    {
+      "id": "r_c_skoda_110r_buy",
+      "carId": "c_skoda_110r",
+      "date": "2019-09-01",
+      "odo": 132500,
+      "desc": "Koupě vozidla",
+      "cat": "Nákup vozidla",
+      "qty": 1,
+      "price": 145000,
+      "note": "Import/Koupě",
+      "createdAt": "2019-09-01T00:00:00Z"
+    },
+    {
+      "id": "r_c_skoda_110r_oil_134120",
+      "carId": "c_skoda_110r",
+      "date": "2021-05-18",
+      "odo": 134120,
+      "desc": "Olej a filtry",
+      "cat": "Servis a opravy",
+      "qty": 1,
+      "price": 1850,
+      "note": "Interval",
+      "createdAt": "2021-05-18T00:00:00Z"
+    },
+    {
+      "id": "r_c_skoda_110r_sale",
+      "carId": "c_skoda_110r",
+      "date": "2024-08-15",
+      "odo": 134800,
+      "desc": "Prodej do sbírky",
+      "cat": "Administrativa",
+      "qty": 1,
+      "price": 0,
+      "note": "Prodáno za 220 000 Kč (mimo evidenci výdajů)",
+      "createdAt": "2024-08-15T00:00:00Z"
     }
   ],
   "fuels": [
@@ -6292,6 +6515,30 @@
       "fullTank": true,
       "note": "",
       "createdAt": "2020-04-11T00:00:00Z"
+    },
+    {
+      "id": "f_c_skoda_1000mb_0",
+      "carId": "c_skoda_1000mb",
+      "date": "2025-06-21",
+      "odo": 89512,
+      "fuelTypeId": "p98",
+      "liters": 23.4,
+      "cost": 1029,
+      "fullTank": true,
+      "note": "První zkušební jízda po GO motoru",
+      "createdAt": "2025-06-21T00:00:00Z"
+    },
+    {
+      "id": "f_c_skoda_1000mb_1",
+      "carId": "c_skoda_1000mb",
+      "date": "2025-08-09",
+      "odo": 89698,
+      "fuelTypeId": "p98",
+      "liters": 17.2,
+      "cost": 768,
+      "fullTank": true,
+      "note": "Sraz veteránů",
+      "createdAt": "2025-08-09T00:00:00Z"
     }
   ],
   "reminders": [
@@ -6354,6 +6601,122 @@
       "lastDone": null,
       "warnAt": 30,
       "date": "2026-11-15"
+    },
+    {
+      "id": "rem_c_skoda_1000mb_stk",
+      "carId": "c_skoda_1000mb",
+      "name": "STK (veterán, 2 roky)",
+      "type": "date",
+      "interval": null,
+      "lastDone": null,
+      "warnAt": 30,
+      "date": "2027-06-01"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "job_honda_inspection",
+      "carId": "c_honda_civic",
+      "status": "planned",
+      "shop": "Honda servis Praha",
+      "startDate": "2026-06-29",
+      "endDate": "",
+      "estimatedCost": 3500,
+      "notes": "Předprodejní kontrola pro zájemce, výpis z diagnostiky.",
+      "tasks": [
+        {
+          "text": "Diagnostika OBD",
+          "done": false
+        },
+        {
+          "text": "Kontrola brzd a podvozku",
+          "done": false
+        },
+        {
+          "text": "Výpis servisní historie",
+          "done": false
+        }
+      ],
+      "createdAt": "2026-06-10T00:00:00Z"
+    },
+    {
+      "id": "job_bmw_servis",
+      "carId": "c_bmw_5",
+      "status": "in_progress",
+      "shop": "BMW Invelt Praha",
+      "startDate": "2026-06-15",
+      "endDate": "",
+      "estimatedCost": 18500,
+      "notes": "Velký servis + výměna brzd vpředu.",
+      "tasks": [
+        {
+          "text": "Olej + olejový filtr",
+          "done": true
+        },
+        {
+          "text": "Vzduchový filtr",
+          "done": true
+        },
+        {
+          "text": "Pylový filtr",
+          "done": false
+        },
+        {
+          "text": "Brzdy přední (kotouče + destičky)",
+          "done": false
+        },
+        {
+          "text": "Kontrola adblue systému",
+          "done": false
+        }
+      ],
+      "createdAt": "2026-06-01T00:00:00Z"
+    },
+    {
+      "id": "job_skoda1000_chrom",
+      "carId": "c_skoda_1000mb",
+      "status": "planned",
+      "shop": "Chromování Janáček",
+      "startDate": "2026-08-03",
+      "endDate": "2026-08-21",
+      "estimatedCost": 22000,
+      "notes": "Renovace chromovaných lišt a nárazníků pro Škodu 1000 MB.",
+      "tasks": [
+        {
+          "text": "Demontáž lišt",
+          "done": false
+        },
+        {
+          "text": "Přebroušení + chrom",
+          "done": false
+        },
+        {
+          "text": "Zpětná montáž",
+          "done": false
+        }
+      ],
+      "createdAt": "2026-06-15T00:00:00Z"
+    },
+    {
+      "id": "job_audi_a4_summer",
+      "carId": "c_audi_a4",
+      "status": "done",
+      "shop": "Pneuservis u Nádraží",
+      "startDate": "2026-04-02",
+      "endDate": "2026-04-02",
+      "estimatedCost": 1200,
+      "notes": "Sezónní přezutí.",
+      "tasks": [
+        {
+          "text": "Přezutí 4 ks letní",
+          "done": true
+        },
+        {
+          "text": "Vyvážení",
+          "done": true
+        }
+      ],
+      "createdAt": "2026-03-18T00:00:00Z"
     }
   ]
 }

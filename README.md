@@ -1,10 +1,10 @@
 # MyCars — Vehicle Maintenance Tracker
 
-**Version:** 3.13.5 · **Build:** 20260527-002
+**Version:** 3.15.0 · **Build:** 20260616-007
 **Author:** kraah  
 **License:** GNU GPL v3 (with §7 attribution requirement — see `LICENSE`)  
 **Live:** https://kraah4.github.io/MyCars/MyCars.html  
-**Type:** Single-file offline web application (PWA)
+**Type:** Offline web application (PWA) — `MyCars.html` + `mycars.js` + `mycars-sw.js`
 
 ---
 
@@ -12,7 +12,7 @@
 
 MyCars is a privacy-first, offline vehicle maintenance and expense tracker. Everything runs directly in the browser — no server, no account, no data ever leaves your device. Data is stored in browser `localStorage` under the key `mycars_v3`.
 
-The entire application is a single `MyCars.html` file that works over `file://` as well as any HTTP server.
+The app entry point is `MyCars.html` (markup + styles) with all logic in `mycars.js` and an optional Service Worker (`mycars-sw.js`) for offline cache. It works over `file://` as well as any HTTP server.
 
 ---
 
@@ -43,11 +43,13 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 
 | Page | Description |
 | --- | --- |
+| **Fleet** | Vehicle cards split into **Active vehicles** and a collapsible **Archive** section (sold / decommissioned cars). Cards show document pills, current service/job badges and — for vehicles *For sale* — the asking price and listing link |
 | **Dashboard** | Vehicle status, document expiry alerts, last refuel, key statistics including km driven in the current calendar year |
 | **Records** | Service records with 5 summary stat cards, full-text search, category filter |
 | **Fuel log** | Fuel entries with per-tank consumption, average price/litre |
 | **Analytics** | Expense charts, monthly trends, and categorized stats (Costs, Service, Fuel). **Comparison tab** ranks all vehicles by avg. consumption, cost/km, avg. monthly cost, avg. service cost, total cost, and mileage; includes a full detail comparison table |
-| **Reminders** | Km-based and date-based reminders with status indicators |
+| **Reminders** | Km-based and date-based reminders with status indicators; suspended vehicles (storage / in restoration) are folded into their own collapsible section, decommissioned ones are hidden |
+| **Service** | Planned-service work orders (jobs) — see the *Service & planned jobs* section below |
 | **Settings** | Appearance (theme), language, tyre reminders, JSON backup, CSV import, data management, app info |
 
 ---
@@ -62,15 +64,44 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 | Plate | no | Displayed in sidebar |
 | VIN | no | |
 | Fuel type | yes | Petrol / Diesel / LPG / Electric / Hybrid / PHEV |
-| Status | yes | Active / Inactive — inactive vehicles sorted to the bottom of sidebar |
+| Status | yes | One of 6 values — see *Vehicle status* below |
+| Classification | no | Standard / Youngtimer / Historic / Veteran — see *Vehicle classification* below |
+| Asking price | conditional | Only shown for *For sale* — displayed as a pill on the fleet card |
+| Listing URL | conditional | Only shown for *For sale* — clickable “Listing ↗” pill on the fleet card |
 | Starting odometer | no | Baseline km for driven distance calculations |
 | Acquisition date | no | Date the vehicle was purchased |
-| Decommission date | no | Date the vehicle was retired |
+| Decommission date | no | Date the vehicle was retired (auto-filled to today when archived if missing) |
 | Colour | no | Visual identifier dot in the sidebar |
 | Tyres | no | Summer / winter / all-season sets, each with **front and rear axle** parameters: width, aspect ratio, rim diameter, load index, speed index, tyre pressure (low/high load). A “Front = rear” toggle hides the rear fields when both axles share the same specification. Each set also has an optional **manufacture date** field (free text, e.g. `2023` or DOT week/year code `2350`). |
 | Documents | no | STK, Emissions, Liability insurance, Comprehensive insurance — each with expiry date + warning threshold (days) |
 | Oil service | no | Interval (km), last done at (km), warning threshold (km remaining) |
 | Notes | no | Free text |
+
+### Vehicle status (6 values)
+
+The status drives where the vehicle appears in the Fleet view (active vs. archive), whether it shows up in the Service / Reminders pages, and whether sale-only fields are exposed.
+
+| Status | Group | Meaning |
+| --- | --- | --- |
+| **Operational** | active | Daily driver — full participation in Fleet, Reminders, Service |
+| **In storage** | active (suspended) | Temporarily off the road — folded under *Suspended* in Reminders |
+| **In restoration** | active (suspended) | Being restored — same handling as *In storage* |
+| **For sale** | active | Adds the *Asking price* and *Listing URL* fields, shown as pills on the fleet card |
+| **Sold** | archive | Hidden from active fleet — appears in the collapsible *Archive* section |
+| **Decommissioned** | archive | Same archive handling — also used for totalled / scrapped cars |
+
+Legacy backups (`status: "active"` / `status: "inactive"`) are migrated automatically on load and on import: `active → operational`, `inactive → in storage`.
+
+### Vehicle classification (4 values)
+
+A secondary tag that influences a few specific behaviours (e.g. historic cars skip the automatic seasonal tyre reminder and use the 2-year MOT/STK interval).
+
+| Classification | Notes |
+| --- | --- |
+| **Standard** | Default |
+| **Youngtimer** | Informational pill on Fleet / Dashboard |
+| **Historic (HV)** | Hint shown in Reminders: *“STK ve 2-letém intervalu, POV není povinné.”* — also skipped by the seasonal tyre reminder |
+| **Veteran** | Same MOT exemptions as Historic; usually paired with status *In restoration* or *In storage* |
 
 ---
 
@@ -193,14 +224,58 @@ Two reminder types:
 - The app can automatically remind you to change tyres (Summer/Winter)
 - Enabled in **Settings** → **Tyre change reminders**
 - Alerts 30 days before **Nov 1** (Winter side) and **Mar 31** (Summer side) for all active vehicles
+- Vehicles classified as **Historic** or **Veteran** are skipped (a small hint is shown on the page)
 
 Status: `OK` · `Due soon` (within warning threshold) · `Overdue`
 
+The Reminders page is split into two sections:
+
+- **Active** — operational + for_sale vehicles
+- **Suspended** (collapsible, expanded by default) — vehicles in storage or in restoration
+
+Sold / decommissioned vehicles are not listed at all.
+
 ---
 
-## Sidebar Vehicle Order
+## Service & Planned Jobs
 
-Active vehicles first (alphabetical A→Z), then inactive vehicles (alphabetical A→Z).
+The **Service** page tracks planned-service work orders ("jobs"). Each job represents a visit to a workshop and has:
+
+| Field | Notes |
+| --- | --- |
+| Vehicle | Picker excludes archived vehicles (sold / decommissioned) for new jobs |
+| Workshop | Free text with autocomplete from previously used workshops |
+| Start / end date | Date pickers |
+| Status | `planned` · `in_progress` · `done` · `cancelled` |
+| Estimated cost | Used as the price when the job is converted to a service record |
+| Tasks | Checklist — items can be ticked off directly from the fleet card |
+| Notes | Free text |
+
+The page groups jobs into four sections: *Currently in service*, *Planned*, *Done* (collapsed) and *Cancelled* (collapsed). Active and upcoming jobs are surfaced on the matching fleet card as a 🔧 or 📅 pill (hover/tap to see the workshop + dates). Marking a job **Done → record** opens a pre-filled record modal (category *Service & repairs*, description = workshop + ticked tasks, price = estimated cost) and flips the job status to `done`.
+
+---
+
+## Sample / Showcase Data
+
+A ready-to-import demo dataset lives in [`mycars_showcase_data.json`](mycars_showcase_data.json). It covers all 6 vehicle statuses and all 4 classifications:
+
+- **Operational:** Audi A4 Avant, BMW 530d xDrive (daily drivers)
+- **For sale:** Honda Civic Type R (with asking price + listing URL)
+- **In restoration:** Škoda 1000 MB (1967, veterán) — mid-restoration
+- **Archive (sold):** Lexus IS 250, Audi Q7, Alfa Giulia, VW Transporter, Škoda 110 R Coupé
+- **Archive (decommissioned):** BMW 320i (totalled after rear-end collision)
+
+It also includes four sample **jobs** spanning *planned*, *in_progress* and *done* statuses, plus the matching reminders.
+
+To try it: **Settings → Import backup → select `mycars_showcase_data.json`**.
+
+> ⚠️ Import is destructive — it overwrites your current data. Export a backup first if needed.
+
+---
+
+## Sidebar / Switcher Vehicle Order
+
+Vehicle switcher (top-bar dropdown) and the *Active* section of the Fleet page list vehicles alphabetically (A→Z). Archived vehicles (sold / decommissioned) only appear in the collapsible **Archive** section of the Fleet page and are excluded from the switcher's main list.
 
 ---
 
@@ -352,7 +427,7 @@ Datum,Typ paliva,Tankováno litrů,Cena za litr,Celková cena,Stav tachometru,Km
 | **WCAG** | Text contrast ratios ≥ 4.5:1 on all three themes |
 | **PWA** | Installable on iOS 16.4+ (Safari → Add to Home Screen) and Android/Chrome |
 | **Service Worker** | Cache-first, offline-capable after first load; update detection with in-app toast notification |
-| **Codebase** | ~5 000 lines; split into `MyCars.html` (shell, styles) and `mycars.js` (logic) |
+| **Codebase** | `MyCars.html` (shell, styles) + `mycars.js` (logic, ~5 000 lines) + `mycars-sw.js` (service worker) |
 
 ### localStorage data structure
 
@@ -372,43 +447,65 @@ The `settings` object inside the stored JSON:
   "cars": [
     {
       "id": "uid",
-      "make": "Škoda", "model": "Octavia", "year": 2008,
-      "plate": "1Z3 4567", "vin": "...", "fuelType": "petrol",
-      "status": "active", "startOdo": 243927, "color": "#e8c547",
-      "stk": "2026-09-05", "stkWarn": 30,
+      "make": "Škoda", "model": "1000 MB", "year": 1967,
+      "plate": "VET 1967", "vin": "...", "fuelType": "petrol",
+      "status": "in_restoration",
+      "classification": "veteran",
+      "startOdo": 89450, "color": "#a86b3d",
+      "stk": "2027-06-01", "stkWarn": 30,
       "emission": null, "emissionWarn": 30,
-      "pov": "2026-03-14", "povWarn": 30,
-      "insurance": null, "insuranceWarn": 30,
-      "oilInterval": 10000, "oilLastKm": 270000, "oilWarn": 1000,
-      "acquired": "2022-03-11", "decommissioned": null,
+      "pov": null, "povWarn": 30,
+      "insurance": "2026-05-01", "insuranceWarn": 30,
+      "oilInterval": 10000, "oilLastKm": 89450, "oilWarn": 1000,
+      "acquired": "2024-04-12", "decommissioned": null,
+      "salePrice": null, "saleAdUrl": null,
       "note": ""
     }
   ],
   "records": [
     {
-      "id": "uid", "carId": "...", "date": "2022-09-05",
-      "odo": 245448, "desc": "Oil change", "cat": "Provozní náplně",
-      "qty": 7, "price": 231.43, "note": "",
+      "id": "uid", "carId": "...", "date": "2025-03-11",
+      "odo": 89450, "desc": "Engine rebuild", "cat": "Servis a opravy",
+      "qty": 1, "price": 47800, "note": "",
       "createdAt": "...", "updatedAt": "..."
     }
   ],
   "fuels": [
     {
-      "id": "uid", "carId": "...", "date": "2022-11-08",
-      "odo": 247127, "fuelTypeId": "p95", "liters": 44,
-      "cost": 2068, "fullTank": true, "note": "",
+      "id": "uid", "carId": "...", "date": "2025-06-21",
+      "odo": 89512, "fuelTypeId": "p98", "liters": 23.4,
+      "cost": 1029, "fullTank": true, "note": "",
       "createdAt": "..."
     }
   ],
   "reminders": [
     {
       "id": "uid", "carId": "...", "name": "Oil change",
-      "type": "km", "interval": 10000, "lastDone": 270000, "warnAt": 1000
+      "type": "km", "interval": 10000, "lastDone": 89450, "warnAt": 1000
     }
   ],
-  "savedAt": "2026-03-16T12:00:00.000Z"
+  "jobs": [
+    {
+      "id": "uid", "carId": "...", "status": "planned",
+      "shop": "Chromování Janáček",
+      "startDate": "2026-08-03", "endDate": "2026-08-21",
+      "estimatedCost": 22000, "notes": "",
+      "tasks": [{ "text": "Demontáž lišt", "done": false }],
+      "createdAt": "..."
+    }
+  ],
+  "settings": { "tireReminders": true, "theme": "dark" },
+  "lang": "cs",
+  "savedAt": "2026-06-17T12:00:00.000Z"
 }
 ```
+
+#### Field reference
+
+- `status` — one of `operational` · `storage` · `in_restoration` · `for_sale` · `sold` · `decommissioned`. Legacy `active` / `inactive` values from older backups are migrated on load and on import.
+- `classification` — one of `standard` · `youngtimer` · `historic` · `veteran` (defaults to `standard` when missing).
+- `salePrice`, `saleAdUrl` — optional; only used when `status === "for_sale"`.
+- `jobs[].status` — `planned` · `in_progress` · `done` · `cancelled`.
 
 > **Note:** Expense categories are stored internally in Czech (e.g. `"Provozní náplně"` = Fluids & consumables, `"Servis a opravy"` = Service & repairs). The UI displays translated names based on the selected language.
 
