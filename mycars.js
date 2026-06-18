@@ -83,7 +83,9 @@ let state = {
   analyticsCarId:null,  // null = all active | '__all__' = all incl. inactive | carId = single car
   analyticsTab:'overview', // 'overview' | 'compare'
   remindersCarId:null,   // null = all active | carId = single car
-  cars:[], records:[], reminders:[], fuels:[]
+  serviceCarId:null,     // null = all active | carId = single car (filter for Service page)
+  editingJobId:null,
+  cars:[], records:[], reminders:[], fuels:[], jobs:[]
 };
 
 const CATEGORIES = {
@@ -103,6 +105,28 @@ const FUEL_TYPE_LABELS = {
   petrol:{cs:'Benzín',en:'Petrol'}, diesel:{cs:'Diesel',en:'Diesel'}, lpg:{cs:'LPG',en:'LPG'},
   electric:{cs:'Elektro',en:'Electric'}, hybrid:{cs:'Hybrid',en:'Hybrid'}, phev:{cs:'PHEV',en:'PHEV'}
 };
+
+// ─── CAR STATUS / CLASSIFICATION (v3.15) ─────────────────────────────────
+// Pořadí v poli = pořadí pro řazení (driving → suspended → archive).
+const CAR_STATUSES = ['operational','storage','in_restoration','for_sale','sold','decommissioned'];
+const CAR_CLASSIFICATIONS = ['standard','youngtimer','historic','veteran'];
+
+// Normalizuje starý boolík active/inactive na nový 6-stavový model + doplní klasifikaci.
+function migrateCar(c){
+  if(!c||typeof c!=='object') return c;
+  if(c.status==='active') c.status='operational';
+  else if(c.status==='inactive') c.status='storage';
+  if(!CAR_STATUSES.includes(c.status)) c.status='operational';
+  if(!CAR_CLASSIFICATIONS.includes(c.classification)) c.classification='standard';
+  return c;
+}
+// "Archivovaná" = vozidla, která uživatel už nevlastní / nepoužívá k provozu.
+function isCarArchived(c){ return c?.status==='decommissioned' || c?.status==='sold'; }
+function isCarSuspended(c){ return c?.status==='storage' || c?.status==='in_restoration'; }
+function isCarServiceable(c){ return !isCarArchived(c); }
+function isCarDriving(c){ return c?.status==='operational' || c?.status==='for_sale'; }
+function carStatusLabel(s){ return t('car_status_'+(CAR_STATUSES.includes(s)?s:'operational')); }
+function carClassificationLabel(cl){ return t('car_class_'+(CAR_CLASSIFICATIONS.includes(cl)?cl:'standard')); }
 
 const T = {
   cs:{
@@ -124,7 +148,47 @@ const T = {
     consumption:'Spotřeba',avg_consumption:'Průměrná spotřeba',total_fueled:'Celkem natankováno',
     total_fuel_cost:'Celkem za palivo',fuel_type:'Typ paliva',
     active:'Aktivní',inactive:'Neaktivní',
+    // Stavy vozidla (6)
+    car_status_label:'Stav',
+    car_status_placeholder:'— Vyberte —',
+    car_status_operational:'V provozu',
+    car_status_storage:'V depozitu',
+    car_status_in_restoration:'V renovaci',
+    car_status_for_sale:'Na prodej',
+    car_status_sold:'Prodáno',
+    car_status_decommissioned:'Vyřazené',
+    // Klasifikace vozidla (4)
+    car_class_label:'Klasifikace',
+    car_class_standard:'Běžné',
+    car_class_youngtimer:'Youngtimer',
+    car_class_historic:'Historické (HV)',
+    car_class_veteran:'Veterán',
+    // Prodej
+    sale_price:'Požadovaná cena',
+    sale_ad_url:'URL inzerátu',
+    // Archiv ve Fleetu / Switcheru
+    vehicle_archive:'Archiv',
+    active_vehicles:'Aktivní vozidla',
+    no_archived_vehicles:'Žádná vyřazená vozidla',
+    // Reminders
+    reminders_suspended_section:'Pozastavené (auto v depozitu nebo renovaci)',
+    historic_hint:'Historické vozidlo: STK ve 2-letém intervalu, POV není povinné.',
     stk:'STK',emission:'Emise',pov:'POV',insurance:'Pojištění',
+    // Service / Jobs
+    service:'Servis', service_title:'Plánovaný servis',
+    new_job:'Naplánovat servis', edit_job:'Upravit zakázku',
+    shop:'Servis / dílna', start_date:'Začátek', end_date:'Konec',
+    tasks:'Úkony', add_task:'Přidat úkon',
+    estimated_cost:'Odhadovaná cena',
+    job_status_planned:'Naplánováno', job_status_in_progress:'V servisu',
+    job_status_done:'Hotovo', job_status_cancelled:'Zrušeno',
+    job_section_current:'Aktuálně v servisu', job_section_planned:'Naplánováno',
+    job_section_done:'Dokončeno', job_section_cancelled:'Zrušeno',
+    no_jobs:'Žádné naplánované servisní záznamy',
+    mark_in_progress:'Auto je v servisu', mark_done:'Hotovo → záznam',
+    job_in_service_badge:'V servisu', job_planned_badge:'Plán. servis',
+    confirm_delete_job:'Opravdu smazat tuto zakázku?',
+    job_saved:'Zakázka uložena', job_converted:'Převedeno na záznam',
   },
   en:{
     dashboard:'Dashboard',records:'Records',analytics:'Analytics',reminders:'Reminders',fuel:'Fuel log',
@@ -145,7 +209,47 @@ const T = {
     consumption:'Consumption',avg_consumption:'Avg. consumption',total_fueled:'Total fuelled',
     total_fuel_cost:'Total fuel cost',fuel_type:'Fuel type',
     active:'Active',inactive:'Inactive',
+    // Vehicle statuses (6)
+    car_status_label:'Status',
+    car_status_placeholder:'— Select —',
+    car_status_operational:'Operational',
+    car_status_storage:'In storage',
+    car_status_in_restoration:'In restoration',
+    car_status_for_sale:'For sale',
+    car_status_sold:'Sold',
+    car_status_decommissioned:'Decommissioned',
+    // Vehicle classifications (4)
+    car_class_label:'Classification',
+    car_class_standard:'Standard',
+    car_class_youngtimer:'Youngtimer',
+    car_class_historic:'Historic (HV)',
+    car_class_veteran:'Veteran',
+    // Sale
+    sale_price:'Asking price',
+    sale_ad_url:'Listing URL',
+    // Archive in Fleet / Switcher
+    vehicle_archive:'Archive',
+    active_vehicles:'Active vehicles',
+    no_archived_vehicles:'No decommissioned vehicles',
+    // Reminders
+    reminders_suspended_section:'Suspended (storage or restoration)',
+    historic_hint:'Historic vehicle: MOT every 2 years, liability insurance optional.',
     stk:'STK',emission:'Emissions',pov:'Liability ins.',insurance:'Insurance',
+    // Service / Jobs
+    service:'Service', service_title:'Planned service',
+    new_job:'Schedule service', edit_job:'Edit work order',
+    shop:'Shop / mechanic', start_date:'Start', end_date:'End',
+    tasks:'Tasks', add_task:'Add task',
+    estimated_cost:'Estimated cost',
+    job_status_planned:'Planned', job_status_in_progress:'At shop',
+    job_status_done:'Done', job_status_cancelled:'Cancelled',
+    job_section_current:'Currently at shop', job_section_planned:'Scheduled',
+    job_section_done:'Completed', job_section_cancelled:'Cancelled',
+    no_jobs:'No scheduled service jobs',
+    mark_in_progress:'Car is at shop', mark_done:'Done → record',
+    job_in_service_badge:'At shop', job_planned_badge:'Scheduled',
+    confirm_delete_job:'Really delete this work order?',
+    job_saved:'Work order saved', job_converted:'Converted to record',
   }
 };
 
@@ -442,24 +546,43 @@ function safeJsonParse(text){
   });
 }
 function sanitizeImported(d){
-  if(!d||typeof d!=='object') return {cars:[],records:[],fuels:[],reminders:[]};
+  if(!d||typeof d!=='object') return {cars:[],records:[],fuels:[],reminders:[],jobs:[]};
   const out={
     cars:Array.isArray(d.cars)?d.cars.slice(0,MAX_ARR_LEN):[],
     records:Array.isArray(d.records)?d.records.slice(0,MAX_ARR_LEN):[],
     fuels:Array.isArray(d.fuels)?d.fuels.slice(0,MAX_ARR_LEN):[],
     reminders:Array.isArray(d.reminders)?d.reminders.slice(0,MAX_ARR_LEN):[],
+    jobs:Array.isArray(d.jobs)?d.jobs.slice(0,MAX_ARR_LEN):[],
   };
   // Drop entries that are not plain objects or have invalid id
   const isObj=o=>o&&typeof o==='object'&&!Array.isArray(o);
   const validId=id=>typeof id==='string'&&/^[A-Za-z0-9_\-]{1,64}$/.test(id);
   const fixId=o=>{ if(!validId(o.id)) o.id=uid(); return o; };
-  out.cars=out.cars.filter(isObj).map(fixId);
+  out.cars=out.cars.filter(isObj).map(fixId).map(migrateCar);
   out.records=out.records.filter(isObj).map(fixId);
   out.fuels=out.fuels.filter(isObj).map(fixId);
   out.reminders=out.reminders.filter(isObj).map(fixId);
-  // settings & lang — pouze pokud jsou platné typy
-  if(isObj(d.settings)) out.settings=d.settings;
-  if(typeof d.lang==='string'&&(d.lang==='cs'||d.lang==='en')) out.lang=d.lang;
+  // Jobs: sanitizovat tasks (vnořený array)
+  out.jobs=out.jobs.filter(isObj).map(j=>{
+    fixId(j);
+    j.tasks=Array.isArray(j.tasks)?j.tasks.filter(isObj).slice(0,200).map(tk=>({
+      text: typeof tk.text==='string'?tk.text.slice(0,MAX_STR_LEN):'',
+      done: !!tk.done
+    })):[];
+    // status whitelisting
+    const allowed={planned:1,in_progress:1,done:1,cancelled:1};
+    if(!allowed[j.status]) j.status='planned';
+    return j;
+  });
+  // settings — whitelist známých polí + typová kontrola (cizí klíče zahodíme).
+  if(isObj(d.settings)){
+    const s={};
+    if(typeof d.settings.tireReminders==='boolean') s.tireReminders=d.settings.tireReminders;
+    if(d.settings.theme==='dark'||d.settings.theme==='bright'||d.settings.theme==='glass') s.theme=d.settings.theme;
+    if(Object.keys(s).length) out.settings=s;
+  }
+  // lang — pouze pokud je platná hodnota
+  if(d.lang==='cs'||d.lang==='en') out.lang=d.lang;
   return out;
 }
 function loadData(){
@@ -468,6 +591,7 @@ function loadData(){
     if(d){
       const p=sanitizeImported(safeJsonParse(d));
       state.cars=p.cars;state.records=p.records;state.reminders=p.reminders;state.fuels=p.fuels;
+      state.jobs=p.jobs||[];
       if(p.settings)Object.assign(state.settings,p.settings);
       if(p.lang)state.lang=p.lang;
     }
@@ -478,7 +602,7 @@ function loadData(){
 }
 function saveData(){
   try{
-    localStorage.setItem('mycars_v3',JSON.stringify({cars:state.cars,records:state.records,reminders:state.reminders,fuels:state.fuels,settings:state.settings,lang:state.lang,savedAt:new Date().toISOString()}));
+    localStorage.setItem('mycars_v3',JSON.stringify({cars:state.cars,records:state.records,reminders:state.reminders,fuels:state.fuels,jobs:state.jobs,settings:state.settings,lang:state.lang,savedAt:new Date().toISOString()}));
     return true;
   }catch(e){
     // QuotaExceededError nebo jiná storage chyba — nesmí shodit aplikaci.
@@ -534,10 +658,22 @@ function setLang(l){
     const val=el.getAttribute('data-title-'+l);
     if(val) el.title=val;
   });
-  const tog=document.getElementById('c-status-toggle');
-  if(tog) updateStatusToggleLabel(tog.checked);
+  const stSel=document.getElementById('c-status');
+  if(stSel){
+    // Přeložíme jen options + label, hodnotu zachováme
+    [...stSel.options].forEach(o=>{
+      if(o.value === '') o.textContent = t('car_status_placeholder');
+      else o.textContent = t('car_status_'+o.value)||o.value;
+    });
+  }
+  const clSel=document.getElementById('c-classification');
+  if(clSel){
+    [...clSel.options].forEach(o=>{ o.textContent = t('car_class_'+o.value)||o.value; });
+  }
   const lbl=document.getElementById('c-status-label');
   if(lbl) lbl.textContent=l==='cs'?'Stav':'Status';
+  const lbl2=document.getElementById('c-class-label');
+  if(lbl2) lbl2.textContent=l==='cs'?'Klasifikace':'Classification';
   renderAll();
 }
 
@@ -552,15 +688,18 @@ function renderAll(){
 
 function renderCarsList(){
   const el=document.getElementById('cars-list');
+  // Pořadí: operational → for_sale → storage → in_restoration → decommissioned; pak abecedě.
+  const rank = c => CAR_STATUSES.indexOf(c.status||'operational');
   const sorted=[...state.cars].sort((a,b)=>{
-    const aActive=a.status!=='inactive';const bActive=b.status!=='inactive';
-    if(aActive!==bActive) return aActive?-1:1;
+    const ra=rank(a), rb=rank(b);
+    if(ra!==rb) return ra-rb;
     return `${a.make||''} ${a.model||''}`.localeCompare(`${b.make||''} ${b.model||''}`,'cs');
   });
   el.innerHTML=sorted.map(car=>{
     const sid=safeId(car.id);
+    const dimCls = (isCarArchived(car)||isCarSuspended(car)) ? 'inactive-car' : '';
     return `
-    <div class="car-item ${car.id===state.currentCarId?'active':''} ${car.status==='inactive'?'inactive-car':''}" data-action="selectCar" data-id="${sid}">
+    <div class="car-item ${car.id===state.currentCarId?'active':''} ${dimCls}" data-action="selectCar" data-id="${sid}">
       ${carDotHtml(car.color, 'car-dot')}
       <span class="car-name">${esc(car.make||'')} ${esc(car.model||car.name||'')}
         <small>${car.plate?esc(car.plate)+' · ':''} ${fmtNum(getMaxOdo(car.id))} km</small>
@@ -647,15 +786,15 @@ function renderCarSwitcher(){
 
   const cs=state.lang==='cs';
   const sort=(arr)=>arr.sort((a,b)=>`${a.make} ${a.model}`.localeCompare(`${b.make} ${b.model}`,'cs'));
-  const activeCars=sort(state.cars.filter(c=>c.status!=='inactive'));
-  const inactiveCars=sort(state.cars.filter(c=>c.status==='inactive'));
+  const activeCars=sort(state.cars.filter(c=>!isCarArchived(c)));
+  const archivedCars=sort(state.cars.filter(c=>isCarArchived(c)));
 
   const isCtx=['analytics','reminders'].includes(page);
   const ctxVal=page==='analytics'?state.analyticsCarId:state.remindersCarId;
   const selFn=page==='analytics'?'selectAnalyticsCar':'selectRemindersCar';
 
   // Min cars to show on regular pages
-  if(!isCtx && state.cars.filter(c=>c.status!=='inactive').length<2){
+  if(!isCtx && state.cars.filter(c=>!isCarArchived(c)).length<2){
     bar.style.display='none';return;
   }
   if(!state.cars.length){bar.style.display='none';return;}
@@ -666,9 +805,9 @@ function renderCarSwitcher(){
   let tDot,tName,tPlate='';
   if(isCtx){
     if(!ctxVal){
-      tDot='var(--accent)'; tName=cs?`Všechna aktivní (${activeCars.length})`:`All active (${activeCars.length})`;
+      tDot='var(--accent)'; tName=cs?`Všechna v provozu (${activeCars.length})`:`All in service (${activeCars.length})`;
     } else if(ctxVal==='__all__'){
-      tDot='var(--text2)'; tName=cs?`Všechna vozidla (${state.cars.length})`:`All vehicles (${state.cars.length})`;
+      tDot='var(--text2)'; tName=cs?`Všechna vč. archivu (${state.cars.length})`:`All incl. archive (${state.cars.length})`;
     } else {
       const c=getCar(ctxVal); tDot=c?.color||'#888'; tName=`${c?.make||''} ${c?.model||''}`.trim(); tPlate=c?.plate||'';
     }
@@ -701,31 +840,31 @@ function renderCarSwitcher(){
     const allAct=ctxVal==='__all__';
     menuHtml+=`<div class="csw-menu-item ${allActAct?'active':''}" data-action="${selFn}" data-id="__all__active">`
       +`<span class="csw-dot" style="background:var(--accent)"></span>`
-      +`<span class="csw-make">${cs?`Všechna aktivní (${activeCars.length})`:`All active (${activeCars.length})`}</span></div>`;
-    if(inactiveCars.length){
+      +`<span class="csw-make">${cs?`Všechna v provozu (${activeCars.length})`:`All in service (${activeCars.length})`}</span></div>`;
+    if(archivedCars.length){
       menuHtml+=`<div class="csw-menu-item ${allAct?'active':''}" data-action="${selFn}" data-id="__all__">`
         +`<span class="csw-dot" style="background:var(--text2)"></span>`
-        +`<span class="csw-make">${cs?`Všechna vozidla (${state.cars.length})`:`All vehicles (${state.cars.length})`}</span></div>`;
+        +`<span class="csw-make">${cs?`Všechna vč. archivu (${state.cars.length})`:`All incl. archive (${state.cars.length})`}</span></div>`;
     }
     menuHtml+='<div class="csw-menu-sep"></div>';
     if(activeCars.length){
-      menuHtml+=`<div class="csw-menu-label">${cs?'Aktivní':'Active'}</div>`;
+      menuHtml+=`<div class="csw-menu-label">${t('active_vehicles')}</div>`;
       menuHtml+=activeCars.map(c=>makeCar(c,'',selFn)).join('');
     }
-    if(inactiveCars.length){
+    if(archivedCars.length){
       menuHtml+='<div class="csw-menu-sep"></div>';
-      menuHtml+=`<div class="csw-menu-label">${cs?'Neaktivní':'Inactive'}</div>`;
-      menuHtml+=inactiveCars.map(c=>makeCar(c,'csw-inactive',selFn)).join('');
+      menuHtml+=`<div class="csw-menu-label">${t('vehicle_archive')}</div>`;
+      menuHtml+=archivedCars.map(c=>makeCar(c,'csw-inactive',selFn)).join('');
     }
   } else {
     if(activeCars.length){
-      menuHtml+=`<div class="csw-menu-label">${cs?'Aktivní':'Active'}</div>`;
+      menuHtml+=`<div class="csw-menu-label">${t('active_vehicles')}</div>`;
       menuHtml+=activeCars.map(c=>makeCar(c,'','switchCar')).join('');
     }
-    if(inactiveCars.length){
+    if(archivedCars.length){
       menuHtml+='<div class="csw-menu-sep"></div>';
-      menuHtml+=`<div class="csw-menu-label">${cs?'Neaktivní':'Inactive'}</div>`;
-      menuHtml+=inactiveCars.map(c=>makeCar(c,'csw-inactive','switchCar')).join('');
+      menuHtml+=`<div class="csw-menu-label">${t('vehicle_archive')}</div>`;
+      menuHtml+=archivedCars.map(c=>makeCar(c,'csw-inactive','switchCar')).join('');
     }
   }
 
@@ -825,22 +964,23 @@ function renderPage(){
     fleet:cs?'Přehled vozů':'Fleet',
     dashboard:t('dashboard'),records:t('records'),fuel:t('fuel'),
     analytics:t('analytics'),reminders:t('reminders'),
+    service:t('service'),
     settings:cs?'Nastavení':'Settings',
     'vehicle-edit':cs?'Upravit vozidlo':'Edit vehicle',
     'vehicle-wizard':cs?'Nové vozidlo':'New vehicle'
   };
   const pageName=pageNames[page]||page;
-  const activeCars=state.cars.filter(c=>c.status!=='inactive');
+  const activeCars=state.cars.filter(c=>!isCarArchived(c));
 
   let subtitle='';
   if(page==='analytics'){
     const v=state.analyticsCarId;
-    if(!v) subtitle=cs?`Všechna aktivní (${activeCars.length})`:`All active (${activeCars.length})`;
-    else if(v==='__all__') subtitle=cs?`Všechna vozidla (${state.cars.length})`:`All vehicles (${state.cars.length})`;
+    if(!v) subtitle=cs?`Všechna v provozu (${activeCars.length})`:`All in service (${activeCars.length})`;
+    else if(v==='__all__') subtitle=cs?`Všechna vč. archivu (${state.cars.length})`:`All incl. archive (${state.cars.length})`;
     else{ const c=getCar(v); subtitle=c?`${c.make||''} ${c.model||''}`.trim():''; }
   } else if(page==='reminders'){
     const v=state.remindersCarId;
-    if(!v) subtitle=cs?`Všechna aktivní (${activeCars.length})`:`All active (${activeCars.length})`;
+    if(!v) subtitle=cs?`Všechna v provozu (${activeCars.length})`:`All in service (${activeCars.length})`;
     else{ const c=getCar(v); subtitle=c?`${c.make||''} ${c.model||''}`.trim():''; }
   } else if(page==='vehicle-edit'){
     const editCar=getCar(state.editingCarId);
@@ -852,7 +992,7 @@ function renderPage(){
   document.getElementById('page-title').innerHTML=
     esc(pageName)+(subtitle?` <span>— ${esc(subtitle)}</span>`:'');
 
-  const pages={fleet:renderFleet,dashboard:renderDashboard,records:renderRecords,fuel:renderFuelPage,analytics:renderAnalytics,reminders:renderRemindersPage,settings:renderSettings,'vehicle-edit':renderCarEditPage,'vehicle-wizard':renderVehicleWizard};
+  const pages={fleet:renderFleet,dashboard:renderDashboard,records:renderRecords,fuel:renderFuelPage,analytics:renderAnalytics,reminders:renderRemindersPage,service:renderServicePage,settings:renderSettings,'vehicle-edit':renderCarEditPage,'vehicle-wizard':renderVehicleWizard};
   const contentEl = document.getElementById('content');
   contentEl.innerHTML='';
   contentEl.classList.remove('page-in');
@@ -879,10 +1019,19 @@ function fillCarForm(car){
   // Dates basic
   setDateTriple('c-acquired',      car?.acquired||'');
   setDateTriple('c-decommissioned',car?.decommissioned||'');
-  // Status toggle
-  const isActive = (car?.status||'active')==='active';
-  const tog = document.getElementById('c-status-toggle');
-  if(tog){ tog.checked = isActive; updateStatusToggleLabel(isActive); tog.onchange=()=>updateStatusToggleLabel(tog.checked); }
+  // Status + klasifikace (v3.15)
+  const stSel = document.getElementById('c-status');
+  if(stSel){
+    const norm = CAR_STATUSES.includes(car?.status) ? car.status
+               : (car?.status==='active'?'operational':car?.status==='inactive'?'storage':'operational');
+    stSel.value = norm;
+  }
+  const clSel = document.getElementById('c-classification');
+  if(clSel) clSel.value = CAR_CLASSIFICATIONS.includes(car?.classification) ? car.classification : 'standard';
+  // Pole pro prodej
+  setVal('c-sale-price', car?.salePrice||'');
+  setVal('c-sale-url',   car?.saleAdUrl||'');
+  toggleSaleFields();
   // Docs
   setDateTriple('c-stk',    car?.stk||'');    setVal('c-stk-warn',    car?.stkWarn??30);
   setDateTriple('c-emission',car?.emission||'');setVal('c-emission-warn',car?.emissionWarn??30);
@@ -1023,16 +1172,26 @@ function renderCarEditPage(){
       <div class="edit-accordion">${accordionHtml}</div>
     </div>
     <div class="edit-sticky-bar">
-      <button class="btn btn-danger" data-action="deleteCar" style="padding:9px 14px">
-        ${cs?'Smazat':'Delete'}
-      </button>
-      <div class="edit-sticky-spacer"></div>
-      <button class="btn btn-ghost" data-action="cancelCarEdit">
-        ${cs?'Zrušit':'Cancel'}
-      </button>
-      <button class="btn btn-primary" data-action="saveCar">
-        ${cs?'Uložit':'Save'}
-      </button>
+      <div class="edit-sticky-inner">
+        <div class="edit-sticky-group edit-sticky-left">
+          <button class="btn btn-danger" data-action="deleteCar">
+            ${cs?'Smazat':'Delete'}
+          </button>
+          ${!isCarArchived(car)?`<button class="btn btn-ghost" data-action="archiveCar" data-id="${safeId(car.id)}" title="${cs?'Označit jako vyřazené (uloží se historie)':'Mark as decommissioned (history preserved)'}">
+            ${cs?'Archivovat':'Archive'}
+          </button>`:`<button class="btn btn-ghost" data-action="unarchiveCar" data-id="${safeId(car.id)}" title="${cs?'Vrátit do provozu':'Return to service'}">
+            ${cs?'Vrátit z archivu':'Restore'}
+          </button>`}
+        </div>
+        <div class="edit-sticky-group edit-sticky-right">
+          <button class="btn btn-ghost" data-action="cancelCarEdit">
+            ${cs?'Zrušit':'Cancel'}
+          </button>
+          <button class="btn btn-primary" data-action="saveCar">
+            ${cs?'Uložit změny':'Save changes'}
+          </button>
+        </div>
+      </div>
     </div>`;
 
   // Fill form values & init tyre tab
@@ -1121,9 +1280,10 @@ function renderVehicleWizard(){
     s.classList.toggle('selected', s.dataset.color===state.selectedColor);
     s.onclick=()=>{ state.selectedColor=s.dataset.color; document.querySelectorAll('.color-swatch').forEach(x=>x.classList.remove('selected')); s.classList.add('selected'); };
   });
-  // Status toggle init
-  const tog=document.getElementById('c-status-toggle');
-  if(tog){ if(!tog.dataset.init){tog.checked=true; updateStatusToggleLabel(true); tog.dataset.init='1';} tog.onchange=()=>updateStatusToggleLabel(tog.checked); }
+  // Status dropdown init (v3.15 — default = '' aby uživatel musel vybrat)
+  const stSel=document.getElementById('c-status');
+  if(stSel && !stSel.dataset.init){ stSel.value=''; stSel.dataset.init='1'; }
+  toggleSaleFields();
 }
 
 function wizardNext(){
@@ -1132,8 +1292,14 @@ function wizardNext(){
     const make=document.getElementById('c-make')?.value.trim();
     const model=document.getElementById('c-model')?.value.trim();
     const fuel=document.getElementById('c-fueltype')?.value;
+    const stat=document.getElementById('c-status')?.value;
     if(!make||!model||!fuel){
       showToast(state.lang==='cs'?'Vyplňte značku, model a typ paliva':'Enter make, model and fuel type','error');
+      return;
+    }
+    if(!CAR_STATUSES.includes(stat)){
+      showToast(state.lang==='cs'?'Vyberte stav vozidla':'Please select a vehicle status','error');
+      document.getElementById('c-status')?.focus();
       return;
     }
   }
@@ -1170,8 +1336,14 @@ function _saveWizardDraft(){
     _wizardDraftData[p]=getDateTriple(p);
   });
   _wizardDraftData['_color']=state.selectedColor;
-  const tog=document.getElementById('c-status-toggle');
-  if(tog) _wizardDraftData['_status']=tog.checked;
+  const stSel=document.getElementById('c-status');
+  if(stSel) _wizardDraftData['_status']=stSel.value;
+  const clSel=document.getElementById('c-classification');
+  if(clSel) _wizardDraftData['_classification']=clSel.value;
+  const spEl=document.getElementById('c-sale-price');
+  if(spEl) _wizardDraftData['_salePrice']=spEl.value;
+  const suEl=document.getElementById('c-sale-url');
+  if(suEl) _wizardDraftData['_saleAdUrl']=suEl.value;
   const autoEl=document.getElementById('c-has-automatic');
   const x4El=document.getElementById('c-has-4x4');
   if(autoEl) _wizardDraftData['_hasAutomatic']=autoEl.checked;
@@ -1189,8 +1361,19 @@ function _loadWizardDraft(){
     if(d[p]!==undefined) setDateTriple(p,d[p]||'');
   });
   if(d['_color']){ state.selectedColor=d['_color']; document.querySelectorAll('.color-swatch').forEach(s=>{ s.classList.toggle('selected',s.dataset.color===state.selectedColor); }); }
-  const tog=document.getElementById('c-status-toggle');
-  if(tog&&d['_status']!==undefined){ tog.checked=d['_status']; updateStatusToggleLabel(tog.checked); }
+  const stSel=document.getElementById('c-status');
+  if(stSel && d['_status']!==undefined){
+    // Migrace starého boolean draftu (true=active, false=inactive)
+    const v = d['_status']===true ? 'operational' : d['_status']===false ? 'storage' : d['_status'];
+    if(CAR_STATUSES.includes(v)) stSel.value=v;
+  }
+  const clSel=document.getElementById('c-classification');
+  if(clSel && d['_classification']!==undefined && CAR_CLASSIFICATIONS.includes(d['_classification'])){
+    clSel.value = d['_classification'];
+  }
+  if(d['_salePrice']!==undefined) setVal('c-sale-price', d['_salePrice']);
+  if(d['_saleAdUrl']!==undefined) setVal('c-sale-url',   d['_saleAdUrl']);
+  toggleSaleFields();
   // Drivetrain — nastavit hodnoty (HTML generuje buildBasicSectionForm / buildServiceSectionForm)
   setVal('c-gearbox-oil-interval', parseInt(d['c-gearbox-oil-interval'])||'');
   setVal('c-gearbox-oil-last',     parseInt(d['c-gearbox-oil-last'])||'');
@@ -1224,9 +1407,9 @@ function renderFleet(){
     );
   }
 
-  const activeCars=sortCars(filtered.filter(c=>c.status!=='inactive'));
-  const inactiveCars=sortCars(filtered.filter(c=>c.status==='inactive'));
-  const allFleetCars=[...activeCars,...inactiveCars];
+  const activeCars=sortCars(filtered.filter(c=>!isCarArchived(c)));
+  const archivedCars=sortCars(filtered.filter(c=>isCarArchived(c)));
+  const allFleetCars=[...activeCars,...archivedCars];
 
   if(!allFleetCars.length){
     if(state.carSearch){
@@ -1261,7 +1444,8 @@ function renderFleet(){
   const cardsMap={};
   allFleetCars.forEach(car=>{
     cardsMap[car.id]=(car=>{
-    const isActive=car.status!=='inactive';
+    const isActive=!isCarArchived(car) && !isCarSuspended(car); // používá se pro “život” (olej, palivo, alerty)
+    const isArchived=isCarArchived(car);
     const maxOdo=getMaxOdo(car.id);
     const fuels=getCarFuels(car.id);
     const lastFuel=fuels.length?[...fuels].sort((a,b)=>b.date.localeCompare(a.date))[0]:null;
@@ -1314,6 +1498,22 @@ function renderFleet(){
 
     // Doc pills — only show docs that have a date set
     const docHtml=`<div class="fleet-doc-row">
+      ${(()=>{
+        // Plánovaný servis — badge má prioritu (in_progress přebíjí planned)
+        const activeJob = getActiveJobForCar(car.id);
+        if(activeJob){
+          const shop = activeJob.shop ? ` · ${esc(activeJob.shop)}` : '';
+          const tip = (cs?'Od ':'From ')+fmtDate(activeJob.startDate)+(activeJob.endDate?` → ${fmtDate(activeJob.endDate)}`:'');
+          return `<span class="fleet-doc-pill in_service" title="${esc(tip)}${esc(shop)}">🔧 ${esc(t('job_in_service_badge'))}${shop}</span>`;
+        }
+        const nextJob = getNextPlannedJobForCar(car.id);
+        if(nextJob){
+          const shop = nextJob.shop ? ` · ${esc(nextJob.shop)}` : '';
+          const tip = (cs?'Plán: ':'Scheduled: ')+fmtDate(nextJob.startDate);
+          return `<span class="fleet-doc-pill scheduled" title="${esc(tip)}${esc(shop)}">📅 ${esc(t('job_planned_badge'))} · ${fmtDate(nextJob.startDate)}</span>`;
+        }
+        return '';
+      })()}
       ${car.stk?docLabel('STK',car.stk,car.stkWarn,cs?'Státní technická kontrola':'Technical Inspection'):''}
       ${car.pov?docLabel('POV',car.pov,car.povWarn,cs?'Povinné ručení':'Liability Insurance'):''}
       ${car.emission?docLabel(cs?'Emise':'Emiss.',car.emission,car.emissionWarn,cs?'Měření emisí':'Emission Check'):''}
@@ -1338,7 +1538,13 @@ function renderFleet(){
     const allStatuses=isActive?[...docStatuses,oilSc,gearboxSc,xferSc]:[];
     const cardAccent=!isActive?'var(--border)':allStatuses.includes('due')?'var(--red)':allStatuses.includes('warn')?'var(--amber)':'var(--border)';
 
-    return `<div class="fleet-card" style="border-color:${cardAccent}" data-action="selectCar" data-id="${safeId(car.id)}">
+    const statusCls = car.status || 'operational';
+    const classPill = (car.classification && car.classification!=='standard')
+      ? `<span class="class-badge ${esc(car.classification)}">${esc(carClassificationLabel(car.classification))}</span>` : '';
+    const salePill = (car.status==='for_sale' && car.salePrice)
+      ? `<span class="class-badge for-sale-price" title="${esc(t('sale_price'))}">${esc(t('sale_price'))}: ${fmtMoney(car.salePrice)}</span>` : '';
+
+    return `<div class="fleet-card ${isArchived?'archived':''}" style="border-color:${cardAccent}" data-action="selectCar" data-id="${safeId(car.id)}">
       <div class="fleet-card-header">
         ${carDotHtml(car.color||'#888', 'fleet-card-dot')}
         <div class="fleet-card-title">
@@ -1356,8 +1562,11 @@ function renderFleet(){
           <span class="fleet-row-val">${fmtNum(avgC,1)} l/100 km</span>
         </div>`:''}
       </div>
-      <div class="fleet-card-footer" style="${!isActive?'opacity:.6':''}"> 
-        <span class="status-badge ${car.status||'active'}">${car.status==='inactive'?(cs?'Neaktivní':'Inactive'):(cs?'Aktivní':'Active')}</span>
+      <div class="fleet-card-footer" style="${!isActive?'opacity:.7':''}"> 
+        <span class="status-badge st-${statusCls}">${esc(carStatusLabel(car.status))}</span>
+        ${classPill}
+        ${salePill}
+        <div style="flex:1"></div>
         <button class="btn btn-ghost" style="font-size:.78rem;padding:6px 12px;min-height:36px;" data-action="openCarModal" data-id="${safeId(car.id)}" data-stop-propagation="1" title="${cs?'Upravit vozidlo':'Edit vehicle'}">${cs?'Upravit':'Edit'}</button>
       </div>
     </div>`;
@@ -1365,7 +1574,7 @@ function renderFleet(){
   });
 
   // ── Fleet highlight statistics ───────────────────
-  const allActive=state.cars.filter(c=>c.status!=='inactive');
+  const allActive=state.cars.filter(c=>!isCarArchived(c));
   const fleetTotalCost=allActive.reduce((s,c)=>s+getServiceCost(c.id)+getTotalFuelCost(c.id)+getPurchaseCost(c.id),0);
   const fleetTotalKm=allActive.reduce((s,c)=>s+getKmDriven(c.id),0);
   // Nejvýdajnější vůz (servis+palivo+nákup)
@@ -1376,6 +1585,7 @@ function renderFleet(){
   const fleetRunCost=allActive.reduce((s,c)=>s+getServiceCost(c.id)+getTotalFuelCost(c.id),0);
   const fleetCostPerKm=fleetTotalKm>0?fleetRunCost/fleetTotalKm:0;
 
+  const archCollapsed = state.archiveCollapsed===true; // default false (rozbalené)
   el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
       <div></div>
@@ -1384,8 +1594,13 @@ function renderFleet(){
       </button>
     </div>
     ${''}
-    ${activeCars.length?`<div class="section-title" style="margin-bottom:12px;">${cs?'Aktivní vozidla':'Active vehicles'}</div><div class="fleet-grid" style="margin-bottom:28px;">${activeCars.map(c=>cardsMap[c.id]).join('')}</div>`:''}
-    ${inactiveCars.length?`<div class="section-title" style="margin-bottom:12px;color:var(--text2)">${cs?'Neaktivní vozidla':'Inactive vehicles'}</div><div class="fleet-grid">${inactiveCars.map(c=>cardsMap[c.id]).join('')}</div>`:''}`;
+    ${activeCars.length?`<div class="section-title" style="margin-bottom:12px;">${t('active_vehicles')} <span style="color:var(--text3);font-weight:400">(${activeCars.length})</span></div><div class="fleet-grid" style="margin-bottom:28px;">${activeCars.map(c=>cardsMap[c.id]).join('')}</div>`:''}
+    ${archivedCars.length?`
+      <div class="section-title job-section-collapse ${archCollapsed?'collapsed':''}" data-action="toggleArchiveSection" style="margin-bottom:12px;color:var(--text2);cursor:pointer;">
+        <span class="chev">▼</span> ${t('vehicle_archive')} <span style="color:var(--text3);font-weight:400">(${archivedCars.length})</span>
+      </div>
+      <div class="fleet-grid" id="fleet-archive-grid" ${archCollapsed?'style="display:none"':''}>${archivedCars.map(c=>cardsMap[c.id]).join('')}</div>`
+    :''}`;
 }
 
 // ─── DASHBOARD ───────────────────────────────────────────────
@@ -1444,7 +1659,10 @@ function renderDashboard(){
             car.acquired?(cs?'od':'since')+' '+fmtDate(car.acquired):'',
             car.decommissioned?(cs?'vyřazeno':'decom.')+' '+fmtDate(car.decommissioned):'',
           ].filter(Boolean).join(' · ')}
-          <span class="status-badge ${car.status||'active'}" style="margin-left:8px;">${car.status==='inactive'?t('inactive'):t('active')}</span>
+          <span class="status-badge st-${car.status||'operational'}" style="margin-left:8px;">${esc(carStatusLabel(car.status))}</span>
+          ${(car.classification&&car.classification!=='standard')?`<span class="class-badge ${esc(car.classification)}" style="margin-left:6px">${esc(carClassificationLabel(car.classification))}</span>`:''}
+          ${(car.status==='for_sale'&&car.salePrice)?`<span class="class-badge for-sale-price" style="margin-left:6px">${fmtMoney(car.salePrice)}</span>`:''}
+          ${(car.status==='for_sale'&&car.saleAdUrl)?`<a class="class-badge for-sale-price" style="margin-left:6px;text-decoration:none" href="${esc(car.saleAdUrl)}" target="_blank" rel="noopener noreferrer" title="${esc(car.saleAdUrl)}">${cs?'Inzerát':'Listing'} ↗</a>`:''}
           ${car.hasAutomatic?`<span class="cat-badge" style="background:rgba(108,143,255,.12);color:var(--accent);margin-left:6px">${cs?'Automat':'Auto'}</span>`:''}
           ${car.has4x4?`<span class="cat-badge" style="background:rgba(52,211,153,.12);color:var(--green);margin-left:4px">4×4</span>`:''}
           ${(car.oilType||car.coolantType)?`<span style="display:block;margin-top:4px;color:var(--text3)">${[
@@ -1456,8 +1674,8 @@ function renderDashboard(){
       <button class="row-btn" data-action="openCarModal" data-id="${safeId(car.id)}" style="width:36px;height:36px;flex-shrink:0;" title="${state.lang==='cs'?'Upravit vozidlo':'Edit vehicle'}"><span class="edit-icon">✏</span></button>
     </div>
 
-    <div class="doc-row" style="${car.status==='inactive'?'display:none':'display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:22px'}">
-      ${car.status==='inactive'?'':`
+    <div class="doc-row" style="${isCarArchived(car)?'display:none':'display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:22px'}">
+      ${isCarArchived(car)?'':`
       ${docCard(t('stk'),car.stk,car.stkWarn,cs?'Státní technická kontrola':'Technical Inspection')}
       ${docCard(t('emission'),car.emission,car.emissionWarn,cs?'Měření emisí':'Emission Check')}
       ${docCard(t('pov'),car.pov,car.povWarn,cs?'Povinné ručení':'Liability Insurance')}
@@ -1901,7 +2119,7 @@ function renderAnalytics(){
   const cs=state.lang==='cs';
 
   // Vehicle picker
-  const allActiveCars=state.cars.filter(c=>c.status!=='inactive');
+  const allActiveCars=state.cars.filter(c=>!isCarArchived(c));
   if(!allActiveCars.length&&!state.cars.length){
     el.innerHTML=`<div class="empty"><div class="empty-icon">— —</div><p>${t('no_car')}</p></div>`;return;
   }
@@ -2175,7 +2393,7 @@ function renderAnalytics(){
 function renderAnalyticsCompareContent(el, tabBarHtml, cs){
   // Vybereme auta k porovnání: respektujeme výběr v car switcheru.
   // null = všechna aktivní, '__all__' = všechna vč. neaktivních, carId = jen to jedno (=> hint)
-  const allActive=state.cars.filter(c=>c.status!=='inactive');
+  const allActive=state.cars.filter(c=>!isCarArchived(c));
   const comparePool=state.analyticsCarId==='__all__'
     ?state.cars
     :state.analyticsCarId&&state.analyticsCarId!=='__all__'
@@ -2462,8 +2680,8 @@ function getAutoReminders(car){
   dateRem(cs?'Havarijní pojištění':'Comprehensive ins.', car.insurance, car.insuranceWarn||30);
   dateRem(cs?'Asistenční služby':'Roadside assistance', car.assist, car.assistWarn||30);
 
-  // Přezutí pneumatik — pouze pokud je zapnuto v nastavení a vozidlo je aktivní
-  if(state.settings.tireReminders && car.status!=='inactive'){
+  // Přezutí pneumatik — pouze pokud je zapnuto v nastavení, auto jízdy-schopné a není HV
+  if(state.settings.tireReminders && isCarDriving(car) && car.classification!=='historic'){
     const year=today.getFullYear();
     // Letní přezutí: upozornit 30 dní před 31.3.
     const summerDeadline=new Date(year, 2, 31); // 31.3.
@@ -2540,12 +2758,16 @@ function renderRemindersPage(){
 
   // No inline picker — uses title-bar picker injected by renderPage()
   const pickedCar=state.remindersCarId?getCar(state.remindersCarId):null;
-  const allActiveCarsRem=state.cars.filter(c=>c.status!=='inactive');
+  const allActiveCarsRem=state.cars.filter(c=>!isCarArchived(c)); // bez vyřazených
   const reminderCars=pickedCar?[pickedCar]:allActiveCarsRem;
-  const manualReminders=reminderCars.flatMap(c=>state.reminders.filter(r=>r.carId===c.id));
+
+  // Rozdělit na j.-schopná (V provozu / Na prodej) a pozastavená (V depozitu / V renovaci)
+  const activeRC = reminderCars.filter(c => !isCarSuspended(c));
+  const suspendedRC = reminderCars.filter(c => isCarSuspended(c));
+  const hasHistoric = activeRC.some(c => c.classification==='historic');
+
   const maxOdo=pickedCar?getMaxOdo(pickedCar.id):0;
   const today=new Date();today.setHours(0,0,0,0);
-  const autoReminders=reminderCars.flatMap(c=>getAutoReminders(c));
 
   function renderReminderCard(rem, isAuto=false){
     let sc=rem.sc||'ok', st=rem.st||t('ok'), detail=rem.detail||'';
@@ -2575,22 +2797,396 @@ function renderRemindersPage(){
     </div>`;
   }
 
+  // Pomocná funkce — vyrenderuje auto + manual blok pro daný seznam aut
+  function renderRemindersFor(cars){
+    const autoRem  = cars.flatMap(c=>getAutoReminders(c));
+    const manualR  = cars.flatMap(c=>state.reminders.filter(r=>r.carId===c.id));
+    return `
+      ${autoRem.length?`
+        <div class="section-subtitle" style="margin-top:8px;color:var(--text3);font-size:.85rem;">${cs?'Automatické připomínky':'Automatic reminders'}</div>
+        <div class="reminders-grid" style="margin-bottom:18px;">
+          ${autoRem.map(r=>renderReminderCard(r,true)).join('')}
+        </div>`:''}
+      <div class="section-subtitle" style="color:var(--text3);font-size:.85rem;">${cs?'Vlastní připomínky':'Custom reminders'}</div>
+      ${!manualR.length
+        ?`<div class="empty" style="padding:18px 14px;"><p style="margin:0;color:var(--text3)">${t('no_reminders')}</p></div>`
+        :`<div class="reminders-grid">${manualR.map(r=>renderReminderCard(r,false)).join('')}</div>`}
+    `;
+  }
+
+  const suspendedCollapsed = state.remindersSuspendedCollapsed!==false; // default sbaleno
+
   el.innerHTML=`
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
       <span class="section-title" style="margin:0;flex:1;">${t('reminders_title')}</span>
       <button class="btn btn-primary" data-action="openReminderModal">${t('add_reminder')}</button>
     </div>
 
-    ${autoReminders.length?`
-      <div class="section-title">${cs?'Automatické připomínky':'Automatic reminders'}</div>
-      <div class="reminders-grid" style="margin-bottom:24px;">
-        ${autoReminders.map(r=>renderReminderCard(r,true)).join('')}
+    ${hasHistoric?`
+      <div class="info-card" style="background:rgba(108,143,255,.08);border:1px solid rgba(108,143,255,.25);border-radius:10px;padding:10px 14px;margin-bottom:16px;color:var(--text2);font-size:.88rem;">
+        <strong style="color:var(--accent)">${cs?'Historické vozidlo':'Historic vehicle'}:</strong> ${t('historic_hint')}
       </div>`:''}
 
-    <div class="section-title">${cs?'Vlastní připomínky':'Custom reminders'}</div>
-    ${!manualReminders.length
-      ?`<div class="empty" style="padding:28px 20px;"><div class="empty-icon">— —</div><p>${t('no_reminders')}</p><button class="btn btn-primary" data-action="openReminderModal" style="margin-top:16px;">${cs?'Přidat připomínku':'Add reminder'}</button></div>`
-      :`<div class="reminders-grid">${manualReminders.map(r=>renderReminderCard(r,false)).join('')}</div>`}`;
+    ${activeRC.length
+      ? renderRemindersFor(activeRC)
+      : `<div class="empty" style="padding:28px 20px;"><div class="empty-icon">— —</div><p>${cs?'Žádná vozidla v provozu':'No vehicles in service'}</p></div>`}
+
+    ${suspendedRC.length?`
+      <div class="section-title section-collapse ${suspendedCollapsed?'collapsed':''}" data-action="toggleRemindersSuspended" style="cursor:pointer;margin-top:24px;display:flex;align-items:center;gap:8px;">
+        <span class="chevron" style="display:inline-block;transition:transform .2s;${suspendedCollapsed?'':'transform:rotate(90deg)'}">▶</span>
+        ${t('reminders_suspended_section')} (${suspendedRC.length})
+      </div>
+      <div id="reminders-suspended-grid" style="${suspendedCollapsed?'display:none':''};opacity:.75">
+        ${renderRemindersFor(suspendedRC)}
+      </div>`:''}
+  `;
+}
+
+// ─── SERVICE / JOBS ──────────────────────────────────────────
+// Plánovaný servis (work orders) — auto má naplánovanou návštěvu dílny
+// s konkrétními úkony, stavem (planned/in_progress/done/cancelled)
+// a odhadovanou cenou. Po dokončení lze jedním klikem převést do Records.
+
+// State machine: planned ↔ in_progress → done   (z libovolného stavu → cancelled)
+
+// Najde aktivní (in_progress) job pro vozidlo — využívá Fleet badge.
+function getActiveJobForCar(carId){
+  return state.jobs.find(j=>j.carId===carId && j.status==='in_progress');
+}
+// Najde nejbližší naplánovaný job pro vozidlo (planned, nejnižší startDate).
+function getNextPlannedJobForCar(carId){
+  return state.jobs
+    .filter(j=>j.carId===carId && j.status==='planned')
+    .sort((a,b)=>(a.startDate||'').localeCompare(b.startDate||''))[0];
+}
+// Set unikátních dílen z historie (datalist autocomplete v modalu).
+function getKnownShops(){
+  const set=new Set();
+  state.jobs.forEach(j=>{ if(j.shop) set.add(j.shop); });
+  return [...set].sort();
+}
+
+function renderServicePage(){
+  const el=document.getElementById('content');
+  const cs=state.lang==='cs';
+
+  const inProgress = state.jobs.filter(j=>j.status==='in_progress');
+  const planned    = state.jobs.filter(j=>j.status==='planned')
+    .sort((a,b)=>(a.startDate||'').localeCompare(b.startDate||''));
+  const done       = state.jobs.filter(j=>j.status==='done')
+    .sort((a,b)=>(b.endDate||b.startDate||'').localeCompare(a.endDate||a.startDate||''));
+  const cancelled  = state.jobs.filter(j=>j.status==='cancelled');
+
+  function jobCard(j){
+    const car=getCar(j.carId);
+    const carLabel=car?`${car.make||''} ${car.model||''}`.trim()+(car.plate?` (${car.plate})`:''):'—';
+    const carArchived = car && isCarArchived(car);
+    const tasksDone=j.tasks?j.tasks.filter(tk=>tk.done).length:0;
+    const tasksTotal=j.tasks?j.tasks.length:0;
+    const tasksList=j.tasks&&j.tasks.length
+      ? `<ul class="job-tasks">${j.tasks.map((tk,i)=>`
+          <li class="${tk.done?'done':''}">
+            <input type="checkbox" ${tk.done?'checked':''} data-action="toggleJobTask" data-id="${safeId(j.id)}" data-idx="${i}" data-stop-propagation="1">
+            <span>${esc(tk.text)}</span>
+          </li>`).join('')}</ul>`
+      : '';
+    const dateRange = j.endDate && j.endDate!==j.startDate
+      ? `${fmtDate(j.startDate)} → ${fmtDate(j.endDate)}`
+      : fmtDate(j.startDate);
+
+    // Stav-specifické akce v footeru
+    let actions = '';
+    if(j.status==='planned'){
+      actions = `
+        <button class="btn btn-primary" data-action="setJobStatus" data-id="${safeId(j.id)}" data-status="in_progress">▶ ${t('mark_in_progress')}</button>
+        <button class="btn btn-ghost" data-action="openJobModal" data-id="${safeId(j.id)}">${cs?'Upravit':'Edit'}</button>
+        <button class="btn btn-ghost" data-action="deleteJob" data-id="${safeId(j.id)}">${cs?'Smazat':'Delete'}</button>`;
+    } else if(j.status==='in_progress'){
+      actions = `
+        <button class="btn btn-primary" data-action="convertJobToRecord" data-id="${safeId(j.id)}">✓ ${t('mark_done')}</button>
+        <button class="btn btn-ghost" data-action="openJobModal" data-id="${safeId(j.id)}">${cs?'Upravit':'Edit'}</button>
+        <button class="btn btn-ghost" data-action="setJobStatus" data-id="${safeId(j.id)}" data-status="cancelled">${cs?'Zrušit':'Cancel'}</button>`;
+    } else if(j.status==='done' || j.status==='cancelled'){
+      actions = `
+        <button class="btn btn-ghost" data-action="openJobModal" data-id="${safeId(j.id)}">${cs?'Upravit':'Edit'}</button>
+        <button class="btn btn-ghost" data-action="deleteJob" data-id="${safeId(j.id)}">${cs?'Smazat':'Delete'}</button>`;
+    }
+
+    return `<div class="job-card ${j.status}${carArchived?' archived':''}">
+      <div class="job-card-head">
+        <div class="job-card-title">
+          <div class="job-car">${esc(carLabel)}${carArchived?` <span class="status-badge st-decommissioned" style="margin-left:6px;font-size:.68rem;vertical-align:middle">${esc(t('car_status_decommissioned'))}</span>`:''}</div>
+          ${j.shop?`<div class="job-shop">${esc(j.shop)}</div>`:''}
+        </div>
+        <span class="job-status-pill ${j.status}">${esc(t('job_status_'+j.status))}</span>
+      </div>
+      <div class="job-dates">${dateRange||''}</div>
+      ${tasksList}
+      ${tasksTotal>0?`<div class="job-cost">${tasksDone}/${tasksTotal} ${cs?'úkonů hotovo':'tasks done'}</div>`:''}
+      ${j.estimatedCost?`<div class="job-cost">${cs?'Odhad':'Estimate'}: <strong>${fmtMoney(j.estimatedCost)}</strong></div>`:''}
+      ${j.notes?`<div class="job-cost" style="white-space:pre-wrap">${esc(j.notes)}</div>`:''}
+      <div class="job-actions">${actions}</div>
+    </div>`;
+  }
+
+  function section(title, items, collapsed){
+    if(!items.length) return '';
+    const id = 'job-sect-'+title.replace(/\s/g,'-');
+    return `<div class="section-title job-section-collapse ${collapsed?'collapsed':''}"
+              data-action="toggleJobSection" data-id="${id}">
+              <span class="chev">▼</span> ${esc(title)} <span style="color:var(--text3);font-weight:400">(${items.length})</span>
+            </div>
+            <div class="jobs-grid" id="${id}" ${collapsed?'style="display:none"':''}>
+              ${items.map(jobCard).join('')}
+            </div>`;
+  }
+
+  const noCars = state.cars.length===0;
+  const noServiceableCars = state.cars.filter(c=>!isCarArchived(c)).length===0;
+  const noJobs = state.jobs.length===0;
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+      <span class="section-title" style="margin:0;flex:1;">${t('service_title')}</span>
+      <button class="btn btn-primary" data-action="openJobModal" ${noServiceableCars?'disabled':''} ${noServiceableCars?'title="'+esc(cs?'Žádné servisovatelné auto (všechna vyřazená)':'No serviceable vehicles (all decommissioned)')+'"':''}>+ ${t('new_job')}</button>
+    </div>
+
+    ${noCars
+      ? `<div class="empty"><div class="empty-icon">— —</div><p>${cs?'Nejdřív přidejte vozidlo':'Add a vehicle first'}</p></div>`
+      : noJobs
+        ? `<div class="empty"><div class="empty-icon">—</div><p>${t('no_jobs')}</p>
+             ${noServiceableCars?'':`<button class="btn btn-primary" data-action="openJobModal" style="margin-top:16px;">+ ${t('new_job')}</button>`}</div>`
+        : `${section(t('job_section_current'), inProgress, false)}
+           ${section(t('job_section_planned'), planned, false)}
+           ${section(t('job_section_done'), done, true)}
+           ${section(t('job_section_cancelled'), cancelled, true)}`}
+  `;
+}
+
+function toggleJobSection(id){
+  const head = document.querySelector(`.job-section-collapse[data-id="${id}"]`);
+  const body = document.getElementById(id);
+  if(!head||!body) return;
+  const isCollapsed = head.classList.toggle('collapsed');
+  body.style.display = isCollapsed ? 'none' : '';
+}
+
+// Toggle sekce Archiv na Fleet stránce (sbalitelná, default rozbalená).
+function toggleArchiveSection(){
+  state.archiveCollapsed = !(state.archiveCollapsed===true);
+  const grid = document.getElementById('fleet-archive-grid');
+  const head = document.querySelector('[data-action="toggleArchiveSection"]');
+  if(grid) grid.style.display = state.archiveCollapsed ? 'none' : '';
+  if(head) head.classList.toggle('collapsed', state.archiveCollapsed);
+}
+
+// Toggle sekce Pozastavená vozidla v Reminders (default sbaleno).
+function toggleRemindersSuspended(){
+  state.remindersSuspendedCollapsed = !(state.remindersSuspendedCollapsed===false);
+  const grid = document.getElementById('reminders-suspended-grid');
+  const head = document.querySelector('[data-action="toggleRemindersSuspended"]');
+  if(grid) grid.style.display = state.remindersSuspendedCollapsed ? 'none' : '';
+  if(head){
+    head.classList.toggle('collapsed', state.remindersSuspendedCollapsed);
+    const chev = head.querySelector('.chevron');
+    if(chev) chev.style.transform = state.remindersSuspendedCollapsed ? '' : 'rotate(90deg)';
+  }
+}
+
+// ─── JOB MODAL ───────────────────────────────────────────────
+// Render seznamu task řádků — každý je editovatelný + smazatelný
+function renderJobTasksList(tasks){
+  const cs = state.lang==='cs';
+  const list = document.getElementById('j-tasks-list');
+  if(!list) return;
+  if(!tasks.length){
+    list.innerHTML = `<div style="color:var(--text3);font-size:.8rem;font-style:italic;">${cs?'Žádné úkony — přidejte tlačítkem níže':'No tasks — add with the button below'}</div>`;
+    return;
+  }
+  list.innerHTML = tasks.map((tk,i)=>`
+    <div class="job-task-row">
+      <input type="checkbox" data-onchange="toggleJobModalTask" data-idx="${i}" ${tk.done?'checked':''} title="${cs?'Hotovo':'Done'}">
+      <input type="text" class="form-input" data-oninput="updateJobModalTask" data-idx="${i}"
+             maxlength="200" value="${esc(tk.text)}" placeholder="${cs?'Např. Výměna oleje':'e.g. Oil change'}">
+      <button type="button" class="row-btn del" data-action="removeJobModalTask" data-idx="${i}" title="${cs?'Odebrat':'Remove'}">✕</button>
+    </div>`).join('');
+}
+
+// State používaný jen v rámci otevřeného modalu (drží rozpracované tasks)
+let _jobModalTasks = [];
+
+function openJobModal(jobId){
+  const cs = state.lang==='cs';
+  state.editingJobId = jobId || null;
+  const job = jobId ? state.jobs.find(j=>j.id===jobId) : null;
+  document.getElementById('job-modal-title').textContent = job ? t('edit_job') : t('new_job');
+
+  // Vozidlo — vyřazená (decommissioned) se k servisu nenabízejí.
+  // Pokud edituji existující zakázku na již vyřazené auto, ponechám ji v seznamu (jinak by hodnota zmizela).
+  const carSel = document.getElementById('j-car');
+  const eligibleCars = state.cars.filter(c => !isCarArchived(c) || (job && job.carId===c.id));
+  carSel.innerHTML = eligibleCars.map(c=>{
+    const sel = (job?job.carId:state.currentCarId)===c.id ? 'selected':'';
+    const archMark = isCarArchived(c) ? ' · '+t('car_status_decommissioned') : '';
+    return `<option value="${esc(c.id)}" ${sel}>${esc(c.make||'')} ${esc(c.model||c.name||'')} ${c.plate?'('+esc(c.plate)+')':''}${archMark}</option>`;
+  }).join('');
+
+  // Stav
+  document.getElementById('j-status').value = job?.status || 'planned';
+
+  // Dílna + datalist
+  document.getElementById('j-shop').value = job?.shop || '';
+  const dl = document.getElementById('j-shop-list');
+  dl.innerHTML = getKnownShops().map(s=>`<option value="${esc(s)}">`).join('');
+
+  // Datumy
+  const today = new Date().toISOString().slice(0,10);
+  setDateTriple('j-start', job?.startDate || today);
+  setDateTriple('j-end',   job?.endDate   || '');
+
+  // Cena a poznámka
+  document.getElementById('j-cost').value = job?.estimatedCost ?? '';
+  document.getElementById('j-note').value = job?.notes || '';
+
+  // Tasks (clone, edituji kopii — applneme až při save)
+  _jobModalTasks = job?.tasks ? job.tasks.map(tk=>({text:tk.text,done:!!tk.done})) : [];
+  renderJobTasksList(_jobModalTasks);
+
+  document.getElementById('job-errors').innerHTML = '';
+  openModal('job-modal');
+}
+
+function addJobTask(){
+  _jobModalTasks.push({text:'',done:false});
+  renderJobTasksList(_jobModalTasks);
+  // Focus posledního inputu pro plynulé zadávání
+  const inputs = document.querySelectorAll('#j-tasks-list input[type="text"]');
+  inputs[inputs.length-1]?.focus();
+}
+function removeJobModalTask(idx){
+  _jobModalTasks.splice(idx,1);
+  renderJobTasksList(_jobModalTasks);
+}
+function toggleJobModalTask(idx, checked){
+  if(_jobModalTasks[idx]) _jobModalTasks[idx].done = checked;
+}
+function updateJobModalTask(idx, text){
+  if(_jobModalTasks[idx]) _jobModalTasks[idx].text = text;
+}
+
+function saveJob(){
+  const cs = state.lang==='cs';
+  const errors = [];
+  const carId = document.getElementById('j-car').value;
+  const status = document.getElementById('j-status').value;
+  const shop = document.getElementById('j-shop').value.trim();
+  const startDate = getDateTriple('j-start');
+  const endDate = getDateTriple('j-end');
+  const estimatedCost = parseFloat(document.getElementById('j-cost').value) || 0;
+  const notes = document.getElementById('j-note').value.trim();
+
+  if(!carId) errors.push(cs?'Vyberte vozidlo':'Select a vehicle');
+  if(!startDate) errors.push(cs?'Neplatné nebo neúplné datum začátku':'Invalid or incomplete start date');
+  if(endDate===null) errors.push(cs?'Neplatné datum konce':'Invalid end date');
+  if(startDate && endDate && endDate<startDate) errors.push(cs?'Konec musí být po začátku':'End date must be after start');
+
+  // Odfiltrovat prázdné tasks (uživatel může nechat řádek nevyplněný)
+  const tasks = _jobModalTasks.map(tk=>({text:(tk.text||'').trim(),done:!!tk.done})).filter(tk=>tk.text);
+
+  if(errors.length){
+    document.getElementById('job-errors').innerHTML = errors.map(e=>`<div class="form-error">${esc(e)}</div>`).join('');
+    return;
+  }
+
+  if(state.editingJobId){
+    const idx = state.jobs.findIndex(j=>j.id===state.editingJobId);
+    if(idx>=0){
+      state.jobs[idx] = {...state.jobs[idx], carId, status, shop, startDate, endDate:endDate||'', estimatedCost, notes, tasks, updatedAt:new Date().toISOString()};
+    }
+  } else {
+    state.jobs.push({id:uid(),carId,status,shop,startDate,endDate:endDate||'',estimatedCost,notes,tasks,createdAt:new Date().toISOString()});
+  }
+  saveData();
+  closeModal('job-modal');
+  showToast(t('job_saved'),'success');
+  renderAll();
+}
+
+function deleteJob(id){
+  if(!confirm(t('confirm_delete_job'))) return;
+  state.jobs = state.jobs.filter(j=>j.id!==id);
+  saveData();
+  renderAll();
+}
+
+// Změna stavu z karty (bez otevření modalu) — planned → in_progress, cancel atd.
+function setJobStatus(id, newStatus){
+  const job = state.jobs.find(j=>j.id===id);
+  if(!job) return;
+  const allowed = {planned:1,in_progress:1,done:1,cancelled:1};
+  if(!allowed[newStatus]) return;
+  job.status = newStatus;
+  job.updatedAt = new Date().toISOString();
+  saveData();
+  renderAll();
+}
+
+// Toggle jednotlivého tasku přímo z karty (bez otevření modalu)
+function toggleJobTask(id, idx){
+  const job = state.jobs.find(j=>j.id===id);
+  if(!job || !job.tasks || !job.tasks[idx]) return;
+  job.tasks[idx].done = !job.tasks[idx].done;
+  job.updatedAt = new Date().toISOString();
+  saveData();
+  renderAll();
+}
+
+// Konverze job → record + posun stavu na 'done'
+// Otevře record modal předvyplněný (kategorie Servis a opravy, popis = výčet úkonů,
+// cena = estimatedCost, datum = endDate||startDate). Po uložení záznamu se job
+// posune na 'done' (záznam je single source of truth pro náklady).
+function convertJobToRecord(id){
+  const job = state.jobs.find(j=>j.id===id);
+  if(!job) return;
+  const cs = state.lang==='cs';
+
+  // Posuneme job na 'done' rovnou (zachová se v sekci „Dokončeno")
+  job.status = 'done';
+  if(!job.endDate) job.endDate = new Date().toISOString().slice(0,10);
+  job.updatedAt = new Date().toISOString();
+
+  // Předvyplníme record modal
+  openRecordModal();
+  const carSel = document.getElementById('r-car');
+  if(carSel) carSel.value = job.carId;
+  // Kategorie: 'Servis a opravy' (kanonický CS klíč, viz CATEGORIES.cs)
+  const catSel = document.getElementById('r-cat');
+  if(catSel) catSel.value = 'Servis a opravy';
+  // Datum
+  setDateTriple('r-date', job.endDate || job.startDate);
+  // Popis: dílna + výčet úkonů
+  const tasksText = (job.tasks||[]).map(tk=>tk.text).filter(Boolean).join(', ');
+  const descParts = [];
+  if(job.shop) descParts.push(job.shop);
+  if(tasksText) descParts.push(tasksText);
+  const descEl = document.getElementById('r-desc');
+  if(descEl) descEl.value = descParts.join(' — ').slice(0,200);
+  // Cena
+  if(job.estimatedCost){
+    document.getElementById('r-qty').value = 1;
+    document.getElementById('r-price').value = job.estimatedCost;
+  }
+  // Poznámka
+  if(job.notes){
+    const noteEl = document.getElementById('r-note');
+    if(noteEl) noteEl.value = job.notes;
+  }
+  // Tachometr — předvyplníme aktuální max odo (uživatel může upravit)
+  const odoEl = document.getElementById('r-odo');
+  if(odoEl && !odoEl.value) odoEl.value = getMaxOdo(job.carId) || '';
+
+  saveData(); // uložíme změnu stavu jobu i bez potvrzení záznamu
+  showToast(t('job_converted'),'success');
 }
 
 // ─── MODALS ──────────────────────────────────────────────────
@@ -3005,10 +3601,25 @@ function openCarEdit(carId){
 }
 
 function updateStatusToggleLabel(isActive){
+  // (zachováno kvůli zpětné kompatibilitě starých volajících — v3.15 již nepoužíváno)
   const lbl=document.getElementById('c-status-text');
-  lbl.textContent=isActive?(state.lang==='cs'?'Aktivní':'Active'):(state.lang==='cs'?'Neaktivní':'Inactive');
+  if(!lbl) return;
+  lbl.textContent=isActive?(state.lang==='cs'?'V provozu':'Operational'):(state.lang==='cs'?'V depozitu':'In storage');
   lbl.style.color=isActive?'var(--green)':'var(--text3)';
 }
+
+// Skryje/ukáže pole prodejní cena + URL podle aktuálního stavu (jen když for_sale)
+function toggleSaleFields(){
+  const sel = document.getElementById('c-status');
+  const isSale = sel && sel.value==='for_sale';
+  const p = document.getElementById('c-sale-price-grp');
+  const u = document.getElementById('c-sale-url-grp');
+  if(p) p.style.display = isSale ? '' : 'none';
+  if(u) u.style.display = isSale ? '' : 'none';
+}
+
+// Handler pro change na #c-status — přepíná viditelnost prodejních polí
+function onCarStatusChange(){ toggleSaleFields(); }
 
 // ── Drivetrain features (automatická převodovka / pohon 4×4) ──
 
@@ -3069,10 +3680,24 @@ function buildBasicSectionForm(cs){
   </div>
   <div class='form-group'>
     <label class='form-label' id='c-status-label'>${cs?'Stav':'Status'}</label>
-    <div class='toggle-wrap' style='margin-top:4px'>
-      <label class='toggle'><input type='checkbox' id='c-status-toggle'><span class='toggle-slider'></span></label>
-      <span class='toggle-label' id='c-status-text'>${cs?'Aktivní':'Active'}</span>
-    </div>
+    <select class='form-select' id='c-status' data-onchange="onCarStatusChange" required>
+      <option value="">${esc(t('car_status_placeholder'))}</option>
+      ${CAR_STATUSES.map(s=>`<option value="${s}">${esc(t('car_status_'+s))}</option>`).join('')}
+    </select>
+  </div>
+  <div class='form-group'>
+    <label class='form-label' id='c-class-label'>${cs?'Klasifikace':'Classification'}</label>
+    <select class='form-select' id='c-classification'>
+      ${CAR_CLASSIFICATIONS.map(cl=>`<option value="${cl}">${esc(t('car_class_'+cl))}</option>`).join('')}
+    </select>
+  </div>
+  <div class='form-group' id='c-sale-price-grp' style='display:none'>
+    <label class='form-label'>${cs?'Po\u017eadovan\u00e1 cena':'Asking price'}</label>
+    <input type='number' class='form-input' id='c-sale-price' min='0' step='1000' placeholder='${cs?'CZK':'CZK'}'>
+  </div>
+  <div class='form-group full' id='c-sale-url-grp' style='display:none'>
+    <label class='form-label'>${cs?'URL inzer\u00e1tu':'Listing URL'}</label>
+    <input type='url' class='form-input' id='c-sale-url' maxlength='500' placeholder='https://...'>
   </div>
   <div class='form-group'>
     <label class='form-label'>${cs?'Automatická převodovka':'Automatic gearbox'}</label>
@@ -3180,6 +3805,13 @@ function saveCar(){
     showToast(state.lang==='cs'?'Toto VIN je již evidováno u jiného vozidla':'This VIN is already registered','error');
     return;
   }
+  // Stav je povinný — placeholder hodnota '' není přípustná.
+  const statusVal = document.getElementById('c-status')?.value || '';
+  if(!CAR_STATUSES.includes(statusVal)){
+    showToast(state.lang==='cs'?'Vyberte stav vozidla':'Please select a vehicle status','error');
+    document.getElementById('c-status')?.focus();
+    return;
+  }
 
   const data={
     make,model,
@@ -3187,7 +3819,10 @@ function saveCar(){
     plate,
     vin,
     fuelType:document.getElementById('c-fueltype').value,
-    status:document.getElementById('c-status-toggle').checked?'active':'inactive',
+    status:statusVal,
+    classification:document.getElementById('c-classification')?.value || 'standard',
+    salePrice:parseInt(document.getElementById('c-sale-price')?.value)||null,
+    saleAdUrl:(document.getElementById('c-sale-url')?.value||'').trim()||null,
     startOdo:parseInt(document.getElementById('c-startodo').value)||0,
     color:state.selectedColor,
     stk:getDateTriple('c-stk')||null,
@@ -3258,6 +3893,46 @@ function deleteCar(){
   showToast(state.lang==='cs'?'Vozidlo smazáno':'Vehicle deleted','success');
 }
 
+// Přesun vozidla do archivu (status → decommissioned).
+// Volá se z fleet karty (data-id) nebo z edit page footeru (bez data-id → aktuálně editované).
+function archiveCar(id){
+  const carId = id || state.editingCarId;
+  const car = getCar(carId);
+  if(!car) return;
+  const cs = state.lang==='cs';
+  if(!confirm(cs
+    ? `Přesunout „${car.make||''} ${car.model||''}" do archivu?\nVozidlo bude označeno jako vyřazené, přestane se zobrazovat v Servisu a Připomínkách. Historie záznamů zůstane zachována.`
+    : `Move "${car.make||''} ${car.model||''}" to archive?\nThe vehicle will be marked as decommissioned and hidden from Service and Reminders. All records remain intact.`)) return;
+  car.status = 'decommissioned';
+  if(!car.decommissioned) car.decommissioned = new Date().toISOString().slice(0,10);
+  saveData();
+  // Pokud uživatel klikl z fleet karty, zůstaň na fleet; pokud z edit footeru, vrať na fleet.
+  if(state.editingCarId === carId){
+    state.editingCarId = null;
+    showPage('fleet');
+  } else {
+    renderAll();
+  }
+  showToast(cs?'Vozidlo přesunuto do archivu':'Vehicle moved to archive','success');
+}
+
+// Vrátit vozidlo z archivu zpět do provozu.
+function unarchiveCar(id){
+  const carId = id || state.editingCarId;
+  const car = getCar(carId);
+  if(!car) return;
+  const cs = state.lang==='cs';
+  car.status = 'operational';
+  car.decommissioned = null;
+  saveData();
+  if(state.editingCarId === carId){
+    renderAll(); // edit page se znovu vykreslí s aktuálním stavem
+  } else {
+    renderAll();
+  }
+  showToast(cs?'Vozidlo vráceno do provozu':'Vehicle restored to service','success');
+}
+
 // ─── REMINDERS ───────────────────────────────────────────────
 function openReminderModal(){
   const carSel=document.getElementById('rem-car');
@@ -3302,11 +3977,32 @@ function saveReminder(){
 function deleteReminder(id){state.reminders=state.reminders.filter(r=>r.id!==id);saveData();renderRemindersPage();}
 
 // ─── IMPORT / EXPORT ─────────────────────────────────────────
+// Verze schématu zálohy. Bumpni při změně tvaru (přidání/odebrání top-level polí).
+const BACKUP_SCHEMA_VERSION = 2;
+const APP_VERSION = '3.15.1';
+
 function exportData(){
   const now=new Date();
   const pad=n=>String(n).padStart(2,'0');
   const ts=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-  const data=JSON.stringify({cars:state.cars,records:state.records,fuels:state.fuels,reminders:state.reminders,exportedAt:now.toISOString()},null,2);
+  // Pozn.: ukládáme VŠECHNA persistovaná data ze state — sjednoceno se saveData()
+  // (cars/records/fuels/reminders/jobs + settings + lang). Stavy aut (status: sold,
+  // decommissioned, for_sale, storage, in_restoration) i klasifikace jsou součástí
+  // car objektů a serializují se automaticky.
+  const payload={
+    app:'MyCars',
+    version:APP_VERSION,
+    schema:BACKUP_SCHEMA_VERSION,
+    exportedAt:now.toISOString(),
+    lang:state.lang,
+    settings:state.settings,
+    cars:state.cars,
+    records:state.records,
+    fuels:state.fuels,
+    reminders:state.reminders,
+    jobs:state.jobs,
+  };
+  const data=JSON.stringify(payload,null,2);
   const blob=new Blob([data],{type:'application/json'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');
   a.href=url;a.download=`mycars_${ts}.json`;a.click();URL.revokeObjectURL(url);
@@ -3315,17 +4011,49 @@ function exportData(){
 function importData(e){
   const file=e.target.files[0];if(!file)return;
   if(file.size>20*1024*1024){showToast('Import failed','error');e.target.value='';return;}
+  const cs=state.lang==='cs';
   const reader=new FileReader();
   reader.onload=ev=>{
     try{
       const raw=safeJsonParse(ev.target.result);
+      // Forward-compat check — pokud záloha pochází z novější verze aplikace
+      // (vyšší schema), upozorni uživatele, že jeho instalace je zastaralá
+      // a některá data se nemusí načíst správně (např. nový status auta
+      // se zahodí na fallback). Uživatel může pokračovat nebo zrušit.
+      const fileSchema = (raw && typeof raw.schema==='number') ? raw.schema : 1;
+      const fileVersion = (raw && typeof raw.version==='string') ? raw.version : null;
+      if(fileSchema > BACKUP_SCHEMA_VERSION){
+        const msg = cs
+          ? `Záloha pochází z novější verze MyCars${fileVersion?` (${fileVersion})`:''}.\n\nSchéma zálohy: ${fileSchema}\nSchéma této aplikace: ${BACKUP_SCHEMA_VERSION} (verze ${APP_VERSION})\n\nNěkterá data (např. nové stavy nebo pole vozidel) se nemusí načíst správně.\nDoporučujeme nejprve aktualizovat aplikaci.\n\nPokračovat v importu i tak?`
+          : `This backup comes from a newer MyCars version${fileVersion?` (${fileVersion})`:''}.\n\nBackup schema: ${fileSchema}\nThis app schema: ${BACKUP_SCHEMA_VERSION} (version ${APP_VERSION})\n\nSome data (e.g. new vehicle statuses or fields) may not load correctly.\nWe recommend updating the app first.\n\nProceed with import anyway?`;
+        if(!confirm(msg)){
+          showToast(cs?'Import zrušen':'Import cancelled','');
+          e.target.value='';
+          return;
+        }
+      }
       const d=sanitizeImported(raw);
       state.cars=d.cars;state.records=d.records;
       state.fuels=d.fuels;state.reminders=d.reminders;
+      state.jobs=d.jobs||[];
+      // Settings/lang ze zálohy (sanitizeImported je už validuje).
+      if(d.settings) Object.assign(state.settings, d.settings);
+      if(d.lang) state.lang=d.lang;
       if(state.cars.length)state.currentCarId=state.cars[0].id;
       state.filterCat='';state.search='';state.fuelSearch='';
-      saveData();renderAll();showToast(t('import_ok'),'success');
-    }catch{showToast('Import failed','error');}
+      saveData();
+      applyTheme(); // pro případ, že se změnilo téma ze zálohy
+      renderAll();
+      // Shrnutí — uživatel hned vidí, jestli sedí počty (vč. archivovaných aut).
+      const archived=state.cars.filter(isCarArchived).length;
+      const summary=cs
+        ? `Importováno: ${state.cars.length} vozidel${archived?` (${archived} v archivu)`:''}, ${state.records.length} záznamů, ${state.fuels.length} tankování, ${state.reminders.length} připomínek, ${state.jobs.length} zakázek`
+        : `Imported: ${state.cars.length} vehicles${archived?` (${archived} archived)`:''}, ${state.records.length} records, ${state.fuels.length} fuel logs, ${state.reminders.length} reminders, ${state.jobs.length} jobs`;
+      showToast(summary,'success');
+    }catch(err){
+      console.warn('Import failed',err);
+      showToast(cs?'Import selhal — neplatný soubor':'Import failed — invalid file','error');
+    }
   };
   reader.readAsText(file);e.target.value='';
 }
@@ -3347,7 +4075,7 @@ function renderSettings(){
   const cs=state.lang==='cs';
   const totalRecords=state.records.length;
   const totalFuels=state.fuels.length;
-  const activeCars=state.cars.filter(c=>c.status==='active').length;
+  const activeCars=state.cars.filter(c=>!isCarArchived(c)).length;
   const inactiveCars=state.cars.length-activeCars;
 
   el.innerHTML=`
@@ -3443,8 +4171,8 @@ function renderSettings(){
         <div class="section-title">${cs?'O aplikaci':'About'}</div>
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.13.8</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260616-003</span></div>
+          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.15.1</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260618-012</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           ${(()=>{
@@ -4185,11 +4913,25 @@ document.addEventListener('click', function _clickDispatch(e) {
     case 'wizardBack':          wizardBack(); break;
     // Deletes
     case 'deleteCar':           deleteCar(); break;
+    case 'archiveCar':          archiveCar(d.id); break;
+    case 'unarchiveCar':        unarchiveCar(d.id); break;
     case 'deleteFuel':          deleteFuel(d.id); break;
     case 'deleteRecord':        deleteRecord(d.id); break;
     case 'deleteReminder':      deleteReminder(d.id); break;
+    case 'deleteJob':           deleteJob(d.id); break;
     case 'confirmDeleteAll':         confirmDeleteAll(); break;
     case 'confirmDeleteOperational': confirmDeleteOperational(); break;
+    // Jobs (Service)
+    case 'openJobModal':        openJobModal(d.id); break;
+    case 'saveJob':             saveJob(); break;
+    case 'setJobStatus':        setJobStatus(d.id, d.status); break;
+    case 'toggleJobTask':       toggleJobTask(d.id, Number(d.idx)); break;
+    case 'convertJobToRecord':  convertJobToRecord(d.id); break;
+    case 'addJobTask':          addJobTask(); break;
+    case 'removeJobModalTask':  removeJobModalTask(Number(d.idx)); break;
+    case 'toggleJobSection':    toggleJobSection(d.id); break;
+    case 'toggleArchiveSection':      toggleArchiveSection(); break;
+    case 'toggleRemindersSuspended':  toggleRemindersSuspended(); break;
     // Data
     case 'exportData':          exportData(); break;
     case 'triggerImportFile':   triggerImportFile(); break;
@@ -4249,6 +4991,8 @@ document.addEventListener('change', function _changeDispatch(e) {
     case 'setFilterCat':            setFilterCat(el.value); break;
     case 'setTireReminders':        setTireReminders(el.checked); break;
     case 'saveCarEditDrivetrain':   saveCarEditDrivetrain(); break;
+    case 'onCarStatusChange':       onCarStatusChange(); break;
+    case 'toggleJobModalTask':      toggleJobModalTask(Number(el.dataset.idx), el.checked); break;
   }
 });
 
@@ -4263,6 +5007,7 @@ document.addEventListener('input', function _inputDispatch(e) {
     case 'setRecordsSearch':       setRecordsSearch(el.value); break;
     case 'acFilter':               acFilter(el.dataset.field); break;
     case 'validateSpeedIndex':     validateSpeedIndex(el); break;
+    case 'updateJobModalTask':     updateJobModalTask(Number(el.dataset.idx), el.value); break;
   }
 });
 

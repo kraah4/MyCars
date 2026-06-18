@@ -678,6 +678,8 @@
   .job-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--border) }
   .job-actions .btn { font-size: .76rem; padding: 6px 11px; min-height: 32px }
   .job-section-collapse { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; padding: 6px 0 }
+  /* Sekce s šipkou potřebují víc vzduchu mezi border-left a chevronem, ať šipka „nelepí" na modrý proužek (override section-title padding-left: 10px). */
+  .section-title.job-section-collapse { padding-left: 18px }
   .job-section-collapse .chev { transition: transform .2s; color: var(--text3); font-size: .7rem }
   .job-section-collapse.collapsed .chev { transform: rotate(-90deg) }
   .job-task-row { display: flex; align-items: center; gap: 8px }
