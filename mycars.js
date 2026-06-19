@@ -1,7 +1,10 @@
-// Generate 180×180 PNG apple-touch-icon + favicon from a typographic wordmark.
-// Design: dark rounded badge (matches app --surface) with stacked "My" (white, light)
-// and "Cars" (accent blue #6c8fff, bold) + subtle underline accent. System font stack
-// — renders natively on every OS (Segoe UI / SF / Roboto), no web-font dependency.
+// Generate PNG apple-touch-icon + favicon + dynamic PWA manifest from a typographic
+// wordmark. Design: dark rounded badge (matches app --surface) with stacked "My"
+// (white, light) and "Cars" (accent blue #6c8fff, bold) + subtle underline accent.
+// System font stack renders natively on every OS (Segoe UI / SF / Roboto). We
+// rasterize the SVG via <canvas> so iOS, Android *and* desktop PWA installers
+// (Chrome/Edge/Firefox on Linux KDE Plasma, GNOME, Windows, …) all get the same
+// pixel-perfect PNG instead of a font-dependent SVG.
 (function(){
   var svg =
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>"+
@@ -17,30 +20,67 @@
 
   var url = 'data:image/svg+xml;utf8,'+encodeURIComponent(svg);
 
-  var img = new Image();
-  img.onload = function(){
-    var c=document.createElement('canvas'); c.width=c.height=180;
-    var ctx=c.getContext('2d');
-    ctx.drawImage(img,0,0,180,180);
-    var png;
-    try { png=c.toDataURL('image/png'); }
-    catch(e){ png=url; } // fallback to SVG if canvas tainted
+  // Rasterize the wordmark SVG to a PNG data URL at the given size.
+  function rasterize(size, cb){
+    var img = new Image();
+    img.onload = function(){
+      var c=document.createElement('canvas'); c.width=c.height=size;
+      var ctx=c.getContext('2d');
+      ctx.drawImage(img,0,0,size,size);
+      try { cb(c.toDataURL('image/png')); }
+      catch(e){ cb(null); } // canvas tainted — fall back to SVG via static manifest
+    };
+    img.onerror = function(){ cb(null); };
+    img.src = url;
+  }
 
-    var l=document.getElementById('ati'); if(l) l.href=png;
+  // 1) 180×180 PNG for iOS apple-touch-icon + favicon
+  rasterize(180, function(png180){
+    var href = png180 || url;
+    var l=document.getElementById('ati'); if(l) l.href=href;
     // Force favicon cache bust: remove old link, insert fresh one
     var f=document.getElementById('fav');
     if(f) f.parentNode.removeChild(f);
     var nf=document.createElement('link');
-    nf.rel='icon'; nf.type=(png===url?'image/svg+xml':'image/png'); nf.href=png;
+    nf.rel='icon'; nf.type=(png180?'image/png':'image/svg+xml'); nf.href=href;
     document.head.appendChild(nf);
-  };
-  img.onerror=function(){
-    // Last-resort: use the SVG data URL directly
-    var l=document.getElementById('ati'); if(l) l.href=url;
-    var f=document.getElementById('fav');
-    if(f){ f.type='image/svg+xml'; f.href=url; }
-  };
-  img.src=url;
+  });
+
+  // 2) 512×512 PNG for desktop PWA install (Linux KDE/GNOME, Windows, macOS, …).
+  //    Build an in-memory manifest pointing to the rasterized PNG and swap the
+  //    <link rel="manifest"> href to a blob URL. The static manifest.json on disk
+  //    stays as a fallback for browsers that don't re-read the manifest.
+  rasterize(512, function(png512){
+    if(!png512) return; // canvas tainted — keep static SVG manifest
+    try {
+      var manifest = {
+        name: 'MyCars — Evidence vozidel',
+        short_name: 'MyCars',
+        description: 'Offline vehicle maintenance and expense tracker',
+        start_url: './MyCars.html',
+        scope: './',
+        display: 'standalone',
+        orientation: 'any',
+        background_color: '#07080d',
+        theme_color: '#0f1018',
+        lang: 'cs',
+        categories: ['utilities','productivity'],
+        icons: [
+          { src: png512, sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: png512, sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: png512, sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+        ],
+        shortcuts: [
+          { name:'Přehled vozů',   short_name:'Fleet',     description:'Zobrazit přehled všech vozidel', url:'./MyCars.html#fleet' },
+          { name:'Nové tankování', short_name:'Tankování', description:'Přidat záznam tankování',         url:'./MyCars.html#fuel'  }
+        ]
+      };
+      var blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+      var blobUrl = URL.createObjectURL(blob);
+      var ml = document.querySelector('link[rel="manifest"]');
+      if(ml) ml.href = blobUrl;
+    } catch(e){ /* keep static manifest */ }
+  });
 })();
 
 // ─── FUEL TYPES ──────────────────────────────────────────────
