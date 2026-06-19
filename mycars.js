@@ -85,6 +85,10 @@ let state = {
   remindersCarId:null,   // null = all active | carId = single car
   serviceCarId:null,     // null = all active | carId = single car (filter for Service page)
   editingJobId:null,
+  // Diary (v3.16) — chronologický feed událostí
+  diaryCarId:null,       // null = all active | '__all__' = all incl. archive | carId = single car
+  diarySearch:'',
+  diaryCats:[],          // klikací filtr kategorií záznamů (prázdné = vše)
   cars:[], records:[], reminders:[], fuels:[], jobs:[]
 };
 
@@ -189,6 +193,26 @@ const T = {
     job_in_service_badge:'V servisu', job_planned_badge:'Plán. servis',
     confirm_delete_job:'Opravdu smazat tuto zakázku?',
     job_saved:'Zakázka uložena', job_converted:'Převedeno na záznam',
+    // Diary
+    diary:'Deník',
+    diary_title:'Deník událostí',
+    diary_no_events:'Žádné události',
+    diary_no_events_hint:'Zkus uvolnit filtry nebo přidat záznamy.',
+    diary_type_record:'Záznamy',
+    diary_type_fuel:'Tankování',
+    diary_type_job:'Zakázky',
+    diary_type_lifecycle:'Pořízení / vyřazení',
+    diary_filter_types:'Typy událostí',
+    diary_event_acquired:'Vozidlo pořízeno',
+    diary_event_decommissioned:'Vozidlo vyřazeno',
+    diary_event_sold:'Vozidlo prodáno',
+    diary_event_job_created:'Naplánován servis',
+    diary_event_job_done:'Dokončen servis',
+    diary_event_job_cancelled:'Zrušen servis',
+    diary_event_fuel:'Tankování',
+    diary_event_record:'Záznam',
+    diary_count:'událostí',
+    diary_show_all:'Zobrazit vše',
   },
   en:{
     dashboard:'Dashboard',records:'Records',analytics:'Analytics',reminders:'Reminders',fuel:'Fuel log',
@@ -250,6 +274,26 @@ const T = {
     job_in_service_badge:'At shop', job_planned_badge:'Scheduled',
     confirm_delete_job:'Really delete this work order?',
     job_saved:'Work order saved', job_converted:'Converted to record',
+    // Diary
+    diary:'Diary',
+    diary_title:'Event diary',
+    diary_no_events:'No events',
+    diary_no_events_hint:'Try relaxing filters or adding records.',
+    diary_type_record:'Records',
+    diary_type_fuel:'Fuelling',
+    diary_type_job:'Work orders',
+    diary_type_lifecycle:'Acquired / decommissioned',
+    diary_filter_types:'Event types',
+    diary_event_acquired:'Vehicle acquired',
+    diary_event_decommissioned:'Vehicle decommissioned',
+    diary_event_sold:'Vehicle sold',
+    diary_event_job_created:'Service scheduled',
+    diary_event_job_done:'Service completed',
+    diary_event_job_cancelled:'Service cancelled',
+    diary_event_fuel:'Fuelling',
+    diary_event_record:'Record',
+    diary_count:'events',
+    diary_show_all:'Show all',
   }
 };
 
@@ -789,9 +833,13 @@ function renderCarSwitcher(){
   const activeCars=sort(state.cars.filter(c=>!isCarArchived(c)));
   const archivedCars=sort(state.cars.filter(c=>isCarArchived(c)));
 
-  const isCtx=['analytics','reminders'].includes(page);
-  const ctxVal=page==='analytics'?state.analyticsCarId:state.remindersCarId;
-  const selFn=page==='analytics'?'selectAnalyticsCar':'selectRemindersCar';
+  const isCtx=['analytics','reminders','diary'].includes(page);
+  const ctxVal=page==='analytics'?state.analyticsCarId
+              :page==='reminders'?state.remindersCarId
+              :state.diaryCarId;
+  const selFn=page==='analytics'?'selectAnalyticsCar'
+             :page==='reminders'?'selectRemindersCar'
+             :'selectDiaryCar';
 
   // Min cars to show on regular pages
   if(!isCtx && state.cars.filter(c=>!isCarArchived(c)).length<2){
@@ -915,6 +963,13 @@ function selectRemindersCar(val){
   renderCarSwitcher();
   renderPage();
 }
+function selectDiaryCar(val){
+  state.diaryCarId=val==='__all__active'?null:val;
+  if(val&&val!=='__all__active'&&val!=='__all__') state.currentCarId=val;
+  closeCswMenu();
+  renderCarSwitcher();
+  renderPage();
+}
 
 function setAnalyticsTab(tab){
   state.analyticsTab=tab;
@@ -965,6 +1020,7 @@ function renderPage(){
     dashboard:t('dashboard'),records:t('records'),fuel:t('fuel'),
     analytics:t('analytics'),reminders:t('reminders'),
     service:t('service'),
+    diary:t('diary_title'),
     settings:cs?'Nastavení':'Settings',
     'vehicle-edit':cs?'Upravit vozidlo':'Edit vehicle',
     'vehicle-wizard':cs?'Nové vozidlo':'New vehicle'
@@ -982,6 +1038,11 @@ function renderPage(){
     const v=state.remindersCarId;
     if(!v) subtitle=cs?`Všechna v provozu (${activeCars.length})`:`All in service (${activeCars.length})`;
     else{ const c=getCar(v); subtitle=c?`${c.make||''} ${c.model||''}`.trim():''; }
+  } else if(page==='diary'){
+    const v=state.diaryCarId;
+    if(!v) subtitle=cs?`Všechna v provozu (${activeCars.length})`:`All in service (${activeCars.length})`;
+    else if(v==='__all__') subtitle=cs?`Všechna vč. archivu (${state.cars.length})`:`All incl. archive (${state.cars.length})`;
+    else{ const c=getCar(v); subtitle=c?`${c.make||''} ${c.model||''}`.trim():''; }
   } else if(page==='vehicle-edit'){
     const editCar=getCar(state.editingCarId);
     subtitle=editCar?`${editCar.make||''} ${editCar.model||''}`.trim():'';
@@ -992,7 +1053,7 @@ function renderPage(){
   document.getElementById('page-title').innerHTML=
     esc(pageName)+(subtitle?` <span>— ${esc(subtitle)}</span>`:'');
 
-  const pages={fleet:renderFleet,dashboard:renderDashboard,records:renderRecords,fuel:renderFuelPage,analytics:renderAnalytics,reminders:renderRemindersPage,service:renderServicePage,settings:renderSettings,'vehicle-edit':renderCarEditPage,'vehicle-wizard':renderVehicleWizard};
+  const pages={fleet:renderFleet,dashboard:renderDashboard,records:renderRecords,fuel:renderFuelPage,analytics:renderAnalytics,reminders:renderRemindersPage,service:renderServicePage,diary:renderDiaryPage,settings:renderSettings,'vehicle-edit':renderCarEditPage,'vehicle-wizard':renderVehicleWizard};
   const contentEl = document.getElementById('content');
   contentEl.innerHTML='';
   contentEl.classList.remove('page-in');
@@ -3979,7 +4040,7 @@ function deleteReminder(id){state.reminders=state.reminders.filter(r=>r.id!==id)
 // ─── IMPORT / EXPORT ─────────────────────────────────────────
 // Verze schématu zálohy. Bumpni při změně tvaru (přidání/odebrání top-level polí).
 const BACKUP_SCHEMA_VERSION = 2;
-const APP_VERSION = '3.15.1';
+const APP_VERSION = '3.16.0';
 
 function exportData(){
   const now=new Date();
@@ -4068,6 +4129,303 @@ function showToast(msg,type=''){
 // ── Modal overlay — klik mimo okno NEZAVÍRÁ formulář ─────────
 // Formuláře se zavírají pouze tlačítkem ✕ nebo Zrušit,
 // aby nedocházelo ke ztrátě rozepsaných dat.
+
+// ─── DIARY PAGE ──────────────────────────────────────────────
+// Chronologický feed všech událostí napříč vozidly. Sloučí
+// records + fuels + jobs + lifecycle (acquired/decommissioned),
+// seřadí desc podle data a seskupí po měsících.
+
+// Vrátí pole událostí pro zadané car IDs. Každá událost má:
+//   { date: 'YYYY-MM-DD', type: 'record'|'fuel'|'job'|'lifecycle',
+//     subtype, carId, title, desc, cost, odo, color, sortKey }
+function buildDiaryEvents(carIds){
+  const set = new Set(carIds);
+  const evs = [];
+  const cs = state.lang==='cs';
+  const cats = Array.isArray(state.diaryCats) ? state.diaryCats : [];
+  const catSet = new Set(cats);
+  const anyCat = catSet.size > 0;
+
+  // Records — vždy součástí, ale filtrované podle vybraných kategorií
+  for(const r of state.records){
+    if(!set.has(r.carId)) continue;
+    if(anyCat && !catSet.has(r.cat)) continue;
+    evs.push({
+      date:r.date, type:'record', subtype:r.cat||'', carId:r.carId,
+      title:r.desc||t('diary_event_record'),
+      cat:r.cat||'', odo:r.odo||null, cost:r.price||0,
+      note:r.note||'',
+      color:CAT_COLORS[r.cat]||'#888',
+      sortKey:(r.date||'')+'-r-'+r.id,
+    });
+  }
+
+  // Fuel, jobs a lifecycle nemají kategorii. Pokud uživatel vybral
+  // konkrétní kategorie (cílí na records), schováme je. Bez vybrané
+  // kategorie ukážeme všechny události.
+  if(!anyCat){
+    for(const f of state.fuels){
+      if(!set.has(f.carId)) continue;
+      const liters = (f.liters||0).toFixed(2).replace('.',',');
+      const subtitle = `${liters} l${f.fullTank?' · '+(cs?'plná':'full'):''} · ${fuelTypeLabel(f.fuelTypeId)}`;
+      evs.push({
+        date:f.date, type:'fuel', subtype:'fuel', carId:f.carId,
+        title:t('diary_event_fuel'),
+        subtitle, odo:f.odo||null, cost:f.cost||0,
+        note:f.note||'',
+        color:'#3b82f6',
+        sortKey:(f.date||'')+'-f-'+f.id,
+      });
+    }
+
+    for(const j of state.jobs){
+      if(!set.has(j.carId)) continue;
+      if(j.startDate){
+        evs.push({
+          date:j.startDate, type:'job', subtype:'created', carId:j.carId,
+          title:t('diary_event_job_created'),
+          subtitle:j.shop||'', cost:j.estimatedCost||0, odo:null,
+          note:j.notes||'',
+          color:'#a855f7',
+          sortKey:j.startDate+'-jc-'+j.id,
+        });
+      }
+      if(j.status==='done'){
+        const d = j.endDate || j.startDate;
+        if(d){
+          evs.push({
+            date:d, type:'job', subtype:'done', carId:j.carId,
+            title:t('diary_event_job_done'),
+            subtitle:j.shop||'', cost:j.estimatedCost||0, odo:null,
+            note:j.notes||'',
+            color:'#10b981',
+            sortKey:d+'-jd-'+j.id,
+          });
+        }
+      }
+      if(j.status==='cancelled'){
+        const d = j.endDate || j.startDate;
+        if(d){
+          evs.push({
+            date:d, type:'job', subtype:'cancelled', carId:j.carId,
+            title:t('diary_event_job_cancelled'),
+            subtitle:j.shop||'', cost:0, odo:null,
+            note:j.notes||'',
+            color:'#6b7280',
+            sortKey:d+'-jx-'+j.id,
+          });
+        }
+      }
+    }
+
+    for(const c of state.cars){
+      if(!set.has(c.id)) continue;
+      if(c.acquired){
+        evs.push({
+          date:c.acquired, type:'lifecycle', subtype:'acquired', carId:c.id,
+          title:t('diary_event_acquired'),
+          cost:0, odo:c.startOdo||null,
+          color:'#22c55e',
+          sortKey:c.acquired+'-la-'+c.id,
+        });
+      }
+      if(c.decommissioned){
+        const isSold = c.status==='sold';
+        evs.push({
+          date:c.decommissioned, type:'lifecycle',
+          subtype:isSold?'sold':'decommissioned', carId:c.id,
+          title:t(isSold?'diary_event_sold':'diary_event_decommissioned'),
+          cost:isSold?(c.salePrice||0):0, odo:null,
+          color:isSold?'#f59e0b':'#ef4444',
+          sortKey:c.decommissioned+'-ld-'+c.id,
+        });
+      }
+    }
+  }
+
+  // Vyhledávání (full-text přes title, subtitle, cat, note, SPZ vozidla)
+  const q = (state.diarySearch||'').trim().toLowerCase();
+  let filtered = evs;
+  if(q){
+    filtered = evs.filter(e=>{
+      const car = getCar(e.carId);
+      const carStr = car ? `${car.make||''} ${car.model||''} ${car.plate||''}`.toLowerCase() : '';
+      return (e.title||'').toLowerCase().includes(q)
+        || (e.subtitle||'').toLowerCase().includes(q)
+        || (e.cat||'').toLowerCase().includes(q)
+        || (e.note||'').toLowerCase().includes(q)
+        || carStr.includes(q);
+    });
+  }
+
+  // Seřadit desc (sortKey obsahuje datum-typ-id, takže events ze stejného dne
+  // mají deterministické pořadí)
+  filtered.sort((a,b)=>b.sortKey.localeCompare(a.sortKey));
+  return filtered;
+}
+
+// Formát měsíčního headeru ("Červen 2026" / "June 2026")
+function diaryMonthLabel(yyyyMM){
+  const [y,m] = yyyyMM.split('-');
+  const dt = new Date(Number(y), Number(m)-1, 1);
+  const cs = state.lang==='cs';
+  const month = dt.toLocaleDateString(cs?'cs-CZ':'en-US', { month:'long' });
+  return month.charAt(0).toUpperCase()+month.slice(1)+' '+y;
+}
+
+function renderDiaryPage(){
+  const el = document.getElementById('content');
+  const cs = state.lang==='cs';
+
+  // Resolve scope (jaká auta)
+  const v = state.diaryCarId;
+  let carIds;
+  if(!v) carIds = state.cars.filter(c=>!isCarArchived(c)).map(c=>c.id);
+  else if(v==='__all__') carIds = state.cars.map(c=>c.id);
+  else if(getCar(v)) carIds = [v];
+  else { state.diaryCarId = null; carIds = state.cars.filter(c=>!isCarArchived(c)).map(c=>c.id); }
+
+  const events = buildDiaryEvents(carIds);
+
+  // Klikací chipy kategorií (multi-select). Prázdný výběr = vše.
+  const activeCats = new Set(Array.isArray(state.diaryCats)?state.diaryCats:[]);
+  // Spočítáme, které kategorie skutečně mají záznamy v aktuálním scope —
+  // prázdné chipy bychom zbytečně zabíraly místo, zejména na mobilu.
+  // Záměrně počítáme přes state.records (ne přes events), abychom viděli i
+  // kategorie schované filtrem.
+  const carIdSet = new Set(carIds);
+  const catCounts = Object.create(null);
+  for(const r of state.records){
+    if(!carIdSet.has(r.carId)) continue;
+    if(r.cat) catCounts[r.cat] = (catCounts[r.cat]||0)+1;
+  }
+  const catChips = CATEGORIES[state.lang].map(c=>{
+    const key = normalizeCat(c);
+    const on = activeCats.has(key);
+    // Skryj kategorie, ve kterých nejsou žádné záznamy — pokud ovšem není
+    // vybraná (uživatel musí mít možnost ji odkliknout).
+    if(!on && !catCounts[key]) return '';
+    const color = CAT_COLORS[key] || 'var(--accent)';
+    const style = on
+      ? `background:${color}22;color:${color};border-color:${color}66`
+      : '';
+    return `<button class="diary-chip ${on?'on':''}" data-action="toggleDiaryCat" data-cat="${esc(key)}" style="${style}">
+      ${esc(c)}
+    </button>`;
+  }).join('');
+  const clearBtn = activeCats.size
+    ? `<button class="diary-chip diary-chip-clear" data-action="clearDiaryCats" title="${esc(cs?'Zrušit všechny filtry kategorií':'Clear category filters')}">✕</button>`
+    : '';
+
+  const head = `
+    <div class="diary-toolbar">
+      <div class="diary-search-wrap">
+        <input type="search" class="form-input diary-search" id="diary-search"
+          placeholder="${cs?'Hledat v deníku…':'Search diary…'}"
+          value="${esc(state.diarySearch||'')}"
+          data-oninput="setDiarySearch">
+      </div>
+      <div class="diary-chips" role="group" aria-label="${esc(cs?'Filtr kategorií':'Category filter')}">
+        ${catChips}${clearBtn}
+      </div>
+      <div class="diary-count">${events.length} ${esc(t('diary_count'))}</div>
+    </div>`;
+
+  if(!events.length){
+    el.innerHTML = head + `
+      <div class="empty" style="padding:48px 16px;">
+        <div class="empty-icon">— —</div>
+        <p><strong>${esc(t('diary_no_events'))}</strong></p>
+        <p style="color:var(--text2);font-size:.86rem">${esc(t('diary_no_events_hint'))}</p>
+      </div>`;
+    return;
+  }
+
+  // Seskupení podle YYYY-MM
+  const groups = new Map();
+  for(const e of events){
+    const key = (e.date||'').slice(0,7) || '0000-00';
+    if(!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(e);
+  }
+
+  let html = head + '<div class="diary-feed">';
+  for(const [yyyyMM, list] of groups){
+    html += `<div class="diary-month-head"><span class="diary-month-label">${esc(diaryMonthLabel(yyyyMM))}</span><span class="diary-month-count">${list.length}</span></div>`;
+    html += '<div class="diary-month-items">';
+    for(const e of list){
+      const car = getCar(e.carId);
+      const carName = car ? `${car.make||''} ${car.model||''}`.trim() : '';
+      const plate = car?.plate || '';
+      const dot = car?.color || '#888';
+      const dateStr = fmtDate(e.date);
+      const costStr = e.cost ? fmtMoney(e.cost) : '';
+      const odoStr = e.odo ? `${(e.odo).toLocaleString('cs-CZ')} km` : '';
+      // Subtitle assembly
+      let sub = '';
+      if(e.type==='record' && e.cat){
+        sub = `<span class="diary-cat-badge" style="background:${e.color}22;color:${e.color}">${esc(getCatDisplay(e.cat))}</span>`;
+      } else if(e.subtitle){
+        sub = `<span class="diary-sub">${esc(e.subtitle)}</span>`;
+      }
+      html += `
+        <div class="diary-item" style="--ev-color:${e.color}">
+          <div class="diary-item-bullet"></div>
+          <div class="diary-item-body">
+            <div class="diary-item-head">
+              <span class="diary-date">${esc(dateStr)}</span>
+              <span class="diary-car">${carDotHtml(dot,'diary-car-dot')}<span class="diary-car-name">${esc(carName)}</span>${plate?`<span class="diary-car-plate">${esc(plate)}</span>`:''}</span>
+            </div>
+            <div class="diary-item-title">${esc(e.title)}</div>
+            <div class="diary-item-meta">
+              ${sub}
+              ${odoStr?`<span class="diary-odo">${esc(odoStr)}</span>`:''}
+              ${costStr?`<span class="diary-cost">${esc(costStr)}</span>`:''}
+            </div>
+            ${e.note?`<div class="diary-item-note">${esc(e.note)}</div>`:''}
+          </div>
+        </div>`;
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function setDiarySearch(val){
+  state.diarySearch = val||'';
+  // Pouze re-render content (zachová focus v inputu via debounce? — render je rychlý, ale focus zmizí)
+  // Lehčí UX: filtrujeme jen po dlouhém kliknutí; pro jednoduchost re-rendrujeme a obnovíme focus
+  renderDiaryPage();
+  const inp = document.getElementById('diary-search');
+  if(inp){ inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+}
+
+function setDiaryCat(val){
+  // Legacy single-select (zachováno pro zpětnou kompat) — přepneme do multi.
+  state.diaryCats = val ? [val] : [];
+  renderDiaryPage();
+}
+
+function toggleDiaryCat(cat){
+  if(!cat) return;
+  if(!Array.isArray(state.diaryCats)) state.diaryCats = [];
+  const i = state.diaryCats.indexOf(cat);
+  if(i>=0) state.diaryCats.splice(i,1);
+  else state.diaryCats.push(cat);
+  renderDiaryPage();
+}
+
+function clearDiaryCats(){
+  state.diaryCats = [];
+  renderDiaryPage();
+}
+
+function toggleDiaryType(tk){
+  // Legacy — typy událostí už nejsou v UI, ale handler ponechán bez efektu
+  // pro případné staré data-action atributy (defenzivní).
+  return;
+}
 
 // ─── SETTINGS PAGE ───────────────────────────────────────────
 function renderSettings(){
@@ -4171,8 +4529,8 @@ function renderSettings(){
         <div class="section-title">${cs?'O aplikaci':'About'}</div>
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.15.1</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260618-012</span></div>
+          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.16.0</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260618-017</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           ${(()=>{
@@ -4947,7 +5305,11 @@ document.addEventListener('click', function _clickDispatch(e) {
     case 'selectRecord':        selectRecord(d.id); break;
     case 'selectAnalyticsCar':  selectAnalyticsCar(d.id); break;
     case 'selectRemindersCar':  selectRemindersCar(d.id); break;
+    case 'selectDiaryCar':      selectDiaryCar(d.id); break;
     case 'setAnalyticsTab':     setAnalyticsTab(d.tab); break;
+    case 'toggleDiaryType':     toggleDiaryType(d.tk); break;
+    case 'toggleDiaryCat':      toggleDiaryCat(d.cat); break;
+    case 'clearDiaryCats':      clearDiaryCats(); break;
     case 'cmpTableSort':         cmpTableSort(d.key); break;
     case 'cmpTableSort':         cmpTableSort(d.key); break;
     case 'cmpTableSort':         cmpTableSort(d.key); break;
@@ -4989,6 +5351,7 @@ document.addEventListener('change', function _changeDispatch(e) {
     case 'toggleTyreMode':          toggleTyreMode(); break;
     case 'toggleTyreSame':          toggleTyreSame(el.dataset.set); break;
     case 'setFilterCat':            setFilterCat(el.value); break;
+    case 'setDiaryCat':             setDiaryCat(el.value); break;
     case 'setTireReminders':        setTireReminders(el.checked); break;
     case 'saveCarEditDrivetrain':   saveCarEditDrivetrain(); break;
     case 'onCarStatusChange':       onCarStatusChange(); break;
@@ -5005,6 +5368,7 @@ document.addEventListener('input', function _inputDispatch(e) {
     case 'handleGlobalSearchSync': handleGlobalSearch(el.value); syncDesktopSearch(el.value); break;
     case 'setFuelSearch':          setFuelSearchVal(el.value); break;
     case 'setRecordsSearch':       setRecordsSearch(el.value); break;
+    case 'setDiarySearch':         setDiarySearch(el.value); break;
     case 'acFilter':               acFilter(el.dataset.field); break;
     case 'validateSpeedIndex':     validateSpeedIndex(el); break;
     case 'updateJobModalTask':     updateJobModalTask(Number(el.dataset.idx), el.value); break;

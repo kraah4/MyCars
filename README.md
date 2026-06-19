@@ -1,6 +1,6 @@
 # MyCars — Vehicle Maintenance Tracker
 
-**Version:** 3.15.0 · **Build:** 20260616-007
+**Version:** 3.16.0 · **Build:** 20260618-017
 **Author:** kraah  
 **License:** GNU GPL v3 (with §7 attribution requirement — see `LICENSE`)  
 **Live:** https://kraah4.github.io/MyCars/MyCars.html  
@@ -46,6 +46,7 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 | **Fleet** | Vehicle cards split into **Active vehicles** and a collapsible **Archive** section (sold / decommissioned cars). Cards show document pills, current service/job badges and — for vehicles *For sale* — the asking price and listing link |
 | **Dashboard** | Vehicle status, document expiry alerts, last refuel, key statistics including km driven in the current calendar year |
 | **Records** | Service records with 5 summary stat cards, full-text search, category filter |
+| **Diary** | Unified chronological timeline of every event across all vehicles — service records, fuel entries, job lifecycle (created / done / cancelled) and vehicle lifecycle (acquired / decommissioned / sold). Grouped by month with sticky headers, full-text search, and multi-select category chips. See the *Diary* section below |
 | **Fuel log** | Fuel entries with per-tank consumption, average price/litre |
 | **Analytics** | Expense charts, monthly trends, and categorized stats (Costs, Service, Fuel). **Comparison tab** ranks all vehicles by avg. consumption, cost/km, avg. monthly cost, avg. service cost, total cost, and mileage; includes a full detail comparison table |
 | **Reminders** | Km-based and date-based reminders with status indicators; suspended vehicles (storage / in restoration) are folded into their own collapsible section, decommissioned ones are hidden |
@@ -255,6 +256,32 @@ The page groups jobs into four sections: *Currently in service*, *Planned*, *Don
 
 ---
 
+## Diary
+
+The **Diary** page aggregates everything that ever happened to your fleet into a single chronological feed. Four event sources are merged:
+
+| Source | Event types |
+| --- | --- |
+| `records` | Every service / cost record (coloured by category) |
+| `fuels` | Every refuel (litres, price, full-tank flag) |
+| `jobs` | Job created · done · cancelled |
+| `lifecycle` | Vehicle acquired · decommissioned · sold |
+
+### Scope & filters
+
+- **Vehicle scope** — *(none selected)* shows all active vehicles, the switcher's *All vehicles* option includes the archive, and picking a single car narrows the timeline to that one
+- **Search** — full-text over title, subtitle, note, workshop and category
+- **Category chips** — clickable, multi-select, coloured per category. Empty selection = everything visible; selecting one or more chips narrows to *records* of those categories only (fuel / jobs / lifecycle hide when any chip is active). An ✕ chip clears the selection. Categories with zero records in the current scope are hidden automatically.
+- **Mobile** — chips collapse into a single horizontally scrollable row with a soft fade on the edges; the event counter is hidden (per-month counts are visible in the sticky headers)
+
+### Layout
+
+Events are grouped by month with sticky `Month YYYY` headers. Each item shows a coloured bullet (category colour for records, blue for fuel, purple/green/grey for job transitions, green/orange/red for lifecycle), date, vehicle (colour dot + name + plate), title, optional category badge / subtitle, odometer, cost and note.
+
+> Diary is a **derived view** — there is nothing new in the JSON schema, the page simply rebuilds the timeline from `records`, `fuels`, `jobs` and per-car `acquired` / `decommissioned` fields.
+
+---
+
 ## Sample / Showcase Data
 
 A ready-to-import demo dataset lives in [`mycars_showcase_data.json`](mycars_showcase_data.json). It covers all 6 vehicle statuses and all 4 classifications:
@@ -283,8 +310,8 @@ Vehicle switcher (top-bar dropdown) and the *Active* section of the Fleet page l
 
 ### JSON export / import
 
-- **Export:** Settings → Export backup → downloads `mycars_YYYY-MM-DD-HHMMSS.json`
-- **Import:** Settings → Import backup → replaces all existing data
+- **Export:** Settings → Export backup → downloads `mycars_YYYY-MM-DD-HHMMSS.json`. Exports the full state — vehicles, records, fuel entries, reminders, jobs **plus** `settings` (theme, tyre reminders) and `lang`. The file carries `app: "MyCars"`, `version`, and a numeric `schema` field for forward-compatibility detection.
+- **Import:** Settings → Import backup → replaces all existing data. The import summary toast shows counts of restored vehicles (incl. archive), records, fuel entries, reminders and jobs. If the backup's `schema` is newer than this build, the app shows a confirmation prompt warning that some fields may be lost — cancel to abort cleanly without touching existing data.
 
 > ⚠️ Import is destructive — it overwrites everything. Always export a backup first.
 
@@ -427,7 +454,7 @@ Datum,Typ paliva,Tankováno litrů,Cena za litr,Celková cena,Stav tachometru,Km
 | **WCAG** | Text contrast ratios ≥ 4.5:1 on all three themes |
 | **PWA** | Installable on iOS 16.4+ (Safari → Add to Home Screen) and Android/Chrome |
 | **Service Worker** | Cache-first, offline-capable after first load; update detection with in-app toast notification |
-| **Codebase** | `MyCars.html` (shell, styles) + `mycars.js` (logic, ~5 000 lines) + `mycars-sw.js` (service worker) |
+| **Codebase** | `MyCars.html` (shell, styles) + `mycars.js` (logic, ~5 400 lines) + `mycars-sw.js` (service worker) |
 
 ### localStorage data structure
 
