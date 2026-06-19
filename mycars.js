@@ -83,6 +83,69 @@
   });
 })();
 
+// ─── TRUSTED TYPES BOOTSTRAP ─────────────────────────────────
+// CSP `require-trusted-types-for 'script'` zakazuje přiřazení obyčejných stringů
+// do DOM sinků (innerHTML, outerHTML, insertAdjacentHTML, document.write, eval,
+// Function ctor, setTimeout("kód",…) atd.). Jediný sink, který tato aplikace
+// reálně používá, je innerHTML.
+//
+// Místo přepisování ~58 call-sitů zaregistrujeme jedinou pojmenovanou policy
+// `mycars-html` (povolenou v CSP direktivou `trusted-types mycars-html`) a
+// obalíme setter `Element.prototype.innerHTML` tak, aby stringy transparentně
+// prošly přes policy → vznikne `TrustedHTML`, který IDL setter akceptuje.
+//
+// BEZPEČNOSTNÍ MODEL:
+//  - Naše template literály považujeme za důvěryhodné (píšeme je my).
+//  - Uživatelská data interpolovaná do nich MUSÍ projít přes `esc()` —
+//    to je dlouhodobá konvence kódu a TT na ní nic nemění.
+//  - Přínos TT: externí kód (browser extensions, devtools-injected payloady,
+//    případná budoucí supply-chain kompromitace) nemůže vytvořit vlastní
+//    policy (CSP whitelist obsahuje pouze `mycars-html`) ani obejít náš
+//    setter, takže nedokáže injektovat HTML do DOMu. Plus tvrdá hláška v
+//    konzoli, pokud někdo v budoucnu napíše nový DOM sink bez TT.
+(function(){
+  // Browser bez TT podpory (Safari ≤17 atd.) — `require-trusted-types-for`
+  // direktivu ignoruje a innerHTML funguje normálně. Nic neděláme.
+  if (typeof window.trustedTypes === 'undefined' || !window.trustedTypes.createPolicy) return;
+
+  var policy;
+  try {
+    policy = window.trustedTypes.createPolicy('mycars-html', {
+      // Identita: stringifikace + označení jako TrustedHTML. `esc()` v call-sitech
+      // už uživatelská data escapuje, takže sanitizér na této úrovni není nutný.
+      createHTML: function(s){ return String(s); }
+    });
+  } catch (e) {
+    // CSP odmítl policy (např. chybné nastavení). Bez policy by každé
+    // přiřazení innerHTML pod enforcementem hodilo TypeError a aplikace
+    // by se nerenderovala — radši nechat běžet bez shimu a problém uvidíme
+    // v konzoli při prvním sinku.
+    console.warn('MyCars: Trusted Types policy could not be created:', e);
+    return;
+  }
+
+  // Obal setteru `Element.prototype.innerHTML`: pre-konvertujeme string na
+  // TrustedHTML, pak voláme původní IDL setter. TT enforcement vidí TrustedHTML
+  // a propustí. `instanceof TrustedHTML` čeká už hotový TrustedHTML (nezdvojuje
+  // wrap). null/undefined → prázdný string (kompatibilní s defaultním chováním).
+  var desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+  if (!desc || !desc.set) return;
+  var origSet = desc.set;
+  var TT = window.TrustedHTML;
+  Object.defineProperty(Element.prototype, 'innerHTML', {
+    configurable: true,
+    enumerable: desc.enumerable,
+    get: desc.get,
+    set: function(value){
+      if (TT && value instanceof TT) {
+        origSet.call(this, value);
+      } else {
+        origSet.call(this, policy.createHTML(value == null ? '' : String(value)));
+      }
+    }
+  });
+})();
+
 // ─── FUEL TYPES ──────────────────────────────────────────────
 const FUEL_TYPES = {
   petrol: [
@@ -629,6 +692,175 @@ function safeJsonParse(text){
     return v;
   });
 }
+
+// ─── IMPORT VALIDATION HELPERS ───────────────────────────────
+// Striktní typové validátory pro hranici důvěry (load z localStorage + JSON import).
+// Cíl: zlomená nebo zlomyslná záloha nesmí
+//   • vložit `javascript:` / `data:` URL do <a href> (XSS přes klik uživatele),
+//   • prolomit `style="..."` atribut hodnotou bez escapu (CSS injection v carDotHtml),
+//   • injektovat HTML přes pole, která se renderují raw (např. tyres width/aspect),
+//   • zanést NaN / Infinity / nečíselné stringy do výpočtů (km, spotřeba, ceny),
+//   • zanést neplatná data do `<input type=date>` a do měsíčních agregací.
+// Každý validátor vrací sanitizovanou hodnotu nebo null (caller doplní fallback).
+const _ISO_DATE_RE  = /^\d{4}-\d{2}-\d{2}$/;
+const _HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+const _SPEED_RE     = /^[A-Za-z]{1,4}$/;
+function _vNum(v){
+  if(typeof v==='number') return Number.isFinite(v)?v:null;
+  if(typeof v==='string'){ const t=v.trim(); if(!t) return null; const n=Number(t); return Number.isFinite(n)?n:null; }
+  return null;
+}
+function _vInt(v,min,max){
+  const n=_vNum(v); if(n===null) return null;
+  const i=Math.trunc(n);
+  if(min!=null&&i<min) return null;
+  if(max!=null&&i>max) return null;
+  return i;
+}
+function _vBool(v){ return typeof v==='boolean'?v:null; }
+function _vStr(v,max){
+  if(typeof v!=='string') return null;
+  const t=v.trim(); if(!t) return null;
+  return t.length>max ? t.slice(0,max) : t;
+}
+function _vDate(v){
+  if(typeof v!=='string'||!_ISO_DATE_RE.test(v)) return null;
+  const d=new Date(v+'T00:00:00Z');
+  return isNaN(d.getTime()) ? null : v;
+}
+function _vColor(v){
+  return (typeof v==='string'&&_HEX_COLOR_RE.test(v)) ? v.toLowerCase() : null;
+}
+// _vUrl: jediná povolená schémata jsou http(s). URL constructor odmítne všechny
+// chybné hodnoty včetně `javascript:`/`data:`/`vbscript:`/`file:` (nepatří mezi
+// http(s)). Limit 2048 znaků = de facto browser maximum pro <a href>.
+function _vUrl(v){
+  if(typeof v!=='string'||!v||v.length>2048) return null;
+  try {
+    const u=new URL(v.trim());
+    return (u.protocol==='http:'||u.protocol==='https:') ? u.href : null;
+  } catch(_) { return null; }
+}
+function _vEnum(v,allowed){
+  return (typeof v==='string'&&allowed.indexOf(v)>=0) ? v : null;
+}
+function _vAxle(a){
+  if(!a||typeof a!=='object'||Array.isArray(a)) return null;
+  const speed=_vStr(a.speed,4);
+  return {
+    width:  _vInt(a.width,  0, 999),
+    aspect: _vInt(a.aspect, 0, 200),
+    rim:    _vInt(a.rim,    0, 50),
+    load:   _vInt(a.load,   0, 999),
+    speed:  (speed&&_SPEED_RE.test(speed)) ? speed : null,
+    plow:   _vNum(a.plow),
+    phigh:  _vNum(a.phigh),
+  };
+}
+function _vTyreSet(s){
+  if(!s||typeof s!=='object'||Array.isArray(s)) return null;
+  return {
+    same:  !!s.same,
+    front: _vAxle(s.front) || _vAxle(s),   // tolerantní k legacy flat axle
+    rear:  _vAxle(s.rear),
+  };
+}
+function _vTyres(t){
+  if(!t||typeof t!=='object'||Array.isArray(t)) return null;
+  // Legacy formát: width/aspect přímo na rootu — ponecháme stejnou strukturu.
+  if(t.width!==undefined||t.aspect!==undefined) return _vAxle(t);
+  const out={};
+  if(t.summer)    out.summer    = _vTyreSet(t.summer);
+  if(t.winter)    out.winter    = _vTyreSet(t.winter);
+  if(t.allseason) out.allseason = _vTyreSet(t.allseason);
+  return Object.keys(out).length ? out : null;
+}
+const _FUEL_TYPE_KEYS = Object.keys(FUEL_TYPES);
+// _vCar: validuje jedno vozidlo. Spolu s `migrateCar` (status/classification)
+// pokrývá všechna pole, která appka renderuje nebo používá k výpočtům.
+// Pole, kterých se to netýká (např. budoucí nové vlastnosti), zůstanou
+// nedotčená — `out.cars` v sanitizeImported je shallow copy bez whitelistu klíčů.
+function _vCar(c){
+  // řetězce — délkové limity (safeJsonParse už cappnul, tady jen normalizace typu)
+  c.make        = _vStr(c.make, MAX_STR_LEN) || '';
+  c.model       = _vStr(c.model, MAX_STR_LEN) || '';
+  c.name        = _vStr(c.name, MAX_STR_LEN) || '';
+  c.plate       = _vStr(c.plate, 32) || '';
+  c.vin         = _vStr(c.vin, 32) || '';
+  c.note        = _vStr(c.note, MAX_STR_LEN) || '';
+  c.oilType     = _vStr(c.oilType, 64);
+  c.coolantType = _vStr(c.coolantType, 64);
+  // čísla
+  c.year                = _vInt(c.year, 1900, 2200);
+  c.startOdo            = _vInt(c.startOdo, 0, 99999999);
+  c.oilInterval         = _vInt(c.oilInterval, 0, 9999999);
+  c.oilLastKm           = _vInt(c.oilLastKm, 0, 99999999);
+  c.oilWarn             = _vInt(c.oilWarn, 0, 9999999);
+  c.gearboxOilInterval  = _vInt(c.gearboxOilInterval, 0, 9999999);
+  c.gearboxOilLastKm    = _vInt(c.gearboxOilLastKm, 0, 99999999);
+  c.gearboxOilWarn      = _vInt(c.gearboxOilWarn, 0, 9999999);
+  c.xferOilInterval     = _vInt(c.xferOilInterval, 0, 9999999);
+  c.xferOilLastKm       = _vInt(c.xferOilLastKm, 0, 99999999);
+  c.xferOilWarn         = _vInt(c.xferOilWarn, 0, 9999999);
+  c.stkWarn             = _vInt(c.stkWarn, 0, 3650);
+  c.emissionWarn        = _vInt(c.emissionWarn, 0, 3650);
+  c.povWarn             = _vInt(c.povWarn, 0, 3650);
+  c.insuranceWarn       = _vInt(c.insuranceWarn, 0, 3650);
+  c.assistWarn          = _vInt(c.assistWarn, 0, 3650);
+  c.salePrice           = _vNum(c.salePrice);
+  // datumy (ISO YYYY-MM-DD)
+  c.stk             = _vDate(c.stk);
+  c.emission        = _vDate(c.emission);
+  c.pov             = _vDate(c.pov);
+  c.insurance       = _vDate(c.insurance);
+  c.acquired        = _vDate(c.acquired);
+  c.decommissioned  = _vDate(c.decommissioned);
+  c.assist          = _vDate(c.assist);
+  // enumy a strukturované hodnoty
+  c.fuelType        = _vEnum(c.fuelType, _FUEL_TYPE_KEYS);
+  c.color           = _vColor(c.color);     // bezpečné pro `style="background:${color}"` interpolaci v carDotHtml
+  c.saleAdUrl       = _vUrl(c.saleAdUrl);   // zahodí javascript:/data:/vbscript: schémata
+  // booleany
+  c.tyreAllSeason   = _vBool(c.tyreAllSeason) ?? false;
+  c.hasAutomatic    = _vBool(c.hasAutomatic)  ?? false;
+  c.has4x4          = _vBool(c.has4x4)        ?? false;
+  // pneumatiky (vnořené) — width/aspect/rim/load se renderují raw v tyreAxleSummary
+  c.tyres           = _vTyres(c.tyres);
+  return c;
+}
+function _vRecord(r){
+  r.carId = _vStr(r.carId, 64);
+  r.date  = _vDate(r.date);
+  r.odo   = _vInt(r.odo, 0, 99999999);
+  r.desc  = _vStr(r.desc, MAX_STR_LEN) || '';
+  r.cat   = _vStr(r.cat, 100) || '';   // volný text (escapováno přes esc() v renderu)
+  r.qty   = _vNum(r.qty);
+  r.price = _vNum(r.price);
+  r.note  = _vStr(r.note, MAX_STR_LEN) || '';
+  return r;
+}
+function _vFuel(f){
+  f.carId      = _vStr(f.carId, 64);
+  f.date       = _vDate(f.date);
+  f.odo        = _vInt(f.odo, 0, 99999999);
+  f.liters     = _vNum(f.liters);
+  f.cost       = _vNum(f.cost);
+  f.fuelTypeId = _vStr(f.fuelTypeId, 32);
+  f.fullTank   = _vBool(f.fullTank) ?? false;
+  f.note       = _vStr(f.note, MAX_STR_LEN) || '';
+  return f;
+}
+function _vReminder(rm){
+  rm.carId    = _vStr(rm.carId, 64);
+  rm.name     = _vStr(rm.name, 200) || '';
+  rm.type     = _vEnum(rm.type, ['date','km']) || 'date';
+  rm.date     = _vDate(rm.date);
+  rm.interval = _vInt(rm.interval, 0, 99999999);
+  rm.lastDone = _vInt(rm.lastDone, 0, 99999999);
+  rm.warnAt   = _vInt(rm.warnAt, 0, 9999999);
+  return rm;
+}
+
 function sanitizeImported(d){
   if(!d||typeof d!=='object') return {cars:[],records:[],fuels:[],reminders:[],jobs:[]};
   const out={
@@ -642,20 +874,24 @@ function sanitizeImported(d){
   const isObj=o=>o&&typeof o==='object'&&!Array.isArray(o);
   const validId=id=>typeof id==='string'&&/^[A-Za-z0-9_\-]{1,64}$/.test(id);
   const fixId=o=>{ if(!validId(o.id)) o.id=uid(); return o; };
-  out.cars=out.cars.filter(isObj).map(fixId).map(migrateCar);
-  out.records=out.records.filter(isObj).map(fixId);
-  out.fuels=out.fuels.filter(isObj).map(fixId);
-  out.reminders=out.reminders.filter(isObj).map(fixId);
-  // Jobs: sanitizovat tasks (vnořený array)
+  out.cars=out.cars.filter(isObj).map(fixId).map(migrateCar).map(_vCar);
+  out.records=out.records.filter(isObj).map(fixId).map(_vRecord);
+  out.fuels=out.fuels.filter(isObj).map(fixId).map(_vFuel);
+  out.reminders=out.reminders.filter(isObj).map(fixId).map(_vReminder);
+  // Jobs: sanitizovat tasks (vnořený array) + typovat ostatní pole.
   out.jobs=out.jobs.filter(isObj).map(j=>{
     fixId(j);
+    j.carId   = _vStr(j.carId, 64);
+    j.shop    = _vStr(j.shop, 200) || '';
+    j.dateFrom= _vDate(j.dateFrom);
+    j.dateTo  = _vDate(j.dateTo);
+    j.estCost = _vNum(j.estCost);
+    j.note    = _vStr(j.note, MAX_STR_LEN) || '';
     j.tasks=Array.isArray(j.tasks)?j.tasks.filter(isObj).slice(0,200).map(tk=>({
-      text: typeof tk.text==='string'?tk.text.slice(0,MAX_STR_LEN):'',
-      done: !!tk.done
+      text: _vStr(tk.text, MAX_STR_LEN) || '',
+      done: _vBool(tk.done) ?? false
     })):[];
-    // status whitelisting
-    const allowed={planned:1,in_progress:1,done:1,cancelled:1};
-    if(!allowed[j.status]) j.status='planned';
+    j.status = _vEnum(j.status, ['planned','in_progress','done','cancelled']) || 'planned';
     return j;
   });
   // settings — whitelist známých polí + typová kontrola (cizí klíče zahodíme).
@@ -4570,7 +4806,7 @@ function renderSettings(){
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
           <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.16.0</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260618-017</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260619-020</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           ${(()=>{

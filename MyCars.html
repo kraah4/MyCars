@@ -23,14 +23,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <!--
-  Content-Security-Policy: pragmatická politika pro single-file aplikaci s inline skripty
-  a event handlery. 'unsafe-inline' nelze odstranit bez velké refaktorace, ale CSP
-  i tak významně snižuje dopad případného XSS:
+  Content-Security-Policy: pragmatická politika pro single-file PWA.
+  Aplikace nemá inline ani vzdálené skripty (vše je v mycars.js), takže
+  script-src je restriktivní:
    - connect-src 'self' brání exfiltraci dat z localStorage na cizí endpoint přes fetch/XHR,
-   - script-src bez 'unsafe-eval' a bez vzdálených zdrojů blokuje eval a remote skripty,
-   - object-src/base-uri 'none' blokují <object>/<embed>/<base> injekce.
+   - script-src bez 'unsafe-eval' a bez 'unsafe-inline' blokuje eval, remote i inline skripty,
+   - object-src/base-uri 'none' blokují <object>/<embed>/<base> injekce,
+   - require-trusted-types-for 'script' vynutí TrustedHTML pro innerHTML a další DOM
+     sinks; trusted-types mycars-html povoluje jedinou pojmenovanou policy, kterou
+     vytváří mycars.js. Externí kód (rozšíření, future supply-chain) tak nemůže
+     zapsat libovolné HTML do DOMu bez průchodu naší policy.
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; worker-src 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types mycars-html;">
 <!-- Permissions-Policy: PWA nepotřebuje přístup ke kameře/mikrofonu/geolokaci atd. -->
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), midi=(), interest-cohort=()">
 <title>MyCars — Evidence vozidel</title>
