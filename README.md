@@ -1,6 +1,6 @@
 # MyCars — Vehicle Maintenance Tracker
 
-**Version:** 3.16.0 · **Build:** 20260618-017
+**Version:** 3.17.0 · **Build:** 20260630-006
 **Author:** kraah  
 **License:** GNU GPL v3 (with §7 attribution requirement — see `LICENSE`)  
 **Live:** https://kraah4.github.io/MyCars/MyCars.html  
@@ -51,7 +51,7 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 | **Analytics** | Expense charts, monthly trends, and categorized stats (Costs, Service, Fuel). **Comparison tab** ranks all vehicles by avg. consumption, cost/km, avg. monthly cost, avg. service cost, total cost, and mileage; includes a full detail comparison table |
 | **Reminders** | Km-based and date-based reminders with status indicators; suspended vehicles (storage / in restoration) are folded into their own collapsible section, decommissioned ones are hidden |
 | **Service** | Planned-service work orders (jobs) — see the *Service & planned jobs* section below |
-| **Settings** | Appearance (theme), language, tyre reminders, JSON backup, CSV import, data management, app info |
+| **Settings** | Appearance (theme), language, tyre reminders, **reminder notifications** (opt-in Web Notifications), JSON backup, CSV import, data management, app info |
 
 ---
 
@@ -218,7 +218,8 @@ Two reminder types:
 
 **Date-based** (e.g. MOT expiry)
 
-- Fields: name, date
+- Fields: name, date (DD.MM.YYYY) + optional time (HH:MM, 24-hour format)
+- When time is set, the *Due soon* / *Overdue* status is calculated to the minute; otherwise it is calculated against noon of the given day
 
 ### Automatic (Seasonal)
 
@@ -235,6 +236,17 @@ The Reminders page is split into two sections:
 - **Suspended** (collapsible, expanded by default) — vehicles in storage or in restoration
 
 Sold / decommissioned vehicles are not listed at all.
+
+### Notifications (opt-in)
+
+The app can show a system notification (Web Notifications API) when a reminder transitions to **Due soon** or **Overdue**.
+
+- **Global toggle** — *Settings → Notifications → Reminder notifications*. First activation triggers the browser permission prompt. If the user has previously blocked notifications, the toggle is disabled and a hint explains how to re-enable them in the browser's site settings. A **Test notification** button appears once permission is granted.
+- **Per-reminder toggle** — the reminder modal contains a *Notify me* checkbox (enabled by default). Reminders with notifications turned on are marked with a small 🔔 bell icon next to the delete button on the reminder card (greyed out when global notifications are off).
+- **Schedule** — the app checks reminders 2 s after startup, every 15 minutes while open, and whenever the tab becomes visible again. Each reminder fires at most once every 23 hours (`lastNotifiedAt` timestamp) to avoid spam. Vehicles in storage or in restoration are skipped.
+- **Clicking a notification** focuses the window and opens the Reminders page.
+
+> **Limit:** The Web Notifications API only fires while MyCars is open in a browser tab or installed as a PWA. True background push (notifications while the tab is closed) would require a Push API server, which is out of scope for an offline PWA.
 
 ---
 
@@ -454,7 +466,7 @@ Datum,Typ paliva,Tankováno litrů,Cena za litr,Celková cena,Stav tachometru,Km
 | **WCAG** | Text contrast ratios ≥ 4.5:1 on all three themes |
 | **PWA** | Installable on iOS 16.4+ (Safari → Add to Home Screen) and Android/Chrome |
 | **Service Worker** | Cache-first, offline-capable after first load; update detection with in-app toast notification |
-| **Codebase** | `MyCars.html` (shell, styles) + `mycars.js` (logic, ~5 400 lines) + `mycars-sw.js` (service worker) |
+| **Codebase** | `MyCars.html` (shell, styles) + `mycars.js` (logic, ~5 800 lines) + `mycars-sw.js` (service worker) |
 
 ### localStorage data structure
 
@@ -463,11 +475,14 @@ The `settings` object inside the stored JSON:
 ```json
 "settings": {
   "tireReminders": true,
-  "theme": "dark"
+  "theme": "dark",
+  "notificationsEnabled": false
 }
 ```
 
 `theme` accepts `"dark"` (default), `"bright"` (Light mode optimised for direct sunlight), or `"glass"` (frosted glass mode with gradient background).
+
+`notificationsEnabled` is opt-in (default `false`); enabling it requires browser permission for the Web Notifications API.
 
 ```json
 {
@@ -508,7 +523,8 @@ The `settings` object inside the stored JSON:
   "reminders": [
     {
       "id": "uid", "carId": "...", "name": "Oil change",
-      "type": "km", "interval": 10000, "lastDone": 89450, "warnAt": 1000
+      "type": "km", "interval": 10000, "lastDone": 89450, "warnAt": 1000,
+      "notify": true, "lastNotifiedAt": null
     }
   ],
   "jobs": [
@@ -521,7 +537,7 @@ The `settings` object inside the stored JSON:
       "createdAt": "..."
     }
   ],
-  "settings": { "tireReminders": true, "theme": "dark" },
+  "settings": { "tireReminders": true, "theme": "dark", "notificationsEnabled": false },
   "lang": "cs",
   "savedAt": "2026-06-17T12:00:00.000Z"
 }

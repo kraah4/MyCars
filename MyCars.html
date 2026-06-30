@@ -21,7 +21,7 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <!--
   Content-Security-Policy: pragmatická politika pro single-file PWA.
   Aplikace nemá inline ani vzdálené skripty (vše je v mycars.js), takže
@@ -51,6 +51,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" crossorigin="anonymous" referrerpolicy="no-referrer">
 <style>
   :root {
+    /* color-scheme: říká browseru, kterou variantu nativního UI (time/date picker,
+       scrollbar, form controls) má použít. Bez něj se v dark tématu zobrazí
+       světlý nativní time picker, který s appkou neladí. */
+    color-scheme: dark;
     /* Backgrounds */
     --bg: #07080d;
     --surface: #0f1018;
@@ -89,6 +93,7 @@
   }
   /* ── Bright / outdoor theme ────────────────────── */
   html.theme-bright {
+    color-scheme: light;
     --bg:       #eef0f6;
     --surface:  #ffffff;
     --surface2: #f3f4fb;
@@ -123,6 +128,7 @@
 
   /* ── Glass / Frosted theme ─────────────────────── */
   html.theme-glass {
+    color-scheme: dark;
     --bg:       transparent;
     --surface:  rgba(255,255,255,0.07);
     --surface2: rgba(255,255,255,0.05);
@@ -309,8 +315,23 @@
     .car-header { padding: 12px 14px; gap: 10px }
   }
   @media (max-width: 480px) {
-    .stats-grid { grid-template-columns: 1fr 1fr !important }
+    .stats-grid { grid-template-columns: 1fr 1fr !important; gap: 10px }
     .doc-row { grid-template-columns: 1fr !important }
+    /* FIX (mobile audit): kompaktn\u011bj\u0161\u00ed stat-card aby \u010d\u00edsla typu
+       "2 500 000 K\u010d" nep\u0159et\u00e9kala ven na 320px telefonech. */
+    .stat-card { padding: 14px 14px }
+    .stat-value { font-size: 1.25rem }
+    .stat-label { font-size: .66rem }
+    .stat-sub { font-size: .66rem }
+    /* Topbar na velmi \u00fazk\u00fdch: zmen\u0161it gap, aby se 4 ikony ve\u0161ly. */
+    #topbar { padding: 0 10px; gap: 6px }
+    .content-inner { padding: 16px 12px }
+    /* Car switcher menu p\u0159es celou \u0161\u00ed\u0159ku obrazovky pod topbarem. */
+    .csw-menu { left: 8px !important; right: 8px !important; min-width: 0 !important; max-width: none !important; width: auto !important }
+  }
+  @media (max-width: 360px) {
+    /* Extra \u00fazk\u00e9 (iPhone SE 1, Galaxy Fold zav\u0159en\u00fd): jednoslupcov\u00e9 statistiky */
+    .stats-grid { grid-template-columns: 1fr !important }
   }
 
   /* Hamburger — visiblen only mobile */
@@ -506,7 +527,7 @@
   /* Mobile: modal jako bottom sheet — snazší ovládání palcem */
   @media (max-width: 600px) {
     .modal-overlay { align-items: flex-end; padding: 0 }
-    .modal { border-radius: 20px 20px 0 0; max-height: 92dvh; max-width: 100%; transform: translateY(100%) }
+    .modal { border-radius: 20px 20px 0 0; max-height: 92vh; max-height: 92dvh; max-width: 100%; transform: translateY(100%) }
     .modal.wide { max-width: 100% }
     .modal-overlay.open .modal { transform: translateY(0) }
     /* 1 sloupec ve formuláři — pole jsou dostatečně široká pro palec */
@@ -524,7 +545,7 @@
   .modal-close { width: 40px; height: 40px; border: 1px solid var(--border2); background: none; color: var(--text2); border-radius: var(--radius-sm); cursor: pointer; font-size: .95rem; display: flex; align-items: center; justify-content: center; transition: all .12s; flex-shrink: 0 }
   .modal-close:hover { border-color: var(--red); color: var(--red) }
   .modal-body { padding: 22px }
-  .modal-foot { padding: 16px 22px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end }
+  .modal-foot { padding: 16px 22px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap }
 
   /* ── Forms ──────────────────────────────────── */
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px }
@@ -537,6 +558,17 @@
   .form-input.error { border-color: var(--red) }
   .form-error { font-size: .78rem; color: var(--red) }
   .form-textarea { resize: vertical; min-height: 68px }
+  /* Time-double — vlastní HH:MM dva number inputy ve stejném stylu jako
+     .date-triple. Vyhneme se nativnímu <input type="time">, který v 12h locale
+     OS interpretoval 16 jako 4 PM + skrýval AM/PM pole. Tady kontrolujeme vstup
+     sami, vždy 24h formát, žádný browser picker. */
+  .time-double { display: inline-flex; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: border-color .15s; overflow: hidden; position: relative }
+  .time-double:focus-within { border-color: var(--accent) }
+  .time-double.error { border-color: var(--red) }
+  .time-double input { background: none; border: none; color: var(--text); font-family: var(--font-mono); font-size: .85rem; padding: 9px 0; text-align: center; outline: none; -moz-appearance: textfield; appearance: textfield }
+  .time-double input::-webkit-outer-spin-button, .time-double input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0 }
+  .time-double input.th, .time-double input.tm { width: 34px }
+
   .form-section-label { font-size: .8rem; font-weight: 700; color: var(--text); grid-column: 1/-1; padding: 10px 0 4px; border-bottom: 1px solid var(--border); margin-top: 6px; padding-left: 10px; border-left: 3px solid var(--accent) }
 
   /* ── Charts ─────────────────────────────────── */
@@ -786,7 +818,10 @@
   .car-header-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0 }
   .car-header-info { flex: 1; min-width: 0 }
   .car-header-name { font-size: 1.15rem; font-weight: 600; letter-spacing: -.02em }
-  .car-header-meta { font-size: .78rem; color: var(--text2); margin-top: 4px; font-family: var(--font-mono); white-space: normal; overflow-wrap: anywhere; word-break: break-all }
+  /* FIX (mobile audit): odstraněn `word-break: break-all`, který lámal i uvnitř
+     běžných slov ("Die\nsel"). `overflow-wrap: anywhere` pořád zalomí
+     extrémně dlouhé řetězce (VIN, URL), ale respektuje slovní hranice. */
+  .car-header-meta { font-size: .78rem; color: var(--text2); margin-top: 4px; font-family: var(--font-mono); white-space: normal; overflow-wrap: anywhere }
 
   /* ── Doc cards ──────────────────────────────── */
   .doc-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 22px }
@@ -881,8 +916,8 @@
   html.theme-glass .car-color-dot-ring {
     box-shadow: 0 0 0 1.5px rgba(255,255,255,.60), 0 0 0 3px rgba(255,255,255,.16);
   }
-  .csw-dropdown { position:relative; display:inline-block }
-  .csw-trigger { display:inline-flex; align-items:center; gap:8px; padding:8px 13px; border:1px solid var(--border2); border-left:3px solid var(--csw-car-color, var(--border2)); background:var(--surface3); border-radius:0 var(--radius-sm) var(--radius-sm) 0; cursor:pointer; font-size:.875rem; color:var(--text); font-family:var(--font); transition:all .15s; min-height:40px; white-space:nowrap; max-width:340px }
+  .csw-dropdown { position:relative; display:block; min-width:0; flex:1 }
+  .csw-trigger { display:inline-flex; align-items:center; gap:8px; padding:8px 13px; border:1px solid var(--border2); border-left:3px solid var(--csw-car-color, var(--border2)); background:var(--surface3); border-radius:0 var(--radius-sm) var(--radius-sm) 0; cursor:pointer; font-size:.875rem; color:var(--text); font-family:var(--font); transition:all .15s; min-height:40px; white-space:nowrap; width:100%; max-width:340px; box-sizing:border-box }
   .csw-trigger:hover { border-color:var(--accent); border-left-color:var(--csw-car-color, var(--accent)) }
   .csw-trigger.open { border-color:var(--accent); border-left-color:var(--csw-car-color, var(--accent)) }
   .csw-arrow { color:var(--text2); font-size:.72rem; margin-left:4px; transition:transform .15s; flex-shrink:0 }
@@ -923,10 +958,10 @@
   .settings-card-title { font-size: .95rem; font-weight: 600; margin-bottom: 5px; letter-spacing: -.01em }
   .settings-card-desc { font-size: .82rem; color: var(--text2); margin-bottom: 16px; line-height: 1.6 }
   .settings-card .btn { width: 100%; justify-content: center; margin-top: 6px }
-  .settings-info-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: .875rem }
+  .settings-info-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: .875rem; gap: 10px; flex-wrap: wrap }
   .settings-info-row:last-child { border-bottom: none }
-  .settings-info-row span:first-child { color: var(--text2) }
-  .settings-info-row span:last-child { font-family: var(--font-mono); font-size: .8rem; color: var(--text) }
+  .settings-info-row span:first-child { color: var(--text2); flex-shrink: 0 }
+  .settings-info-row span:last-child { font-family: var(--font-mono); font-size: .8rem; color: var(--text); text-align: right; min-width: 0 }
 
   /* ── Vehicle Edit Page — accordion sections ──────────────── */
   .edit-accordion { display: flex; flex-direction: column; gap: 10px }
@@ -1175,7 +1210,7 @@
         <div class="form-group"><label class="form-label required">Typ</label>
           <select class="form-select" id="rem-type" data-onchange="toggleReminderType">
             <option value="km">Interval km</option>
-            <option value="date">Datum</option>
+            <option value="date">Datum a čas</option>
           </select>
         </div>
         <div class="form-group full"><label class="form-label required">Název</label><input type="text" class="form-input" id="rem-name" maxlength="200" placeholder="Výměna oleje"></div>
@@ -1185,8 +1220,25 @@
           <input type="number" class="form-input" id="rem-lastdone">
           <span id="rem-odo-hint" style="font-size:.72rem;color:var(--text3);margin-top:3px;"></span>
         </div>
-        <div class="form-group" id="rem-date-group" style="display:none"><label class="form-label">Datum</label><div class="date-triple" id="rem-date-wrap"><input type="number" class="dt-d" id="rem-date-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="rem-date-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="rem-date-y" placeholder="RRRR" min="1900" max="2099"></div></div>
+        <div class="form-group" id="rem-date-group" style="display:none">
+          <label class="form-label">Datum a čas</label>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+            <div class="date-triple" id="rem-date-wrap" style="flex:0 0 auto;"><input type="number" class="dt-d" id="rem-date-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="rem-date-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="rem-date-y" placeholder="RRRR" min="1900" max="2099"></div>
+            <div class="time-double" id="rem-time-wrap" style="flex:0 0 auto;">
+              <input type="number" class="th" id="rem-date-h" placeholder="HH" min="0" max="23" inputmode="numeric">
+              <span class="dt-sep">:</span>
+              <input type="number" class="tm" id="rem-date-min" placeholder="MM" min="0" max="59" inputmode="numeric">
+            </div>
+          </div>
+        </div>
         <div class="form-group" id="rem-warn-group"><label class="form-label">Varovat (km zbývá)</label><input type="number" class="form-input" id="rem-warn" placeholder="1000"></div>
+        <div class="form-group full" id="rem-notify-group">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:.92rem;color:var(--text);">
+            <input type="checkbox" id="rem-notify" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent);">
+            <span data-cs="Upozornit notifikací" data-en="Notify me">Upozornit notifikací</span>
+          </label>
+          <span id="rem-notify-hint" style="display:none;font-size:.78rem;color:var(--text3);margin-top:6px;margin-left:28px;"></span>
+        </div>
       </div>
     </div>
     <div class="modal-foot">

@@ -182,7 +182,7 @@ let state = {
   page:1, fuelPage:1, pageSize:25,
   selectedRecordId:null,
   selectedColor:'#e8c547',
-  settings:{ tireReminders:true, theme:'dark' },
+  settings:{ tireReminders:true, theme:'dark', notificationsEnabled:false },
   analyticsCarId:null,  // null = all active | '__all__' = all incl. inactive | carId = single car
   analyticsTab:'overview', // 'overview' | 'compare'
   remindersCarId:null,   // null = all active | carId = single car
@@ -281,6 +281,21 @@ const T = {
     reminders_suspended_section:'Pozastavené (auto v depozitu nebo renovaci)',
     historic_hint:'Historické vozidlo: STK ve 2-letém intervalu, POV není povinné.',
     stk:'STK',emission:'Emise',pov:'POV',insurance:'Pojištění',
+    // Notifications
+    notifications:'Notifikace',
+    notif_card_title:'Notifikace připomínek',
+    notif_card_desc:'Aplikace upozorní na blížící se a prošlé připomínky. Funguje pouze pokud máte MyCars otevřené v prohlížeči nebo nainstalované jako PWA. Každá připomínka je notifikována max. 1× denně.',
+    notif_unsupported:'Tento prohlížeč notifikace nepodporuje',
+    notif_blocked:'Notifikace zablokovány v prohlížeči',
+    notif_grant_hint:'Povolte notifikace v nastavení stránky (zámek vedle URL).',
+    notif_granted_toast:'Notifikace povoleny',
+    notif_denied_toast:'Notifikace zamítnuty',
+    notify_me_label:'Upozornit notifikací',
+    notify_on:'Upozorňovat',
+    notify_off:'Neupozorňovat',
+    notify_indicator_title:'Notifikace u této připomínky zapnutá',
+    notif_test:'Otestovat notifikaci',
+    notif_test_body:'Vše funguje. Tato zpráva je jen test.',
     // Service / Jobs
     service:'Servis', service_title:'Plánovaný servis',
     new_job:'Naplánovat servis', edit_job:'Upravit zakázku',
@@ -362,6 +377,21 @@ const T = {
     reminders_suspended_section:'Suspended (storage or restoration)',
     historic_hint:'Historic vehicle: MOT every 2 years, liability insurance optional.',
     stk:'STK',emission:'Emissions',pov:'Liability ins.',insurance:'Insurance',
+    // Notifications
+    notifications:'Notifications',
+    notif_card_title:'Reminder notifications',
+    notif_card_desc:'The app will notify you about upcoming or overdue reminders. Works only while MyCars is open in your browser or installed as a PWA. Each reminder is notified at most once per day.',
+    notif_unsupported:'This browser does not support notifications',
+    notif_blocked:'Notifications blocked in browser settings',
+    notif_grant_hint:'Allow notifications in the site settings (lock icon next to the URL).',
+    notif_granted_toast:'Notifications enabled',
+    notif_denied_toast:'Notifications denied',
+    notify_me_label:'Notify me',
+    notify_on:'Notify',
+    notify_off:'Do not notify',
+    notify_indicator_title:'Notifications on for this reminder',
+    notif_test:'Test notification',
+    notif_test_body:'It works. This is just a test message.',
     // Service / Jobs
     service:'Service', service_title:'Planned service',
     new_job:'Schedule service', edit_job:'Edit work order',
@@ -703,6 +733,7 @@ function safeJsonParse(text){
 //   • zanést neplatná data do `<input type=date>` a do měsíčních agregací.
 // Každý validátor vrací sanitizovanou hodnotu nebo null (caller doplní fallback).
 const _ISO_DATE_RE  = /^\d{4}-\d{2}-\d{2}$/;
+const _TIME_RE      = /^([01]\d|2[0-3]):[0-5]\d$/;
 const _HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 const _SPEED_RE     = /^[A-Za-z]{1,4}$/;
 function _vNum(v){
@@ -727,6 +758,19 @@ function _vDate(v){
   if(typeof v!=='string'||!_ISO_DATE_RE.test(v)) return null;
   const d=new Date(v+'T00:00:00Z');
   return isNaN(d.getTime()) ? null : v;
+}
+// _vTime: HH:MM (24h, 00:00–23:59). Nepovinná hodnota → null. Renderuje se raw
+// v reminder kartě, regex blábolá vstup mimo strict formu.
+function _vTime(v){
+  if(typeof v!=='string'||!_TIME_RE.test(v)) return null;
+  return v;
+}
+// _vIsoTimestamp: uložený jako `Date.toISOString()` výsledek (UTC). Slouží pro
+// `reminder.lastNotifiedAt` (anti-spam). Vstup mimo platný Date → null.
+function _vIsoTimestamp(v){
+  if(typeof v!=='string'||v.length>40) return null;
+  const d=new Date(v);
+  return isNaN(d.getTime()) ? null : d.toISOString();
 }
 function _vColor(v){
   return (typeof v==='string'&&_HEX_COLOR_RE.test(v)) ? v.toLowerCase() : null;
@@ -855,9 +899,13 @@ function _vReminder(rm){
   rm.name     = _vStr(rm.name, 200) || '';
   rm.type     = _vEnum(rm.type, ['date','km']) || 'date';
   rm.date     = _vDate(rm.date);
+  rm.time     = _vTime(rm.time);
   rm.interval = _vInt(rm.interval, 0, 99999999);
   rm.lastDone = _vInt(rm.lastDone, 0, 99999999);
   rm.warnAt   = _vInt(rm.warnAt, 0, 9999999);
+  // notify default true (existující připomínky bez pole = upozorňovat)
+  rm.notify   = _vBool(rm.notify) ?? true;
+  rm.lastNotifiedAt = _vIsoTimestamp(rm.lastNotifiedAt);
   return rm;
 }
 
@@ -899,6 +947,7 @@ function sanitizeImported(d){
     const s={};
     if(typeof d.settings.tireReminders==='boolean') s.tireReminders=d.settings.tireReminders;
     if(d.settings.theme==='dark'||d.settings.theme==='bright'||d.settings.theme==='glass') s.theme=d.settings.theme;
+    if(typeof d.settings.notificationsEnabled==='boolean') s.notificationsEnabled=d.settings.notificationsEnabled;
     if(Object.keys(s).length) out.settings=s;
   }
   // lang — pouze pokud je platná hodnota
@@ -3116,9 +3165,29 @@ function renderRemindersPage(){
         detail=left<=0?`${fmtNum(Math.abs(left))} km ${cs?'prošlé':'overdue'}`:
                `${fmtNum(left)} km ${t('km_left')}`;
       }else if(rem.type==='date'&&rem.date){
-        const d=new Date(rem.date+'T12:00:00');const diff=Math.round((d-today)/86400000);
-        if(diff<0){sc='due';st=t('overdue');}else if(diff<30){sc='warn';st=t('due_soon');}else{sc='ok';st=t('ok');}
-        detail=diff<0?`${Math.abs(diff)} ${t('days')} ${cs?'prošlé':'overdue'}`:`${diff} ${t('days')}`;
+        // Pokud je zadán čas, počítáme přesně k minutě; jinak proti poledni
+        // daného dne (stávající chování). Zachovává dosavadní > / < 0 smántiku.
+        const nowD=new Date();
+        const iso=rem.time?`${rem.date}T${rem.time}:00`:`${rem.date}T12:00:00`;
+        const d=new Date(iso);
+        if(rem.time){
+          const diffMs=d-nowD;
+          const diffDays=Math.round(diffMs/86400000);
+          if(diffMs<0){sc='due';st=t('overdue');}
+          else if(diffDays<30){sc='warn';st=t('due_soon');}
+          else{sc='ok';st=t('ok');}
+          if(diffMs<0){
+            const absH=Math.round(Math.abs(diffMs)/3600000);
+            detail=absH<48?`${absH} h ${cs?'prošlé':'overdue'}`:`${Math.round(absH/24)} ${t('days')} ${cs?'prošlé':'overdue'}`;
+          } else {
+            const totH=Math.round(diffMs/3600000);
+            detail=totH<48?`${totH} h`:`${Math.round(totH/24)} ${t('days')}`;
+          }
+        } else {
+          const diff=Math.round((d-today)/86400000);
+          if(diff<0){sc='due';st=t('overdue');}else if(diff<30){sc='warn';st=t('due_soon');}else{sc='ok';st=t('ok');}
+          detail=diff<0?`${Math.abs(diff)} ${t('days')} ${cs?'prošlé':'overdue'}`:`${diff} ${t('days')}`;
+        }
       }
     }
     const carName=getCar(rem.carId);
@@ -3127,10 +3196,10 @@ function renderRemindersPage(){
       ${isAuto?`<div class="reminder-name">${esc(carLabel)}</div>`
               :`<div class="reminder-name">${esc(carLabel)}</div>`}
       <div class="reminder-val">${esc(rem.name)}</div>
-      <div class="reminder-meta">${isAuto?esc(rem.meta):(rem.type==='km'?`${fmtNum(rem.lastDone||0)} + ${fmtNum(rem.interval||0)} km`:fmtDate(rem.date))}</div>
+      <div class="reminder-meta">${isAuto?esc(rem.meta):(rem.type==='km'?`${fmtNum(rem.lastDone||0)} + ${fmtNum(rem.interval||0)} km`:fmtDate(rem.date)+(rem.time?` ${esc(rem.time)}`:''))}</div>
       <div class="reminder-meta">${esc(detail)}</div>
       <div class="reminder-status ${sc}">${esc(st)}</div>
-      ${!isAuto?`<button class="row-btn del" data-action="deleteReminder" data-id="${safeId(rem.id)}" style="opacity:1;margin-top:8px;" title="${cs?'Smazat připomínku':'Delete reminder'}">✕</button>`:''}
+      ${!isAuto?`<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-top:8px;">${(rem.notify!==false)?`<span class="rem-bell" title="${esc(t('notify_indicator_title'))}" style="font-size:1rem;line-height:1;opacity:${state.settings.notificationsEnabled?'1':'.35'};color:${state.settings.notificationsEnabled?'var(--accent)':'var(--text3)'};">🔔</span>`:''}<button class="row-btn del" data-action="deleteReminder" data-id="${safeId(rem.id)}" style="opacity:1;" title="${cs?'Smazat připomínku':'Delete reminder'}">✕</button></div>`:''}      
     </div>`;
   }
 
@@ -3154,8 +3223,8 @@ function renderRemindersPage(){
   const suspendedCollapsed = state.remindersSuspendedCollapsed!==false; // default sbaleno
 
   el.innerHTML=`
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
-      <span class="section-title" style="margin:0;flex:1;">${t('reminders_title')}</span>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+      <span class="section-title" style="margin:0;flex:1;min-width:160px;">${t('reminders_title')}</span>
       <button class="btn btn-primary" data-action="openReminderModal">${t('add_reminder')}</button>
     </div>
 
@@ -3169,9 +3238,9 @@ function renderRemindersPage(){
       : `<div class="empty" style="padding:28px 20px;"><div class="empty-icon">— —</div><p>${cs?'Žádná vozidla v provozu':'No vehicles in service'}</p></div>`}
 
     ${suspendedRC.length?`
-      <div class="section-title section-collapse ${suspendedCollapsed?'collapsed':''}" data-action="toggleRemindersSuspended" style="cursor:pointer;margin-top:24px;display:flex;align-items:center;gap:8px;">
-        <span class="chevron" style="display:inline-block;transition:transform .2s;${suspendedCollapsed?'':'transform:rotate(90deg)'}">▶</span>
-        ${t('reminders_suspended_section')} (${suspendedRC.length})
+      <div class="section-title section-collapse ${suspendedCollapsed?'collapsed':''}" data-action="toggleRemindersSuspended" style="cursor:pointer;margin-top:24px;display:flex;align-items:center;gap:8px;min-width:0;">
+        <span class="chevron" style="display:inline-block;transition:transform .2s;flex-shrink:0;${suspendedCollapsed?'':'transform:rotate(90deg)'}">▶</span>
+        <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t('reminders_suspended_section')} (${suspendedRC.length})</span>
       </div>
       <div id="reminders-suspended-grid" style="${suspendedCollapsed?'display:none':''};opacity:.75">
         ${renderRemindersFor(suspendedRC)}
@@ -3596,7 +3665,7 @@ function deleteRecord(id){
 function openFuelModal(fuelId){
   state.editingFuelId=fuelId||null;
   const f=fuelId?state.fuels.find(x=>x.id===fuelId):null;
-  document.getElementById('fuel-modal-title').textContent=f?(state.lang==='cs'?'Upravit tankování':'Edit fuel entry'):(state.lang==='cs'?'tankování':'Add fuel');
+  document.getElementById('fuel-modal-title').textContent=f?(state.lang==='cs'?'Upravit tankování':'Edit fuel entry'):(state.lang==='cs'?'Nové tankování':'New fuel entry');
   const carSel=document.getElementById('f-car');
   carSel.innerHTML=state.cars.map(c=>`<option value="${esc(c.id)}" ${(f?f.carId:state.currentCarId)===c.id?'selected':''}>${esc(c.make||'')} ${esc(c.model||c.name||'')} ${c.plate?'('+esc(c.plate)+')':''}</option>`).join('');
   populateFuelTypes(f?f.carId:state.currentCarId, f?.fuelTypeId);
@@ -4276,6 +4345,26 @@ function openReminderModal(){
   carSel.innerHTML=state.cars.map(c=>`<option value="${esc(c.id)}" ${c.id===state.currentCarId?'selected':''}>${esc(c.make||'')} ${esc(c.model||c.name||'')}</option>`).join('');
   document.getElementById('rem-name').value='';
   document.getElementById('rem-type').value='km';
+  const hEl=document.getElementById('rem-date-h');
+  const mEl=document.getElementById('rem-date-min');
+  if(hEl) hEl.value='';
+  if(mEl) mEl.value='';
+  // Notifikační checkbox — default zapnutý, pokud jsou notifikace pro appku zapnuté
+  const notifyEl=document.getElementById('rem-notify');
+  if(notifyEl){
+    const enabled = !!state.settings.notificationsEnabled && _notifPermission()==='granted';
+    notifyEl.checked = true;
+    notifyEl.disabled = !enabled;
+    const hint=document.getElementById('rem-notify-hint');
+    if(hint){
+      if(!enabled){
+        hint.style.display='';
+        hint.textContent = state.lang==='cs'
+          ? 'Notifikace nejsou v aplikaci povoleny (Nastavení → Notifikace).'
+          : 'Notifications are not enabled in the app (Settings → Notifications).';
+      } else { hint.style.display='none'; }
+    }
+  }
   toggleReminderType();
   prefillReminderFromCar(state.currentCarId);
   openModal('reminder-modal');
@@ -4303,12 +4392,23 @@ function toggleReminderType(){
 function saveReminder(){
   const name=document.getElementById('rem-name').value.trim();
   if(!name){showToast(t('required_field'),'error');return;}
+  // Čas — dva volitelné inputy HH a MM, sestavíme HH:MM v 24h formátu.
+  // Pokud kterékoliv pole prázdné nebo mimo rozsah, čas se neuloží (null).
+  const hh=parseInt(document.getElementById('rem-date-h')?.value,10);
+  const mm=parseInt(document.getElementById('rem-date-min')?.value,10);
+  let time=null;
+  if(Number.isInteger(hh)&&hh>=0&&hh<=23&&Number.isInteger(mm)&&mm>=0&&mm<=59){
+    time=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+  }
   state.reminders.push({id:uid(),carId:document.getElementById('rem-car').value,name,
     type:document.getElementById('rem-type').value,
     interval:parseInt(document.getElementById('rem-interval').value)||null,
     lastDone:parseInt(document.getElementById('rem-lastdone').value)||null,
     date:getDateTriple('rem-date')||null,
-    warnAt:parseInt(document.getElementById('rem-warn').value)||1000});
+    time,
+    warnAt:parseInt(document.getElementById('rem-warn').value)||1000,
+    notify: document.getElementById('rem-notify')?.checked !== false,
+    lastNotifiedAt: null});
   saveData();closeModal('reminder-modal');renderAll();
 }
 function deleteReminder(id){state.reminders=state.reminders.filter(r=>r.id!==id);saveData();renderRemindersPage();}
@@ -4316,7 +4416,7 @@ function deleteReminder(id){state.reminders=state.reminders.filter(r=>r.id!==id)
 // ─── IMPORT / EXPORT ─────────────────────────────────────────
 // Verze schématu zálohy. Bumpni při změně tvaru (přidání/odebrání top-level polí).
 const BACKUP_SCHEMA_VERSION = 2;
-const APP_VERSION = '3.16.0';
+const APP_VERSION = '3.17.0';
 
 function exportData(){
   const now=new Date();
@@ -4767,6 +4867,9 @@ function renderSettings(){
             </span>
           </div>
         </div>
+
+        <div class="section-title">${t('notifications')}</div>
+        ${renderNotificationsSettingsCard(cs)}
       </div>
 
       <!-- RIGHT column: Instalace · Statistika · O aplikaci -->
@@ -4805,8 +4908,8 @@ function renderSettings(){
         <div class="section-title">${cs?'O aplikaci':'About'}</div>
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.16.0</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260619-020</span></div>
+          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.17.0</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260630-006</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           ${(()=>{
@@ -4814,8 +4917,8 @@ function renderSettings(){
             const kb=(u.used/1024).toFixed(1);
             const limitKb=(u.limit/1024/1024).toFixed(0);
             const color=u.pct>90?'var(--red)':u.pct>70?'var(--accent)':'var(--green)';
-            return `<div class="settings-info-row"><span>${cs?'Využití úložiště':'Storage usage'}</span><span style="display:flex;align-items:center;gap:8px;min-width:200px;justify-content:flex-end">
-              <div style="flex:1;max-width:120px;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${u.pct.toFixed(1)}%;background:${color};transition:width .3s"></div></div>
+            return `<div class="settings-info-row"><span>${cs?'Využití úložiště':'Storage usage'}</span><span style="display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap;flex:1;min-width:0">
+              <div style="flex:1;min-width:60px;max-width:120px;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${u.pct.toFixed(1)}%;background:${color};transition:width .3s"></div></div>
               <span style="font-family:var(--font-mono);font-size:.75rem;white-space:nowrap">${kb} KB / ~${limitKb} MB</span>
             </span></div>`;
           })()}
@@ -4950,6 +5053,19 @@ document.addEventListener('click', e => {
 });
 
 loadData();setLang(state.lang);setupDatePickers();
+
+// ─── NOTIFICATION SCHEDULER ───────────────────────────────────
+// Po startu (až se appka usadí) jednorázová kontrola, pak každých 15 minut.
+// Interval funguje pouze pokud je záložka otevřená — fakt: pro background push by
+// bylo potřeba SW + Push API + server. To je mimo scope této PWA.
+setTimeout(function(){ try{ checkAndNotifyReminders(); }catch(_){} }, 2000);
+setInterval(function(){ try{ checkAndNotifyReminders(); }catch(_){} }, 15 * 60 * 1000);
+// Když se uživatel vrátí na záložku, znovu zkontrolovat (možná uplynul den)
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible'){
+    try{ checkAndNotifyReminders(); }catch(_){}
+  }
+});
 
 // ─── TABLE SCROLL INDICATOR ───────────────────────────────────
 // Přidá třídu .scrollable na .table-scroll pokud obsah přesahuje šířku (zobrazí gradient)
@@ -5511,6 +5627,173 @@ function triggerImportFile() { document.getElementById('import-file').click(); }
 function triggerImportCsvFile() { document.getElementById('import-csv-file').click(); }
 function setFilterCat(val) { state.filterCat = val; state.page = 1; renderRecords(); }
 function setTireReminders(checked) { state.settings.tireReminders = checked; saveData(); renderPage(); }
+
+// ── Notifications ───────────────────────────────────────────────
+function _notifSupported(){ return typeof Notification!=='undefined'; }
+function _notifPermission(){ return _notifSupported() ? Notification.permission : 'unsupported'; }
+function renderNotificationsSettingsCard(cs){
+  const supported = _notifSupported();
+  const perm = _notifPermission();
+  const enabled = !!state.settings.notificationsEnabled;
+  const blocked = supported && perm==='denied';
+  const disabled = !supported || blocked;
+  let statusText = '';
+  let statusColor = 'var(--text2)';
+  if(!supported){ statusText = t('notif_unsupported'); }
+  else if(blocked){ statusText = t('notif_blocked'); statusColor = 'var(--red)'; }
+  else if(enabled && perm==='granted'){ statusText = cs?'Zapnuto':'Enabled'; statusColor = 'var(--green)'; }
+  else { statusText = cs?'Vypnuto':'Disabled'; }
+  return `
+    <div class="settings-card settings-col-card">
+      <div class="settings-card-title" style="margin-bottom:6px;">${t('notif_card_title')}</div>
+      <div class="settings-card-desc" style="margin-bottom:12px;">${t('notif_card_desc')}</div>
+      <div class="toggle-wrap">
+        <label class="toggle">
+          <input type="checkbox" id="setting-notifications"
+            ${enabled && perm==='granted' ? 'checked' : ''}
+            ${disabled ? 'disabled' : ''}
+            data-onchange="setNotificationsEnabled">
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label" style="color:${statusColor}">${statusText}</span>
+      </div>
+      ${blocked ? `<div class="settings-card-desc" style="margin-top:10px;color:var(--text2);font-size:.85rem;">${t('notif_grant_hint')}</div>` : ''}
+      ${enabled && perm==='granted' ? `<div style="margin-top:12px;"><button type="button" class="btn btn-secondary" data-action="testNotification">${t('notif_test')}</button></div>` : ''}
+    </div>
+  `;
+}
+function setNotificationsEnabled(checked){
+  const cs = state.lang === 'cs';
+  if(!checked){
+    state.settings.notificationsEnabled = false;
+    saveData(); renderPage();
+    return;
+  }
+  if(!_notifSupported()){
+    showToast(t('notif_unsupported'), 'error');
+    renderPage();
+    return;
+  }
+  if(Notification.permission === 'granted'){
+    state.settings.notificationsEnabled = true;
+    saveData(); renderPage();
+    setTimeout(checkAndNotifyReminders, 200);
+    return;
+  }
+  if(Notification.permission === 'denied'){
+    showToast(t('notif_blocked'), 'error');
+    renderPage();
+    return;
+  }
+  // permission === 'default' → vyžádat
+  Notification.requestPermission().then(function(p){
+    if(p === 'granted'){
+      state.settings.notificationsEnabled = true;
+      saveData();
+      showToast(t('notif_granted_toast'), 'success');
+      setTimeout(checkAndNotifyReminders, 200);
+    } else {
+      state.settings.notificationsEnabled = false;
+      saveData();
+      showToast(t('notif_denied_toast'), 'error');
+    }
+    renderPage();
+  }).catch(function(){
+    state.settings.notificationsEnabled = false;
+    saveData(); renderPage();
+  });
+}
+function testNotification(){
+  if(!_notifSupported() || Notification.permission !== 'granted') return;
+  try {
+    const n = new Notification('MyCars', { body: t('notif_test_body'), tag: 'mycars-test' });
+    n.onclick = function(){ try { window.focus(); } catch(_){} this.close(); };
+  } catch(_){}
+}
+
+// Vypočte (sc, body) pro reminder. Vrací null pokud `ok` (nic nenotifikujeme).
+// Logika musí zůstat v souladu s renderReminderCard (tam je primární zdroj).
+function _reminderNotifyPayload(rem){
+  const cs = state.lang === 'cs';
+  let sc = 'ok';
+  let body = '';
+  if(rem.type === 'km'){
+    const odo = rem.carId ? getMaxOdo(rem.carId) : 0;
+    const left = (rem.lastDone||0) + (rem.interval||0) - odo;
+    if(left <= 0){ sc = 'due'; body = `${fmtNum(Math.abs(left))} km ${cs?'prošlé':'overdue'}`; }
+    else if(left <= (rem.warnAt||1000)){ sc = 'warn'; body = `${fmtNum(left)} km ${cs?'zbývá':'left'}`; }
+  } else if(rem.type === 'date' && rem.date){
+    const nowD = new Date();
+    const iso = rem.time ? `${rem.date}T${rem.time}:00` : `${rem.date}T12:00:00`;
+    const d = new Date(iso);
+    if(isNaN(d.getTime())) return null;
+    if(rem.time){
+      const diffMs = d - nowD;
+      const diffDays = Math.round(diffMs/86400000);
+      if(diffMs < 0){
+        sc = 'due';
+        const absH = Math.round(Math.abs(diffMs)/3600000);
+        body = absH < 48 ? `${absH} h ${cs?'prošlé':'overdue'}` : `${Math.round(absH/24)} ${cs?'dní prošlé':'days overdue'}`;
+      } else if(diffDays < 30){
+        sc = 'warn';
+        const totH = Math.round(diffMs/3600000);
+        body = totH < 48 ? `${totH} h` : `${Math.round(totH/24)} ${cs?'dní':'days'}`;
+      }
+    } else {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const diff = Math.round((d - today)/86400000);
+      if(diff < 0){ sc = 'due'; body = `${Math.abs(diff)} ${cs?'dní prošlé':'days overdue'}`; }
+      else if(diff < 30){ sc = 'warn'; body = `${diff} ${cs?'dní':'days'}`; }
+    }
+  }
+  if(sc === 'ok') return null;
+  return { sc, body };
+}
+
+function checkAndNotifyReminders(){
+  if(!state.settings.notificationsEnabled) return;
+  if(!_notifSupported() || Notification.permission !== 'granted') return;
+  if(!Array.isArray(state.reminders) || !state.reminders.length) return;
+  const cs = state.lang === 'cs';
+  const now = Date.now();
+  const DAY = 23 * 3600 * 1000; // anti-spam: max 1× za 23 h na ten samý reminder
+  let dirty = false;
+  for(const rem of state.reminders){
+    if(rem.notify === false) continue;
+    // Skip auta v depozitu/renovaci (auto-připomínky se generují jinde, ale i pro
+    // manuální má smysl: pokud je auto pozastavené, neotravujeme)
+    const car = rem.carId ? getCar(rem.carId) : null;
+    if(car && isCarSuspended(car)) continue;
+    // Anti-spam — pokud jsme nedávno notifikovali tu samou připomínku, počkáme
+    if(rem.lastNotifiedAt){
+      const last = new Date(rem.lastNotifiedAt).getTime();
+      if(!isNaN(last) && (now - last) < DAY) continue;
+    }
+    const payload = _reminderNotifyPayload(rem);
+    if(!payload) continue;
+    const carLabel = car ? `${car.make||''} ${car.model||car.name||''}`.trim() : '';
+    const prefix = payload.sc === 'due' ? '⚠ ' : '⏰ ';
+    const title = `${prefix}${rem.name||(cs?'Připomínka':'Reminder')}`;
+    const bodyParts = [];
+    if(carLabel) bodyParts.push(carLabel);
+    if(payload.body) bodyParts.push(payload.body);
+    try {
+      const n = new Notification(title, {
+        body: bodyParts.join(' · '),
+        tag: 'mycars-rem-' + rem.id,
+        renotify: false,
+      });
+      n.onclick = function(){
+        try { window.focus(); } catch(_){}
+        try { showPage('reminders'); } catch(_){}
+        this.close();
+      };
+      rem.lastNotifiedAt = new Date().toISOString();
+      dirty = true;
+    } catch(_){ /* notifikace mohla selhat (např. quota) — ticho dál */ }
+  }
+  if(dirty) saveData();
+}
 function setFuelSearchVal(val) { state.fuelSearch = val; state.fuelPage = 1; renderFuelPage(); }
 function setRecordsSearch(val) { state.search = val; state.page = 1; renderRecords(); }
 function acHide(field) {
@@ -5532,6 +5815,7 @@ document.addEventListener('click', function _clickDispatch(e) {
     case 'openFuelModal':       openFuelModal(d.id); break;
     case 'openRecordModal':     openRecordModal(); break;
     case 'openReminderModal':   openReminderModal(); break;
+    case 'testNotification':    testNotification(); break;
     case 'openCsvImportModal':  openCsvImportModal(); break;
     // Modals — close
     case 'closeModal':          closeModal(d.id); break;
@@ -5629,6 +5913,7 @@ document.addEventListener('change', function _changeDispatch(e) {
     case 'setFilterCat':            setFilterCat(el.value); break;
     case 'setDiaryCat':             setDiaryCat(el.value); break;
     case 'setTireReminders':        setTireReminders(el.checked); break;
+    case 'setNotificationsEnabled': setNotificationsEnabled(el.checked); break;
     case 'saveCarEditDrivetrain':   saveCarEditDrivetrain(); break;
     case 'onCarStatusChange':       onCarStatusChange(); break;
     case 'toggleJobModalTask':      toggleJobModalTask(Number(el.dataset.idx), el.checked); break;
