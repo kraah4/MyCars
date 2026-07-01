@@ -5,6 +5,60 @@
 // rasterize the SVG via <canvas> so iOS, Android *and* desktop PWA installers
 // (Chrome/Edge/Firefox on Linux KDE Plasma, GNOME, Windows, …) all get the same
 // pixel-perfect PNG instead of a font-dependent SVG.
+
+// ─── SAFE-AREA FALLBACK BOOTSTRAP (build 029) ─────────────────
+// CSS řeší 99 % případů přes env(safe-area-inset-*) s baseline v max().
+// Tento IIFE pokrývá poslední edge-case: iOS Safari v PWA (standalone) módu,
+// kde env() občas vrací 0 přestože reálně jsme pod Dynamic Island / status barem.
+// Postup:
+//   1) Detekuj standalone display-mode + iOS UA (jinak nic neděláme — Android,
+//      desktop, běžný Safari tab jsou v pořádku).
+//   2) Změř computed padding-top probe elementu s env(safe-area-inset-top,0).
+//   3) Pokud reálně vrátil 0, přepíšeme CSS proměnné --sat/--sab hardcoded
+//      hodnotami odpovídajícími typickému iOS status baru a home indicatoru.
+// Díky vrstvě CSS proměnných (definované v :root MyCars.html) se změna
+// propaguje na všechny selektory bez další úpravy.
+(function(){
+  try {
+    var mm = window.matchMedia && window.matchMedia('(display-mode: standalone)');
+    var isStandalone = (mm && mm.matches) || window.navigator.standalone === true;
+    var ua = navigator.userAgent || '';
+    var isIOS = /iP(hone|ad|od)/.test(ua) ||
+                // iPadOS 13+ se hlásí jako Mac; detekujeme přes touch capability
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (!isStandalone || !isIOS) return;
+
+    // Probe: element s env(...) paddingem mimo layout, změř computed value
+    var probe = document.createElement('div');
+    probe.style.cssText =
+      'position:fixed;left:-9999px;top:0;width:1px;height:1px;' +
+      'padding-top:env(safe-area-inset-top,0px);' +
+      'padding-bottom:env(safe-area-inset-bottom,0px);' +
+      'visibility:hidden;pointer-events:none';
+    // document.body může chybět, pokud script běží v <head>; zkusíme documentElement
+    (document.body || document.documentElement).appendChild(probe);
+    var cs = window.getComputedStyle(probe);
+    var top = parseFloat(cs.paddingTop) || 0;
+    var bot = parseFloat(cs.paddingBottom) || 0;
+    probe.parentNode.removeChild(probe);
+
+    if (top === 0 && bot === 0) {
+      // env() nefunguje ale jsme v iOS PWA — nastav hardcoded typické hodnoty.
+      // 47px = iOS status bar + Dynamic Island buffer (bezpečná horní mez pro
+      // všechny iPhone od X po 17 Pro Max), 34px = home indicator (jednotný
+      // od iPhone X). Landscape safe insets nejsou spolehlivě potřeba (fallback
+      // baseline v max() stačí — DI ve landscape zabírá ~59px vlevo, ale
+      // topbar padding-left 22px + landscape šířka to obvykle pokryjí).
+      document.documentElement.style.setProperty('--sat', '47px');
+      document.documentElement.style.setProperty('--sab', '34px');
+      document.documentElement.classList.add('safe-area-fallback');
+    }
+  } catch (e) {
+    // Nikdy nesmíme rozbít bootstrap kvůli safe-area detekci.
+    // Bez fallbacku appka pořád funguje díky CSS max() vrstvě.
+  }
+})();
+
 (function(){
   var svg =
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>"+
@@ -4909,7 +4963,7 @@ function renderSettings(){
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
           <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.17.0</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260630-006</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260701-002</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           ${(()=>{
