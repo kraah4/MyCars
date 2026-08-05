@@ -7,35 +7,36 @@
 // pixel-perfect PNG instead of a font-dependent SVG.
 
 // ─── SAFE-AREA FALLBACK BOOTSTRAP (build 029) ─────────────────
-// CSS řeší 99 % případů přes env(safe-area-inset-*) s baseline v max().
-// Tento IIFE pokrývá poslední edge-case: iOS Safari v PWA (standalone) módu,
-// kde env() občas vrací 0 přestože reálně jsme pod Dynamic Island / status barem.
-// Postup:
-//   1) Detekuj standalone display-mode + iOS UA (jinak nic neděláme — Android,
-//      desktop, běžný Safari tab jsou v pořádku).
-//   2) Změř computed padding-top probe elementu s env(safe-area-inset-top,0).
-//   3) Pokud reálně vrátil 0, přepíšeme CSS proměnné --sat/--sab hardcoded
-//      hodnotami odpovídajícími typickému iOS status baru a home indicatoru.
-// Díky vrstvě CSS proměnných (definované v :root MyCars.html) se změna
-// propaguje na všechny selektory bez další úpravy.
+// CSS covers 99% of cases via env(safe-area-inset-*) with a baseline inside max().
+// This IIFE handles the last edge case: iOS Safari in standalone PWA mode where
+// env() sometimes returns 0 even though we are actually below the Dynamic Island
+// / status bar.
+// Steps:
+//   1) Detect standalone display-mode + iOS UA (otherwise do nothing — Android,
+//      desktop and regular Safari tabs are fine).
+//   2) Measure computed padding-top of a probe element with env(safe-area-inset-top,0).
+//   3) If env actually returned 0, override CSS variables --sat/--sab with
+//      hardcoded values matching the typical iOS status bar and home indicator.
+// Thanks to the CSS variable layer (declared in :root of MyCars.html) the change
+// propagates to every selector without further edits.
 (function(){
   try {
     var mm = window.matchMedia && window.matchMedia('(display-mode: standalone)');
     var isStandalone = (mm && mm.matches) || window.navigator.standalone === true;
     var ua = navigator.userAgent || '';
     var isIOS = /iP(hone|ad|od)/.test(ua) ||
-                // iPadOS 13+ se hlásí jako Mac; detekujeme přes touch capability
+                // iPadOS 13+ reports itself as Mac; detect via touch capability
                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     if (!isStandalone || !isIOS) return;
 
-    // Probe: element s env(...) paddingem mimo layout, změř computed value
+    // Probe: an off-layout element with env(...) padding, measure computed value
     var probe = document.createElement('div');
     probe.style.cssText =
       'position:fixed;left:-9999px;top:0;width:1px;height:1px;' +
       'padding-top:env(safe-area-inset-top,0px);' +
       'padding-bottom:env(safe-area-inset-bottom,0px);' +
       'visibility:hidden;pointer-events:none';
-    // document.body může chybět, pokud script běží v <head>; zkusíme documentElement
+    // document.body may be missing if the script runs in <head>; fall back to documentElement
     (document.body || document.documentElement).appendChild(probe);
     var cs = window.getComputedStyle(probe);
     var top = parseFloat(cs.paddingTop) || 0;
@@ -43,19 +44,19 @@
     probe.parentNode.removeChild(probe);
 
     if (top === 0 && bot === 0) {
-      // env() nefunguje ale jsme v iOS PWA — nastav hardcoded typické hodnoty.
-      // 47px = iOS status bar + Dynamic Island buffer (bezpečná horní mez pro
-      // všechny iPhone od X po 17 Pro Max), 34px = home indicator (jednotný
-      // od iPhone X). Landscape safe insets nejsou spolehlivě potřeba (fallback
-      // baseline v max() stačí — DI ve landscape zabírá ~59px vlevo, ale
-      // topbar padding-left 22px + landscape šířka to obvykle pokryjí).
+      // env() is not working but we are in iOS PWA — set hardcoded typical values.
+      // 47px = iOS status bar + Dynamic Island buffer (safe upper bound for every
+      // iPhone from X to 17 Pro Max), 34px = home indicator (uniform since iPhone X).
+      // Landscape safe insets are not reliably needed (baseline fallback in max()
+      // suffices — DI in landscape takes ~59px on the left, but topbar padding-left
+      // 22px + landscape width usually cover it).
       document.documentElement.style.setProperty('--sat', '47px');
       document.documentElement.style.setProperty('--sab', '34px');
       document.documentElement.classList.add('safe-area-fallback');
     }
   } catch (e) {
-    // Nikdy nesmíme rozbít bootstrap kvůli safe-area detekci.
-    // Bez fallbacku appka pořád funguje díky CSS max() vrstvě.
+    // Never break bootstrap due to safe-area detection.
+    // Without the fallback the app still works thanks to the CSS max() layer.
   }
 })();
 
@@ -138,50 +139,52 @@
 })();
 
 // ─── TRUSTED TYPES BOOTSTRAP ─────────────────────────────────
-// CSP `require-trusted-types-for 'script'` zakazuje přiřazení obyčejných stringů
-// do DOM sinků (innerHTML, outerHTML, insertAdjacentHTML, document.write, eval,
-// Function ctor, setTimeout("kód",…) atd.). Jediný sink, který tato aplikace
-// reálně používá, je innerHTML.
+// CSP `require-trusted-types-for 'script'` forbids assigning plain strings to
+// DOM sinks (innerHTML, outerHTML, insertAdjacentHTML, document.write, eval,
+// Function ctor, setTimeout("code",…) etc.). The only sink this app actually
+// uses is innerHTML.
 //
-// Místo přepisování ~58 call-sitů zaregistrujeme jedinou pojmenovanou policy
-// `mycars-html` (povolenou v CSP direktivou `trusted-types mycars-html`) a
-// obalíme setter `Element.prototype.innerHTML` tak, aby stringy transparentně
-// prošly přes policy → vznikne `TrustedHTML`, který IDL setter akceptuje.
+// Instead of rewriting ~58 call sites we register a single named policy
+// `mycars-html` (whitelisted in CSP via `trusted-types mycars-html`) and
+// wrap the `Element.prototype.innerHTML` setter so plain strings pass
+// transparently through the policy → producing a `TrustedHTML` which the IDL
+// setter accepts.
 //
-// BEZPEČNOSTNÍ MODEL:
-//  - Naše template literály považujeme za důvěryhodné (píšeme je my).
-//  - Uživatelská data interpolovaná do nich MUSÍ projít přes `esc()` —
-//    to je dlouhodobá konvence kódu a TT na ní nic nemění.
-//  - Přínos TT: externí kód (browser extensions, devtools-injected payloady,
-//    případná budoucí supply-chain kompromitace) nemůže vytvořit vlastní
-//    policy (CSP whitelist obsahuje pouze `mycars-html`) ani obejít náš
-//    setter, takže nedokáže injektovat HTML do DOMu. Plus tvrdá hláška v
-//    konzoli, pokud někdo v budoucnu napíše nový DOM sink bez TT.
+// SECURITY MODEL:
+//  - We treat our own template literals as trusted (we author them).
+//  - User data interpolated into them MUST go through `esc()` — this is a
+//    long-standing code convention and TT does not change it.
+//  - TT benefit: external code (browser extensions, devtools-injected payloads,
+//    a hypothetical future supply-chain compromise) cannot create its own
+//    policy (CSP whitelist contains only `mycars-html`) nor bypass our
+//    setter, so it cannot inject HTML into the DOM. Plus a loud console error
+//    if anyone writes a new DOM sink without TT in the future.
 (function(){
-  // Browser bez TT podpory (Safari ≤17 atd.) — `require-trusted-types-for`
-  // direktivu ignoruje a innerHTML funguje normálně. Nic neděláme.
+  // Browser without TT support (Safari ≤17 etc.) — `require-trusted-types-for`
+  // is ignored and innerHTML works normally. Do nothing.
   if (typeof window.trustedTypes === 'undefined' || !window.trustedTypes.createPolicy) return;
 
   var policy;
   try {
     policy = window.trustedTypes.createPolicy('mycars-html', {
-      // Identita: stringifikace + označení jako TrustedHTML. `esc()` v call-sitech
-      // už uživatelská data escapuje, takže sanitizér na této úrovni není nutný.
+      // Identity: stringify + tag as TrustedHTML. Call sites already escape
+      // user data via `esc()`, so no sanitizer is needed at this level.
       createHTML: function(s){ return String(s); }
     });
   } catch (e) {
-    // CSP odmítl policy (např. chybné nastavení). Bez policy by každé
-    // přiřazení innerHTML pod enforcementem hodilo TypeError a aplikace
-    // by se nerenderovala — radši nechat běžet bez shimu a problém uvidíme
-    // v konzoli při prvním sinku.
+    // CSP rejected the policy (e.g. misconfigured). Without a policy every
+    // innerHTML assignment would throw TypeError under enforcement and the
+    // app would fail to render — better to run without the shim and surface
+    // the problem in the console on the first sink.
     console.warn('MyCars: Trusted Types policy could not be created:', e);
     return;
   }
 
-  // Obal setteru `Element.prototype.innerHTML`: pre-konvertujeme string na
-  // TrustedHTML, pak voláme původní IDL setter. TT enforcement vidí TrustedHTML
-  // a propustí. `instanceof TrustedHTML` čeká už hotový TrustedHTML (nezdvojuje
-  // wrap). null/undefined → prázdný string (kompatibilní s defaultním chováním).
+  // Wrap the `Element.prototype.innerHTML` setter: pre-convert the string to
+  // TrustedHTML, then invoke the original IDL setter. TT enforcement sees
+  // TrustedHTML and lets it through. `instanceof TrustedHTML` expects an
+  // already-wrapped TrustedHTML (avoids double wrapping). null/undefined →
+  // empty string (compatible with default behaviour).
   var desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
   if (!desc || !desc.set) return;
   var origSet = desc.set;
@@ -240,13 +243,13 @@ let state = {
   analyticsCarId:null,  // null = all active | '__all__' = all incl. inactive | carId = single car
   analyticsTab:'overview', // 'overview' | 'compare'
   remindersCarId:null,   // null = all active | carId = single car
-  serviceCarId:null,     // null = all active | carId = single car (filter for Service page)
   editingJobId:null,
-  // Diary (v3.16) — chronologický feed událostí
+  // Diary (v3.16) — chronological event feed
   diaryCarId:null,       // null = all active | '__all__' = all incl. archive | carId = single car
   diarySearch:'',
-  diaryCats:[],          // klikací filtr kategorií záznamů (prázdné = vše)
-  cars:[], records:[], reminders:[], fuels:[], jobs:[]
+  diaryCats:[],          // clickable record-category filter (empty = all)
+  cars:[], records:[], reminders:[], fuels:[], jobs:[],
+  dataUpdatedAt:null     // ISO timestamp of last content change (set by saveData on real changes)
 };
 
 const CATEGORIES = {
@@ -268,11 +271,11 @@ const FUEL_TYPE_LABELS = {
 };
 
 // ─── CAR STATUS / CLASSIFICATION (v3.15) ─────────────────────────────────
-// Pořadí v poli = pořadí pro řazení (driving → suspended → archive).
+// Array order = sort order (driving → suspended → archive).
 const CAR_STATUSES = ['operational','storage','in_restoration','for_sale','sold','decommissioned'];
 const CAR_CLASSIFICATIONS = ['standard','youngtimer','historic','veteran'];
 
-// Normalizuje starý boolík active/inactive na nový 6-stavový model + doplní klasifikaci.
+// Normalises the legacy active/inactive boolean to the new 6-state model + fills classification.
 function migrateCar(c){
   if(!c||typeof c!=='object') return c;
   if(c.status==='active') c.status='operational';
@@ -281,7 +284,7 @@ function migrateCar(c){
   if(!CAR_CLASSIFICATIONS.includes(c.classification)) c.classification='standard';
   return c;
 }
-// "Archivovaná" = vozidla, která uživatel už nevlastní / nepoužívá k provozu.
+// "Archived" = vehicles the user no longer owns / does not operate.
 function isCarArchived(c){ return c?.status==='decommissioned' || c?.status==='sold'; }
 function isCarSuspended(c){ return c?.status==='storage' || c?.status==='in_restoration'; }
 function isCarServiceable(c){ return !isCarArchived(c); }
@@ -495,20 +498,20 @@ function fmtDate(d){
 
 
 // ─── DATE TRIPLE INPUT HELPERS ───────────────────────────────
-// Zapíše ISO datum (YYYY-MM-DD) do trojice inputů s prefixem
+// Write an ISO date (YYYY-MM-DD) into the triple of inputs identified by prefix.
 function setDateTriple(prefix, iso){
   const m=iso?iso.match(/^(\d{4})-(\d{2})-(\d{2})$/):null;
   document.getElementById(prefix+'-d').value=m?parseInt(m[3]):'';
   document.getElementById(prefix+'-m').value=m?parseInt(m[2]):'';
   document.getElementById(prefix+'-y').value=m?m[1]:'';
 }
-// Přečte trojici inputů a vrátí ISO datum nebo ''
+// Read the triple of inputs and return an ISO date or ''.
 function getDateTriple(prefix){
   const d=document.getElementById(prefix+'-d').value;
   const m=document.getElementById(prefix+'-m').value;
   const y=document.getElementById(prefix+'-y').value;
   if(!d&&!m&&!y)return'';
-  if(!d||!m||!y)return null; // neúplné
+  if(!d||!m||!y)return null; // incomplete
   const iso=`${y.padStart(4,'0')}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
   const dt=new Date(iso+'T12:00:00');
   return isNaN(dt.getTime())?null:iso;
@@ -584,17 +587,17 @@ function setupDatePickers() {
   });
 }
 
-// Auto-focus: po vyplnění dne skočí na měsíc, po měsíci na rok
-// Guard pomocí data atributu — listener se přidá jen jednou na každý element
+// Auto-focus: after two digits in day → jump to month, then to year.
+// Guarded via data attribute — listener attached only once per element.
 function initDateTripleNav(prefix){
   const dEl=document.getElementById(prefix+'-d');
   const mEl=document.getElementById(prefix+'-m');
   const yEl=document.getElementById(prefix+'-y');
   if(!dEl||!mEl||!yEl) return;
-  if(dEl.dataset.navInit) return; // již inicializováno
+  if(dEl.dataset.navInit) return; // already initialised
   dEl.dataset.navInit='1';
   mEl.dataset.navInit='1';
-  // inputmode: numeric klávesnice na mobilech (bez +/– šipek jako type=number)
+  // inputmode: numeric keyboard on mobile (no +/– arrows unlike type=number)
   [dEl,mEl,yEl].forEach(el=>el.setAttribute('inputmode','numeric'));
   dEl.addEventListener('input',()=>{if(dEl.value.length>=2)mEl.focus();});
   mEl.addEventListener('input',()=>{if(mEl.value.length>=2)yEl.focus();});
@@ -602,7 +605,7 @@ function initDateTripleNav(prefix){
 
 
 function fmtNum(n,dec=0){return new Intl.NumberFormat('cs-CZ',{minimumFractionDigits:dec,maximumFractionDigits:dec}).format(n||0)}
-// uid: kryptograficky bezpečné s fallbackem pro starší prohlížeče
+// uid: cryptographically secure with a fallback for older browsers.
 function uid(){
   try{
     if(typeof crypto!=='undefined' && crypto.randomUUID) return 'u_'+crypto.randomUUID().replace(/-/g,'');
@@ -613,18 +616,18 @@ function uid(){
   }catch(e){}
   return '_'+Math.random().toString(36).substr(2,9)+Date.now().toString(36);
 }
-// esc: HTML-escape uživatelských dat při interpolaci do innerHTML / atributů.
-// Vrací prázdný řetězec pro null/undefined; všechny ostatní hodnoty stringifikuje.
+// esc: HTML-escape user data when interpolating into innerHTML / attributes.
+// Returns an empty string for null/undefined; stringifies everything else.
 const _ESC_MAP={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;','=':'&#61;'};
 function esc(s){return s==null?'':String(s).replace(/[&<>"'`=]/g,c=>_ESC_MAP[c]);}
-// safeId: validuje řetězec použitelný v onclick="fn('${id}')" atributu (bez uvozovek/lomítek/HTML znaků).
-// Pokud ID není bezpečné, vrací prázdný řetězec — volající má fallback ošetřit.
+// safeId: validates a string safe to use inside onclick="fn('${id}')" (no quotes/slashes/HTML chars).
+// Returns an empty string if the id is not safe — callers must handle the fallback.
 function safeId(id){return /^[A-Za-z0-9_\-]{1,64}$/.test(id||'') ? id : '';}
 
 // ── Car color dot helper ──────────────────────────────────────
-// Barvy které potřebují ring místo glow (tmavé / nevýrazné na tmavém pozadí)
+// Colors that need a ring instead of a glow (dark / low-contrast on dark background).
 const DOT_RING_COLORS = new Set(['#7a5230','#c8956a','#e8e4d8','#2a2a2a','#aaaaaa','#888','#aaa']);
-// Vrací true pokud je hex barva příliš tmavá na tmavém pozadí (luminance < ~31 %)
+// Returns true if the hex color is too dark on a dark background (luminance < ~31%).
 function _isColorDark(hex){
   const h=(hex||'').replace('#','').toLowerCase();
   if(!/^[0-9a-f]{3,6}$/.test(h)) return false;
@@ -637,42 +640,42 @@ function carDotClass(color){
   return DOT_RING_COLORS.has(c)||_isColorDark(c)
     ? 'car-color-dot-ring' : 'car-color-dot-glow';
 }
-// cssClass = třída elementu (fleet-card-dot / csw-dot / car-header-dot / car-dot)
+// cssClass = element class (fleet-card-dot / csw-dot / car-header-dot / car-dot)
 function carDotHtml(color, cssClass){
   const c = color||'#888';
   const variant = carDotClass(c);
-  // --dot-color CSS proměnná umožňuje glow v barvě tečky bez inline JS
+  // --dot-color CSS variable enables the glow to inherit the dot color without inline JS
   return `<span class="${cssClass} ${variant}" style="background:${c};--dot-color:${c}"></span>`;
 }
 
 function getCar(id){return state.cars.find(c=>c.id===id)}
 function getCarRecords(carId){return state.records.filter(r=>r.carId===carId)}
 function getCarFuels(carId){return state.fuels.filter(f=>f.carId===carId)}
-// Sdílená funkce — spotřeba metodou plné nádrže (použita v tankování i analytice)
-// Segmenty kratší než MIN_SEGMENT_KM nebo s hodnotou > MAX_CONSUMPTION jsou přeskočeny
-// jako chybná data (duplicitní záznam, špatně zadaný odometr apod.)
-const _MIN_SEG_KM = 5;       // minimální délka segmentu v km
-const _MAX_CONS   = 40;      // sanity cap l/100km — nad tím jde téměř jistě o chybu zadání
+// Shared helper — full-tank consumption method (used both in fuel log and analytics).
+// Segments shorter than MIN_SEGMENT_KM or with a value > MAX_CONSUMPTION are skipped
+// as bad data (duplicate entry, wrong odometer, etc.).
+const _MIN_SEG_KM = 5;       // minimum segment length in km
+const _MAX_CONS   = 40;      // sanity cap l/100km — above this it is almost certainly a data-entry error
 function calcConsumptions(carId){
   const allFuels=getCarFuels(carId);
-  // Pouze plné nádrže s platným odometrem > 0
+  // Only full tanks with a valid odometer > 0
   const fullFuels=[...allFuels].filter(f=>f.fullTank&&f.odo>0).sort((a,b)=>a.odo-b.odo);
   const result=[];
   for(let i=1;i<fullFuels.length;i++){
     const kmDiff=fullFuels[i].odo-fullFuels[i-1].odo;
-    if(kmDiff<_MIN_SEG_KM) continue; // příliš krátký segment → přeskočit
+    if(kmDiff<_MIN_SEG_KM) continue; // segment too short → skip
     const liters=allFuels.filter(f=>f.odo>fullFuels[i-1].odo&&f.odo<=fullFuels[i].odo)
                          .reduce((s,f)=>s+(f.liters||0),0);
     if(liters<=0) continue;
     const val=liters/kmDiff*100;
-    if(val>_MAX_CONS) continue; // nesmyslně vysoká hodnota → chyba dat, přeskočit
+    if(val>_MAX_CONS) continue; // implausibly high value → data error, skip
     result.push({odo:fullFuels[i].odo,val});
   }
   return result;
 }
 function avgConsumptionVal(carId){
-  // Vážený průměr (správná metoda plné nádrže): celkem litrů ÷ celkem km
-  // mezi první a poslední plnou nádrží — odolné vůči krátkým segmentům.
+  // Weighted average (correct full-tank method): total litres ÷ total km between
+  // the first and last full tank — robust against short segments.
   const allFuels=getCarFuels(carId);
   const fullFuels=[...allFuels].filter(f=>f.fullTank&&f.odo>0).sort((a,b)=>a.odo-b.odo);
   if(fullFuels.length<2) return 0;
@@ -732,24 +735,24 @@ function getCatDisplay(cat){
 }
 function normalizeCat(cat){const i=CATEGORIES.en.indexOf(cat);return i>=0?CATEGORIES.cs[i]:cat}
 
-// Mapování starých/CSV kategorií na nové
+// Map legacy / CSV categories to the current canonical set.
 function mapCatToNew(cat){
   if(!cat) return 'Servis a opravy';
   const v = cat.trim().toLowerCase();
-  // Nákup vozidla
+  // Vehicle purchase
   if(v.includes('nákup') || v.includes('vehicle purchase') || v.includes('purchase')) return 'Nákup vozidla';
-  // Administrativa
+  // Administration
   if(['pojištění','insurance','pov','stk','mot','inspection','poplatky','fees',
       'přepis','evidenč','pokuta','fine','administrative','administrativa'].some(k=>v.includes(k))) return 'Administrativa';
-  // Provozní náplně
+  // Fluids & consumables
   if(['olej','oil','chladič','coolant','ostřikovač','washer','brzdová kapalina','brake fluid',
       'náplň','fluid','provozní'].some(k=>v.includes(k))) return 'Provozní náplně';
-  // Pneumatiky a kola
+  // Tyres & wheels
   if(['pneumatik','tyre','tire','kol','wheel','disk','přezutí','vyvážení','geometrie','alignment'].some(k=>v.includes(k))) return 'Pneumatiky a kola';
-  // Vybavení a vzhled
+  // Equipment & appearance
   if(['vybavení','equipment','koberec','carpet','roletka','autokosmetika','lak','paint',
       'interiér','interior','doplněk','accessory','karoserie','bodywork'].some(k=>v.includes(k))) return 'Vybavení a vzhled';
-  // Servis a opravy — vše ostatní
+  // Service & repairs — everything else
   return 'Servis a opravy';
 }
 
@@ -762,8 +765,8 @@ function fuelTypeLabel(id){
 }
 
 // ─── DATA ────────────────────────────────────────────────────
-// Bezpečné parsování JSON s ochranou proti prototype-pollution
-// a omezením velikosti řetězců/polí (mitigace DoS).
+// Safe JSON parsing with protection against prototype pollution and
+// caps on string/array size (DoS mitigation).
 const MAX_STR_LEN=4000;
 const MAX_ARR_LEN=50000;
 const FORBIDDEN_KEYS={'__proto__':1,'constructor':1,'prototype':1};
@@ -778,14 +781,14 @@ function safeJsonParse(text){
 }
 
 // ─── IMPORT VALIDATION HELPERS ───────────────────────────────
-// Striktní typové validátory pro hranici důvěry (load z localStorage + JSON import).
-// Cíl: zlomená nebo zlomyslná záloha nesmí
-//   • vložit `javascript:` / `data:` URL do <a href> (XSS přes klik uživatele),
-//   • prolomit `style="..."` atribut hodnotou bez escapu (CSS injection v carDotHtml),
-//   • injektovat HTML přes pole, která se renderují raw (např. tyres width/aspect),
-//   • zanést NaN / Infinity / nečíselné stringy do výpočtů (km, spotřeba, ceny),
-//   • zanést neplatná data do `<input type=date>` a do měsíčních agregací.
-// Každý validátor vrací sanitizovanou hodnotu nebo null (caller doplní fallback).
+// Strict type validators for the trust boundary (loading from localStorage +
+// JSON import). Goal: a broken or malicious backup must not
+//   • insert `javascript:` / `data:` URLs into <a href> (XSS via user click),
+//   • break the `style="..."` attribute with an unescaped value (CSS injection in carDotHtml),
+//   • inject HTML via fields that are rendered raw (e.g. tyres width/aspect),
+//   • bring NaN / Infinity / non-numeric strings into calculations (km, consumption, prices),
+//   • push invalid data into `<input type=date>` and monthly aggregations.
+// Each validator returns a sanitized value or null (caller supplies fallback).
 const _ISO_DATE_RE  = /^\d{4}-\d{2}-\d{2}$/;
 const _TIME_RE      = /^([01]\d|2[0-3]):[0-5]\d$/;
 const _HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -813,14 +816,14 @@ function _vDate(v){
   const d=new Date(v+'T00:00:00Z');
   return isNaN(d.getTime()) ? null : v;
 }
-// _vTime: HH:MM (24h, 00:00–23:59). Nepovinná hodnota → null. Renderuje se raw
-// v reminder kartě, regex blábolá vstup mimo strict formu.
+// _vTime: HH:MM (24h, 00:00–23:59). Optional value → null. Rendered raw in the
+// reminder card; the regex rejects any input outside the strict form.
 function _vTime(v){
   if(typeof v!=='string'||!_TIME_RE.test(v)) return null;
   return v;
 }
-// _vIsoTimestamp: uložený jako `Date.toISOString()` výsledek (UTC). Slouží pro
-// `reminder.lastNotifiedAt` (anti-spam). Vstup mimo platný Date → null.
+// _vIsoTimestamp: stored as a `Date.toISOString()` result (UTC). Used for
+// `reminder.lastNotifiedAt` (anti-spam). Input outside valid Date → null.
 function _vIsoTimestamp(v){
   if(typeof v!=='string'||v.length>40) return null;
   const d=new Date(v);
@@ -829,9 +832,9 @@ function _vIsoTimestamp(v){
 function _vColor(v){
   return (typeof v==='string'&&_HEX_COLOR_RE.test(v)) ? v.toLowerCase() : null;
 }
-// _vUrl: jediná povolená schémata jsou http(s). URL constructor odmítne všechny
-// chybné hodnoty včetně `javascript:`/`data:`/`vbscript:`/`file:` (nepatří mezi
-// http(s)). Limit 2048 znaků = de facto browser maximum pro <a href>.
+// _vUrl: only http(s) schemes are allowed. The URL constructor rejects every
+// bad value including `javascript:`/`data:`/`vbscript:`/`file:` (not http(s)).
+// The 2048-char limit is the de-facto browser maximum for <a href>.
 function _vUrl(v){
   if(typeof v!=='string'||!v||v.length>2048) return null;
   try {
@@ -859,13 +862,13 @@ function _vTyreSet(s){
   if(!s||typeof s!=='object'||Array.isArray(s)) return null;
   return {
     same:  !!s.same,
-    front: _vAxle(s.front) || _vAxle(s),   // tolerantní k legacy flat axle
+    front: _vAxle(s.front) || _vAxle(s),   // tolerant to legacy flat axle shape
     rear:  _vAxle(s.rear),
   };
 }
 function _vTyres(t){
   if(!t||typeof t!=='object'||Array.isArray(t)) return null;
-  // Legacy formát: width/aspect přímo na rootu — ponecháme stejnou strukturu.
+  // Legacy format: width/aspect directly on root — keep the same structure.
   if(t.width!==undefined||t.aspect!==undefined) return _vAxle(t);
   const out={};
   if(t.summer)    out.summer    = _vTyreSet(t.summer);
@@ -874,12 +877,13 @@ function _vTyres(t){
   return Object.keys(out).length ? out : null;
 }
 const _FUEL_TYPE_KEYS = Object.keys(FUEL_TYPES);
-// _vCar: validuje jedno vozidlo. Spolu s `migrateCar` (status/classification)
-// pokrývá všechna pole, která appka renderuje nebo používá k výpočtům.
-// Pole, kterých se to netýká (např. budoucí nové vlastnosti), zůstanou
-// nedotčená — `out.cars` v sanitizeImported je shallow copy bez whitelistu klíčů.
+// _vCar: validates a single vehicle. Together with `migrateCar`
+// (status/classification) it covers every field the app renders or uses in
+// calculations. Fields not covered here (e.g. future new properties) remain
+// untouched — `out.cars` in sanitizeImported is a shallow copy without a
+// key whitelist.
 function _vCar(c){
-  // řetězce — délkové limity (safeJsonParse už cappnul, tady jen normalizace typu)
+  // strings — length caps (safeJsonParse already capped, this just normalises the type)
   c.make        = _vStr(c.make, MAX_STR_LEN) || '';
   c.model       = _vStr(c.model, MAX_STR_LEN) || '';
   c.name        = _vStr(c.name, MAX_STR_LEN) || '';
@@ -888,7 +892,7 @@ function _vCar(c){
   c.note        = _vStr(c.note, MAX_STR_LEN) || '';
   c.oilType     = _vStr(c.oilType, 64);
   c.coolantType = _vStr(c.coolantType, 64);
-  // čísla
+  // numbers
   c.year                = _vInt(c.year, 1900, 2200);
   c.startOdo            = _vInt(c.startOdo, 0, 99999999);
   c.oilInterval         = _vInt(c.oilInterval, 0, 9999999);
@@ -906,7 +910,7 @@ function _vCar(c){
   c.insuranceWarn       = _vInt(c.insuranceWarn, 0, 3650);
   c.assistWarn          = _vInt(c.assistWarn, 0, 3650);
   c.salePrice           = _vNum(c.salePrice);
-  // datumy (ISO YYYY-MM-DD)
+  // dates (ISO YYYY-MM-DD)
   c.stk             = _vDate(c.stk);
   c.emission        = _vDate(c.emission);
   c.pov             = _vDate(c.pov);
@@ -914,15 +918,15 @@ function _vCar(c){
   c.acquired        = _vDate(c.acquired);
   c.decommissioned  = _vDate(c.decommissioned);
   c.assist          = _vDate(c.assist);
-  // enumy a strukturované hodnoty
+  // enums and structured values
   c.fuelType        = _vEnum(c.fuelType, _FUEL_TYPE_KEYS);
-  c.color           = _vColor(c.color);     // bezpečné pro `style="background:${color}"` interpolaci v carDotHtml
-  c.saleAdUrl       = _vUrl(c.saleAdUrl);   // zahodí javascript:/data:/vbscript: schémata
-  // booleany
+  c.color           = _vColor(c.color);     // safe for `style="background:${color}"` interpolation in carDotHtml
+  c.saleAdUrl       = _vUrl(c.saleAdUrl);   // rejects javascript:/data:/vbscript: schemes
+  // booleans
   c.tyreAllSeason   = _vBool(c.tyreAllSeason) ?? false;
   c.hasAutomatic    = _vBool(c.hasAutomatic)  ?? false;
   c.has4x4          = _vBool(c.has4x4)        ?? false;
-  // pneumatiky (vnořené) — width/aspect/rim/load se renderují raw v tyreAxleSummary
+  // tyres (nested) — width/aspect/rim/load render raw in tyreAxleSummary
   c.tyres           = _vTyres(c.tyres);
   return c;
 }
@@ -931,7 +935,7 @@ function _vRecord(r){
   r.date  = _vDate(r.date);
   r.odo   = _vInt(r.odo, 0, 99999999);
   r.desc  = _vStr(r.desc, MAX_STR_LEN) || '';
-  r.cat   = _vStr(r.cat, 100) || '';   // volný text (escapováno přes esc() v renderu)
+  r.cat   = _vStr(r.cat, 100) || '';   // free text (escaped via esc() in the renderer)
   r.qty   = _vNum(r.qty);
   r.price = _vNum(r.price);
   r.note  = _vStr(r.note, MAX_STR_LEN) || '';
@@ -957,7 +961,7 @@ function _vReminder(rm){
   rm.interval = _vInt(rm.interval, 0, 99999999);
   rm.lastDone = _vInt(rm.lastDone, 0, 99999999);
   rm.warnAt   = _vInt(rm.warnAt, 0, 9999999);
-  // notify default true (existující připomínky bez pole = upozorňovat)
+  // notify defaults to true (existing reminders without the field = notify)
   rm.notify   = _vBool(rm.notify) ?? true;
   rm.lastNotifiedAt = _vIsoTimestamp(rm.lastNotifiedAt);
   return rm;
@@ -980,7 +984,7 @@ function sanitizeImported(d){
   out.records=out.records.filter(isObj).map(fixId).map(_vRecord);
   out.fuels=out.fuels.filter(isObj).map(fixId).map(_vFuel);
   out.reminders=out.reminders.filter(isObj).map(fixId).map(_vReminder);
-  // Jobs: sanitizovat tasks (vnořený array) + typovat ostatní pole.
+  // Jobs: sanitize tasks (nested array) + type every other field.
   out.jobs=out.jobs.filter(isObj).map(j=>{
     fixId(j);
     j.carId   = _vStr(j.carId, 64);
@@ -996,7 +1000,7 @@ function sanitizeImported(d){
     j.status = _vEnum(j.status, ['planned','in_progress','done','cancelled']) || 'planned';
     return j;
   });
-  // settings — whitelist známých polí + typová kontrola (cizí klíče zahodíme).
+  // settings — whitelist of known fields + type check (foreign keys are dropped).
   if(isObj(d.settings)){
     const s={};
     if(typeof d.settings.tireReminders==='boolean') s.tireReminders=d.settings.tireReminders;
@@ -1004,7 +1008,7 @@ function sanitizeImported(d){
     if(typeof d.settings.notificationsEnabled==='boolean') s.notificationsEnabled=d.settings.notificationsEnabled;
     if(Object.keys(s).length) out.settings=s;
   }
-  // lang — pouze pokud je platná hodnota
+  // lang — only accept a known value
   if(d.lang==='cs'||d.lang==='en') out.lang=d.lang;
   return out;
 }
@@ -1012,23 +1016,45 @@ function loadData(){
   try{
     const d=localStorage.getItem('mycars_v3');
     if(d){
-      const p=sanitizeImported(safeJsonParse(d));
+      const rawObj=safeJsonParse(d);
+      const p=sanitizeImported(rawObj);
       state.cars=p.cars;state.records=p.records;state.reminders=p.reminders;state.fuels=p.fuels;
       state.jobs=p.jobs||[];
       if(p.settings)Object.assign(state.settings,p.settings);
       if(p.lang)state.lang=p.lang;
+      // Metadata outside sanitizeImported (per-device, does not propagate in export).
+      if(rawObj&&typeof rawObj.dataUpdatedAt==='string') state.dataUpdatedAt=rawObj.dataUpdatedAt;
     }
     if(state.cars.length)state.currentCarId=state.cars[0].id;
-  }catch(e){console.warn('Chyba při načítání dat',e);}
+  }catch(e){console.warn('Failed to load data',e);}
+  // Baseline for detecting content changes in saveData().
+  _prevContentSig=_contentSig();
   // Apply saved theme
   applyTheme();
 }
+// Content signature (cars/records/fuels/reminders/jobs) — used by saveData()
+// to distinguish real user-data changes from settings/language toggles.
+let _prevContentSig=null;
+function _contentSig(){
+  try{return JSON.stringify({c:state.cars,r:state.records,f:state.fuels,rm:state.reminders,j:state.jobs});}
+  catch{return '';}
+}
 function saveData(){
   try{
-    localStorage.setItem('mycars_v3',JSON.stringify({cars:state.cars,records:state.records,reminders:state.reminders,fuels:state.fuels,jobs:state.jobs,settings:state.settings,lang:state.lang,savedAt:new Date().toISOString()}));
+    // Detect a real change of user records — the timestamp only updates when
+    // content differs from the last loaded/saved version (not on mere theme,
+    // language or notification-toggle changes).
+    const sig=_contentSig();
+    if(_prevContentSig!==null && sig!==_prevContentSig){
+      state.dataUpdatedAt=new Date().toISOString();
+    }
+    _prevContentSig=sig;
+    localStorage.setItem('mycars_v3',JSON.stringify({cars:state.cars,records:state.records,reminders:state.reminders,fuels:state.fuels,jobs:state.jobs,settings:state.settings,lang:state.lang,savedAt:new Date().toISOString(),dataUpdatedAt:state.dataUpdatedAt||null}));
+    // Async write to synced folder (fire-and-forget)
+    if(_sync.enabled) _sync.writeFile();
     return true;
   }catch(e){
-    // QuotaExceededError nebo jiná storage chyba — nesmí shodit aplikaci.
+    // QuotaExceededError or another storage error — must not crash the app.
     console.error('saveData failed:',e);
     const cs=state.lang==='cs';
     const isQuota=e&&(e.name==='QuotaExceededError'||e.code===22||e.code===1014);
@@ -1040,13 +1066,13 @@ function saveData(){
   }
 }
 
-// Vrátí odhadované využití localStorage pro aktuální klÍč — synchronní (rychlá) varianta.
-// (Použité bajty počítáme jako length × 2, protože localStorage je interně UTF-16.)
+// Returns the estimated localStorage usage for the current key — synchronous (fast) variant.
+// (Used bytes = length × 2 because localStorage is internally UTF-16.)
 function getStorageUsageSync(){
   try{
     const raw=localStorage.getItem('mycars_v3')||'';
     const used=raw.length*2; // approx bytes
-    const limit=5*1024*1024; // typický limit prohlížeče 5 MB
+    const limit=5*1024*1024; // typical browser limit of 5 MB
     return {used,limit,pct:Math.min(100,used/limit*100)};
   }catch{return {used:0,limit:5*1024*1024,pct:0};}
 }
@@ -1083,7 +1109,7 @@ function setLang(l){
   });
   const stSel=document.getElementById('c-status');
   if(stSel){
-    // Přeložíme jen options + label, hodnotu zachováme
+    // Only translate the option labels; keep the current value.
     [...stSel.options].forEach(o=>{
       if(o.value === '') o.textContent = t('car_status_placeholder');
       else o.textContent = t('car_status_'+o.value)||o.value;
@@ -1111,7 +1137,7 @@ function renderAll(){
 
 function renderCarsList(){
   const el=document.getElementById('cars-list');
-  // Pořadí: operational → for_sale → storage → in_restoration → decommissioned; pak abecedě.
+  // Order: operational → for_sale → storage → in_restoration → decommissioned; then alphabetical.
   const rank = c => CAR_STATUSES.indexOf(c.status||'operational');
   const sorted=[...state.cars].sort((a,b)=>{
     const ra=rank(a), rb=rank(b);
@@ -1127,14 +1153,14 @@ function renderCarsList(){
       <span class="car-name">${esc(car.make||'')} ${esc(car.model||car.name||'')}
         <small>${car.plate?esc(car.plate)+' · ':''} ${fmtNum(getMaxOdo(car.id))} km</small>
       </span>
-      <button class="row-btn" data-action="openCarModal" data-id="${sid}" data-stop-propagation="1" title="${state.lang==='cs'?'Upravit vozidlo':'Edit vehicle'}"><span class="edit-icon">✏</span></button>
+      <button class="row-btn" data-action="openCarEdit" data-id="${sid}" data-stop-propagation="1" title="${state.lang==='cs'?'Upravit vozidlo':'Edit vehicle'}"><span class="edit-icon">✏</span></button>
     </div>`;
   }).join('')||`<div style="padding:8px 10px;color:var(--text3);font-size:.78rem;">${esc(t('no_car'))}</div>`;
 }
 
 function selectCar(id){
   state.currentCarId=id;
-  state.analyticsCarId=id; // analytics defaultně na vybrané auto
+  state.analyticsCarId=id; // default analytics scope to the picked car
   state.page=1;state.fuelPage=1;
   state.filterCat='';state.search='';state.fuelSearch='';
   closeSidebarOnMobile();
@@ -1243,7 +1269,7 @@ function renderCarSwitcher(){
     if(c){tDot=c.color||'#888'; tName=`${c.make||''} ${c.model||''}`.trim(); tPlate=c.plate||'';}
     else{tDot='var(--text2)'; tName=cs?'Vybrat vozidlo':'Select vehicle';}
   }
-  // triggerLabel — tečka: pokud je to barva auta, použij carDotHtml; jinak plain span pro systémové barvy
+  // triggerLabel dot: if it is a car colour, use carDotHtml; otherwise a plain span for system colours.
   const isCarColor = tDot && !tDot.startsWith('var(');
   const triggerDot = isCarColor
     ? carDotHtml(tDot, 'csw-dot')
@@ -1295,7 +1321,7 @@ function renderCarSwitcher(){
     }
   }
 
-  // CSS proměnná --csw-car-color pro left border triggeru — jen pro barvy aut, ne systémové
+  // CSS variable --csw-car-color for the trigger's left border — only for car colours, not system ones.
   const triggerColorStyle = isCarColor ? `style="--csw-car-color:${tDot}"` : '';
 
   bar.innerHTML=`<span class="csw-bar-label">${cs?'Vozidlo':'Vehicle'}</span>`
@@ -1374,7 +1400,7 @@ function showPage(page){
   state.currentPage=page;
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('nav-'+page)?.classList.add('active');
-  const onSettings = page==='settings';
+  const onSettings = page==='settings' || page==='data-management';
   const onFleet = page==='fleet';
   const onEdit = page==='vehicle-edit' || page==='vehicle-wizard';
   const fuelBtn=document.getElementById('add-fuel-btn');
@@ -1401,6 +1427,7 @@ function renderPage(){
     service:t('service'),
     diary:t('diary_title'),
     settings:cs?'Nastavení':'Settings',
+    'data-management':cs?'Správa dat':'Data management',
     'vehicle-edit':cs?'Upravit vozidlo':'Edit vehicle',
     'vehicle-wizard':cs?'Nové vozidlo':'New vehicle'
   };
@@ -1425,14 +1452,14 @@ function renderPage(){
   } else if(page==='vehicle-edit'){
     const editCar=getCar(state.editingCarId);
     subtitle=editCar?`${editCar.make||''} ${editCar.model||''}`.trim():'';
-  } else if(!['settings','fleet','vehicle-wizard'].includes(page)&&car){
+  } else if(!['settings','data-management','fleet','vehicle-wizard'].includes(page)&&car){
     subtitle=`${car.make||''} ${car.model||car.name||''} ${car.plate?'('+car.plate+')':''}`.trim();
   }
 
   document.getElementById('page-title').innerHTML=
     esc(pageName)+(subtitle?` <span>— ${esc(subtitle)}</span>`:'');
 
-  const pages={fleet:renderFleet,dashboard:renderDashboard,records:renderRecords,fuel:renderFuelPage,analytics:renderAnalytics,reminders:renderRemindersPage,service:renderServicePage,diary:renderDiaryPage,settings:renderSettings,'vehicle-edit':renderCarEditPage,'vehicle-wizard':renderVehicleWizard};
+  const pages={fleet:renderFleet,dashboard:renderDashboard,records:renderRecords,fuel:renderFuelPage,analytics:renderAnalytics,reminders:renderRemindersPage,service:renderServicePage,diary:renderDiaryPage,settings:renderSettings,'data-management':renderDataManagement,'vehicle-edit':renderCarEditPage,'vehicle-wizard':renderVehicleWizard};
   const contentEl = document.getElementById('content');
   contentEl.innerHTML='';
   contentEl.classList.remove('page-in');
@@ -1444,7 +1471,7 @@ function renderPage(){
 
 // ─── HELPERS — shared between edit page & wizard ─────────────
 
-// Fill all form fields from a car object (same logic as old openCarModal)
+// Fill all form fields from a car object (shared by edit page and wizard)
 function fillCarForm(car){
   const cs = state.lang==='cs';
   // Basic
@@ -1459,7 +1486,7 @@ function fillCarForm(car){
   // Dates basic
   setDateTriple('c-acquired',      car?.acquired||'');
   setDateTriple('c-decommissioned',car?.decommissioned||'');
-  // Status + klasifikace (v3.15)
+  // Status + classification (v3.15)
   const stSel = document.getElementById('c-status');
   if(stSel){
     const norm = CAR_STATUSES.includes(car?.status) ? car.status
@@ -1468,7 +1495,7 @@ function fillCarForm(car){
   }
   const clSel = document.getElementById('c-classification');
   if(clSel) clSel.value = CAR_CLASSIFICATIONS.includes(car?.classification) ? car.classification : 'standard';
-  // Pole pro prodej
+  // Sale fields
   setVal('c-sale-price', car?.salePrice||'');
   setVal('c-sale-url',   car?.saleAdUrl||'');
   toggleSaleFields();
@@ -1499,12 +1526,12 @@ function fillCarForm(car){
     const prefix=wrap.id.replace('-wrap','');
     initDateTripleNav(prefix);
   });
-  // Drivetrain — nastavit hodnoty přepínačů a servisních polí (HTML je již vygenerováno builderem)
+  // Drivetrain — set toggle and service field values (HTML is already generated by the builder).
   const autoEl=document.getElementById('c-has-automatic');
   const x4El=document.getElementById('c-has-4x4');
   if(autoEl){ autoEl.checked=_carEditDrivetrain.hasAutomatic; }
   if(x4El){ x4El.checked=_carEditDrivetrain.has4x4; }
-  // saveCarEditDrivetrain voláme jen pokud jsou přepínače v DOM (základní sekce je otevřena)
+  // Only call saveCarEditDrivetrain if the toggles are in the DOM (basic section is open).
   if(autoEl||x4El) saveCarEditDrivetrain();
   setVal('c-gearbox-oil-interval', car?.gearboxOilInterval||'');
   setVal('c-gearbox-oil-last',     car?.gearboxOilLastKm||'');
@@ -1578,7 +1605,8 @@ function renderCarEditPage(){
   const sections=[
     {id:'basic',   title:cs?'Základní informace':'Basic info',
       form: buildBasicSectionForm(cs)},
-    {id:'docs',    title:cs?'Dokumenty & termíny':'Documents & dates',  form:"\n<div class='form-grid'>\n  <div class='form-section-label'>STK – Technická prohlídka</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-stk-wrap'>\n      <input type='number' class='dt-d' id='c-stk-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-stk-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-stk-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-stk-warn' value='30'></div>\n  <div class='form-section-label'>Emise – Měření emisí</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-emission-wrap'>\n      <input type='number' class='dt-d' id='c-emission-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-emission-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-emission-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-emission-warn' value='30'></div>\n  <div class='form-section-label'>POV – Povinné ručení</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-pov-wrap'>\n      <input type='number' class='dt-d' id='c-pov-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-pov-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-pov-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-pov-warn' value='30'></div>\n  <div class='form-section-label'>Havarijní pojištění (volitelné)</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-ins-wrap'>\n      <input type='number' class='dt-d' id='c-ins-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-ins-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-ins-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-ins-warn' value='30'></div>\n  <div class='form-section-label'>Asistenční služby (volitelné)</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-assist-wrap'>\n      <input type='number' class='dt-d' id='c-assist-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-assist-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-assist-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-assist-warn' value='30'></div>\n</div>"},
+    {id:'docs',    title:cs?'Dokumenty & termíny':'Documents & dates',
+      form: buildDocsSectionForm(cs)},
     {id:'service', title:cs?'Servis':'Service',
       form: buildServiceSectionForm(cs, _carEditDrivetrain.hasAutomatic, _carEditDrivetrain.has4x4)},
     {id:'tyres',   title:cs?'Pneumatiky':'Tyres',
@@ -1642,7 +1670,7 @@ function cancelCarEdit(){
   showPage(state.editReturnPage||'fleet');
 }
 
-// ─── VEHICLE WIZARD (nové vozidlo) ────────────────────────────
+// ─── VEHICLE WIZARD (new vehicle) ────────────────────────────
 function renderVehicleWizard(){
   const el = document.getElementById('content');
   const cs = state.lang==='cs';
@@ -1683,7 +1711,7 @@ function renderVehicleWizard(){
   ];
   const stepForms=[
     buildBasicSectionForm(cs),
-    "\n<div class='form-grid'>\n  <div class='form-section-label'>STK – Technická prohlídka</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-stk-wrap'>\n      <input type='number' class='dt-d' id='c-stk-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-stk-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-stk-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-stk-warn' value='30'></div>\n  <div class='form-section-label'>Emise – Měření emisí</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-emission-wrap'>\n      <input type='number' class='dt-d' id='c-emission-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-emission-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-emission-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-emission-warn' value='30'></div>\n  <div class='form-section-label'>POV – Povinné ručení</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-pov-wrap'>\n      <input type='number' class='dt-d' id='c-pov-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-pov-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-pov-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-pov-warn' value='30'></div>\n  <div class='form-section-label'>Havarijní pojištění (volitelné)</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-ins-wrap'>\n      <input type='number' class='dt-d' id='c-ins-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-ins-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-ins-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-ins-warn' value='30'></div>\n  <div class='form-section-label'>Asistenční služby (volitelné)</div>\n  <div class='form-group'><label class='form-label'>Platnost do</label>\n    <div class='date-triple' id='c-assist-wrap'>\n      <input type='number' class='dt-d' id='c-assist-d' placeholder='DD' min='1' max='31'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-assist-m' placeholder='MM' min='1' max='12'>\n      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-assist-y' placeholder='RRRR' min='1900' max='2099'>\n    </div>\n  </div>\n  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-assist-warn' value='30'></div>\n</div>",
+    buildDocsSectionForm(cs),
     buildServiceSectionForm(cs, _wizardDraftData['_hasAutomatic']||false, _wizardDraftData['_has4x4']||false),
     `<div id="car-tab-tyres"></div>`,
   ];
@@ -1720,7 +1748,7 @@ function renderVehicleWizard(){
     s.classList.toggle('selected', s.dataset.color===state.selectedColor);
     s.onclick=()=>{ state.selectedColor=s.dataset.color; document.querySelectorAll('.color-swatch').forEach(x=>x.classList.remove('selected')); s.classList.add('selected'); };
   });
-  // Status dropdown init (v3.15 — default = '' aby uživatel musel vybrat)
+  // Status dropdown init (v3.15 — default = '' so the user must pick a value)
   const stSel=document.getElementById('c-status');
   if(stSel && !stSel.dataset.init){ stSel.value=''; stSel.dataset.init='1'; }
   toggleSaleFields();
@@ -1761,7 +1789,7 @@ function wizardBack(){
 
 // Draft persists wizard form values between step transitions
 let _wizardDraftData = {};
-// Stav přepínačů pohonu při editaci vozidla (perzistuje mezi přepínáním záložek)
+// Drivetrain toggle state during vehicle edit (persists across tab switches).
 let _carEditDrivetrain = {hasAutomatic:false, has4x4:false};
 
 function _saveWizardDraft(){
@@ -1803,7 +1831,7 @@ function _loadWizardDraft(){
   if(d['_color']){ state.selectedColor=d['_color']; document.querySelectorAll('.color-swatch').forEach(s=>{ s.classList.toggle('selected',s.dataset.color===state.selectedColor); }); }
   const stSel=document.getElementById('c-status');
   if(stSel && d['_status']!==undefined){
-    // Migrace starého boolean draftu (true=active, false=inactive)
+    // Migration of legacy boolean draft (true=active, false=inactive)
     const v = d['_status']===true ? 'operational' : d['_status']===false ? 'storage' : d['_status'];
     if(CAR_STATUSES.includes(v)) stSel.value=v;
   }
@@ -1814,7 +1842,7 @@ function _loadWizardDraft(){
   if(d['_salePrice']!==undefined) setVal('c-sale-price', d['_salePrice']);
   if(d['_saleAdUrl']!==undefined) setVal('c-sale-url',   d['_saleAdUrl']);
   toggleSaleFields();
-  // Drivetrain — nastavit hodnoty (HTML generuje buildBasicSectionForm / buildServiceSectionForm)
+  // Drivetrain — apply values (HTML is produced by buildBasicSectionForm / buildServiceSectionForm)
   setVal('c-gearbox-oil-interval', parseInt(d['c-gearbox-oil-interval'])||'');
   setVal('c-gearbox-oil-last',     parseInt(d['c-gearbox-oil-last'])||'');
   setVal('c-gearbox-oil-warn',     parseInt(d['c-gearbox-oil-warn'])||1000);
@@ -1825,7 +1853,7 @@ function _loadWizardDraft(){
   const x4ElW=document.getElementById('c-has-4x4');
   if(autoElW&&d['_hasAutomatic']!==undefined){ autoElW.checked=d['_hasAutomatic']; }
   if(x4ElW&&d['_has4x4']!==undefined){ x4ElW.checked=d['_has4x4']; }
-  // saveCarEditDrivetrain voláme jen pokud jsou přepínače v DOM (krok 0 — základní info)
+  // Only call saveCarEditDrivetrain if the toggles are in the DOM (step 0 — basic info)
   if(autoElW||x4ElW) saveCarEditDrivetrain();
 }
 
@@ -1860,7 +1888,7 @@ function renderFleet(){
     }else{
       el.innerHTML=`<div class="empty"><div class="empty-icon">— —</div>
         <p>${cs?'Žádná aktivní vozidla. Přidejte první vozidlo.':'No active vehicles. Add your first vehicle.'}</p>
-        <button class="btn btn-primary" style="margin-top:16px;" data-action="openCarModal">${cs?'Přidat vozidlo':'Add vehicle'}</button>
+        <button class="btn btn-primary" style="margin-top:16px;" data-action="openCarEdit">${cs?'Přidat vozidlo':'Add vehicle'}</button>
       </div>`;
     }
     return;
@@ -1884,7 +1912,7 @@ function renderFleet(){
   const cardsMap={};
   allFleetCars.forEach(car=>{
     cardsMap[car.id]=(car=>{
-    const isActive=!isCarArchived(car) && !isCarSuspended(car); // používá se pro “život” (olej, palivo, alerty)
+    const isActive=!isCarArchived(car) && !isCarSuspended(car); // used for “liveness” (oil, fuel, alerts)
     const isArchived=isCarArchived(car);
     const maxOdo=getMaxOdo(car.id);
     const fuels=getCarFuels(car.id);
@@ -1904,7 +1932,7 @@ function renderFleet(){
         <span class="fleet-row-val ${sc}">${label}</span>
       </div>`;
     }
-    // Olej v převodovce
+    // Gearbox oil
     if(isActive&&car.hasAutomatic&&car.gearboxOilInterval&&car.gearboxOilLastKm){
       const left=(car.gearboxOilLastKm+car.gearboxOilInterval)-maxOdo;
       const sc=left<=0?'due':left<=(car.gearboxOilWarn||1000)?'warn':'ok';
@@ -1914,7 +1942,7 @@ function renderFleet(){
         <span class="fleet-row-val ${sc}">${label}</span>
       </div>`;
     }
-    // Olej ve čtyřkolce
+    // 4x4 transfer-case oil
     if(isActive&&car.has4x4&&car.xferOilInterval&&car.xferOilLastKm){
       const left=(car.xferOilLastKm+car.xferOilInterval)-maxOdo;
       const sc=left<=0?'due':left<=(car.xferOilWarn||1000)?'warn':'ok';
@@ -1939,7 +1967,7 @@ function renderFleet(){
     // Doc pills — only show docs that have a date set
     const docHtml=`<div class="fleet-doc-row">
       ${(()=>{
-        // Plánovaný servis — badge má prioritu (in_progress přebíjí planned)
+        // Planned service — badge has priority (in_progress overrides planned)
         const activeJob = getActiveJobForCar(car.id);
         if(activeJob){
           const shop = activeJob.shop ? ` · ${esc(activeJob.shop)}` : '';
@@ -2007,7 +2035,7 @@ function renderFleet(){
         ${classPill}
         ${salePill}
         <div style="flex:1"></div>
-        <button class="btn btn-ghost" style="font-size:.78rem;padding:6px 12px;min-height:36px;" data-action="openCarModal" data-id="${safeId(car.id)}" data-stop-propagation="1" title="${cs?'Upravit vozidlo':'Edit vehicle'}">${cs?'Upravit':'Edit'}</button>
+        <button class="btn btn-ghost" style="font-size:.78rem;padding:6px 12px;min-height:36px;" data-action="openCarEdit" data-id="${safeId(car.id)}" data-stop-propagation="1" title="${cs?'Upravit vozidlo':'Edit vehicle'}">${cs?'Upravit':'Edit'}</button>
       </div>
     </div>`;
   })(car);
@@ -2017,19 +2045,19 @@ function renderFleet(){
   const allActive=state.cars.filter(c=>!isCarArchived(c));
   const fleetTotalCost=allActive.reduce((s,c)=>s+getServiceCost(c.id)+getTotalFuelCost(c.id)+getPurchaseCost(c.id),0);
   const fleetTotalKm=allActive.reduce((s,c)=>s+getKmDriven(c.id),0);
-  // Nejvýdajnější vůz (servis+palivo+nákup)
+  // Most expensive vehicle (service + fuel + purchase)
   const costByCar=allActive.map(c=>({car:c,cost:getServiceCost(c.id)+getTotalFuelCost(c.id)+getPurchaseCost(c.id)}))
     .sort((a,b)=>b.cost-a.cost);
   const topCar=costByCar[0];
-  // Průměrná cena za km (vážená — celkové náklady / celkové km, bez nákupu)
+  // Average cost per km (weighted — total cost / total km, excluding purchase)
   const fleetRunCost=allActive.reduce((s,c)=>s+getServiceCost(c.id)+getTotalFuelCost(c.id),0);
   const fleetCostPerKm=fleetTotalKm>0?fleetRunCost/fleetTotalKm:0;
 
-  const archCollapsed = state.archiveCollapsed===true; // default false (rozbalené)
+  const archCollapsed = state.archiveCollapsed===true; // default false (expanded)
   el.innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
       <div></div>
-      <button class="btn btn-ghost" data-action="openCarModal" style="font-size:.82rem;">
+      <button class="btn btn-ghost" data-action="openCarEdit" style="font-size:.82rem;">
         + ${cs?'Přidat vozidlo':'Add vehicle'}
       </button>
     </div>
@@ -2052,16 +2080,16 @@ function renderDashboard(){
   const recs=getCarRecords(car.id);
   const fuels=getCarFuels(car.id);
   const cs=state.lang==='cs';
-  // Výpočty — všechny přes sdílené helper funkce (stejná logika jako Analytics)
+  // Calculations — all go through shared helpers (same logic as Analytics)
   const maxOdo=getMaxOdo(car.id);
   const kmDriven=getKmDriven(car.id);
   const total=getServiceCost(car.id)+getTotalFuelCost(car.id)+getPurchaseCost(car.id);
-  const costPerKm=getCostPerKm(car.id);          // BEZ nákupu vozidla
-  const avgConsumption=avgConsumptionVal(car.id); // metoda plné nádrže
+  const costPerKm=getCostPerKm(car.id);          // EXCLUDING vehicle purchase
+  const avgConsumption=avgConsumptionVal(car.id); // full-tank method
   const kmThisYear=getKmThisYear(car.id);
 
   const alerts=buildAlerts(car);
-  // Přidat automatické připomínky přezutí do alertů dashboardu
+  // Also inject automatic tire-change reminders into dashboard alerts
   getAutoReminders(car).filter(r=>r.id.includes('tire')).forEach(r=>{
     alerts.push({level:r.sc==='due'?'danger':'warn', title:r.name, detail:r.detail});
   });
@@ -2111,7 +2139,7 @@ function renderDashboard(){
           ].filter(Boolean).join(' · ')}</span>`:''}
         </div>
       </div>
-      <button class="row-btn" data-action="openCarModal" data-id="${safeId(car.id)}" style="width:36px;height:36px;flex-shrink:0;" title="${state.lang==='cs'?'Upravit vozidlo':'Edit vehicle'}"><span class="edit-icon">✏</span></button>
+      <button class="row-btn" data-action="openCarEdit" data-id="${safeId(car.id)}" style="width:36px;height:36px;flex-shrink:0;" title="${state.lang==='cs'?'Upravit vozidlo':'Edit vehicle'}"><span class="edit-icon">✏</span></button>
     </div>
 
     <div class="doc-row" style="${isCarArchived(car)?'display:none':'display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:22px'}">
@@ -2144,19 +2172,19 @@ function renderDashboard(){
       const hasTyres = car.tyres && (car.tyres.summer||car.tyres.winter||car.tyres.allseason);
       if(!hasTyres) return '';
       const cs2=state.lang==='cs';
-      // Renderuje jeden řádek nebo dva (přední / zadní) pro danou sadu
+      // Renders one row, or two (front / rear) for a given set
       const row=(label,data)=>{
         if(!data) return '';
         const s=tyreSummary(data);
         if(!s) return '';
-        // tyreSummary vrátí string (same) nebo {front,rear} (různé nápravy)
+        // tyreSummary returns a string (same) or {front,rear} (different axles)
         if(typeof s === 'string'){
           return `<div style="display:flex;align-items:baseline;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
             <span style="font-size:.78rem;color:var(--text2);width:100px;flex-shrink:0">${label}</span>
             <span style="font-size:.82rem;font-family:var(--font-mono);color:var(--text)">${s}</span>
           </div>`;
         }
-        // Různé nápravy — dva podřádky
+        // Different axles — two sub-rows
         const axleRow=(axleLabel,val)=>val?`
           <div style="display:flex;align-items:baseline;gap:10px;padding:4px 0 4px 16px;border-bottom:1px solid var(--border)">
             <span style="font-size:.75rem;color:var(--text3);width:74px;flex-shrink:0">${axleLabel}</span>
@@ -2210,14 +2238,14 @@ function buildAlerts(car){
     if(left<=0)alerts.push({level:'danger',title:state.lang==='cs'?'Výměna oleje':'Oil change',detail:`${Math.abs(left)} km ${state.lang==='cs'?'prošlé':'overdue'}`});
     else if(left<=(car.oilWarn||1000))alerts.push({level:'warn',title:state.lang==='cs'?'Výměna oleje':'Oil change',detail:`${t('oil_due')} ${fmtNum(left)} km`});
   }
-  // Výměna oleje v převodovce (automatická převodovka)
+  // Gearbox oil change (automatic transmission)
   if(car.hasAutomatic&&car.gearboxOilInterval&&car.gearboxOilLastKm){
     const left=(car.gearboxOilLastKm+car.gearboxOilInterval)-maxOdo;
     const warnKm=car.gearboxOilWarn||1000;
     if(left<=0)alerts.push({level:'danger',title:state.lang==='cs'?'Výměna oleje v převodovce':'Gearbox oil change',detail:`${Math.abs(left)} km ${state.lang==='cs'?'prošlé':'overdue'}`});
     else if(left<=warnKm)alerts.push({level:'warn',title:state.lang==='cs'?'Výměna oleje v převodovce':'Gearbox oil change',detail:`${t('oil_due')} ${fmtNum(left)} km`});
   }
-  // Výměna oleje ve čtyřkolce (pohon 4×4)
+  // 4x4 transfer-case oil change (4x4 drive)
   if(car.has4x4&&car.xferOilInterval&&car.xferOilLastKm){
     const left=(car.xferOilLastKm+car.xferOilInterval)-maxOdo;
     const warnKm=car.xferOilWarn||1000;
@@ -2259,7 +2287,7 @@ function renderRecords(){
   const sa=f=>state.sortField===f?(state.sortDir>0?'↑':'↓'):'';
   const cs=state.lang==='cs';
 
-  // Stat karty — počítáme ze VŠECH záznamů (bez filtru)
+  // Stat cards — computed over ALL records (no filter)
   const totalCost=allRecs.reduce((s,r)=>s+(r.qty||1)*(r.price||0),0);
   const maxRec=allRecs.filter(r=>r.cat!=='Nákup vozidla').reduce((m,r)=>{const v=(r.qty||1)*(r.price||0);return v>m.v?{v,r}:m},{v:0,r:null});
   const lastRec=[...allRecs].sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
@@ -2485,7 +2513,7 @@ function renderFuelPage(){
     if(av<bv)return-state.fuelSortDir;if(av>bv)return state.fuelSortDir;return 0;
   });
 
-  // Consumption — sdílená funkce (stejný výpočet jako v analytice)
+  // Consumption — shared helper (same calculation as Analytics)
   const consumptions=calcConsumptions(car.id);
   const avgC=avgConsumptionVal(car.id);
   const totalLiters=getTotalLiters(car.id);
@@ -2569,7 +2597,7 @@ function renderAnalytics(){
     ?state.cars
     :state.analyticsCarId?[getCar(state.analyticsCarId)].filter(Boolean):allActiveCars;
 
-  // Tab bar — vložíme před obsah; compare tab jen pokud máme ≥2 auta celkem
+  // Tab bar — prepended before the content; Compare tab shown only when there are ≥2 cars in total.
   const canCompare=state.cars.length>=2;
   const tab=state.analyticsTab||'overview';
   const tabBarHtml=`<div class="analytics-tabs">
@@ -2577,46 +2605,46 @@ function renderAnalytics(){
     ${canCompare?`<button class="analytics-tab${tab==='compare'?' active':''}" data-action="setAnalyticsTab" data-tab="compare">${cs?'Porovnání':'Compare'}</button>`:''}
   </div>`;
 
-  // Route na správný obsah
+  // Route to the correct content variant
   if(tab==='compare'&&canCompare){
     renderAnalyticsCompareContent(el, tabBarHtml, cs);
     return;
   }
 
-  // Agregace dat přes vybraná vozidla
+  // Aggregate data across the selected vehicles
   const recs=selectedCars.flatMap(c=>getCarRecords(c.id));
   const fuels=selectedCars.flatMap(c=>getCarFuels(c.id));
   if(!recs.length&&!fuels.length){
     el.innerHTML=tabBarHtml+`<div class="empty"><div class="empty-icon">— —</div><p>${t('no_records')}</p><div style="display:flex;gap:10px;justify-content:center;margin-top:16px;"><button class="btn btn-ghost" data-action="openRecordModal">${cs?'Přidat záznam':'Add record'}</button><button class="btn btn-fuel" data-action="openFuelModal">${cs?'Přidat tankování':'Add fuel entry'}</button></div></div>`;return;
   }
 
-  // Výpočty — agregované přes vybraná vozidla
+  // Calculations — aggregated across the selected vehicles
   const purchaseCost=selectedCars.reduce((s,c)=>s+getPurchaseCost(c.id),0);
   const serviceCost=selectedCars.reduce((s,c)=>s+getServiceCost(c.id),0);
   const fuelCost=selectedCars.reduce((s,c)=>s+getTotalFuelCost(c.id),0);
   const total=purchaseCost+serviceCost+fuelCost;
   const totalWithoutPurchase=serviceCost+fuelCost;
-  // km — pro jedno auto přesně, pro více aut suma
+  // km — exact for a single car, summed for multiple
   const kmDriven=selectedCars.reduce((s,c)=>s+getKmDriven(c.id),0);
   const kmThisYear=selectedCars.reduce((s,c)=>s+getKmThisYear(c.id),0);
   const totalLiters=selectedCars.reduce((s,c)=>s+getTotalLiters(c.id),0);
-  // Průměrná cena za litr
+  // Average price per litre
   const avgPricePerLiter=totalLiters>0?fuelCost/totalLiters:0;
-  // Průměrná spotřeba — pro jedno auto přesnou metodou plné nádrže, pro více aut vážený průměr
+  // Average consumption — exact full-tank method for a single car, weighted average for multiple
   const singleCarId=(state.analyticsCarId&&state.analyticsCarId!=='__all__')?state.analyticsCarId:null;
   const avgC=singleCarId
     ?avgConsumptionVal(singleCarId)
     :(kmDriven>0&&totalLiters>0?totalLiters/kmDriven*100:0);
   const consumptions=singleCarId?calcConsumptions(singleCarId):[];
 
-  // Měsíční data
-  // Měsíční servis (bez nákupu vozidla)
+  // Monthly data
+  // Monthly service (excluding vehicle purchase)
   const byMonthService={};
   recs.filter(r=>r.cat!=='Nákup vozidla').forEach(r=>{if(!r.date)return;const m=r.date.slice(0,7);byMonthService[m]=(byMonthService[m]||0)+(r.qty||1)*(r.price||0);});
-  // Měsíční palivo
+  // Monthly fuel
   const byMonthFuel={};
   fuels.forEach(f=>{if(!f.date)return;const m=f.date.slice(0,7);byMonthFuel[m]=(byMonthFuel[m]||0)+(f.cost||0);});
-  // Celkem za měsíc = servis + palivo (BEZ nákupu vozidla) — pro škálování grafu i viditelný součet
+  // Monthly total = service + fuel (EXCLUDING vehicle purchase) — used both for chart scaling and the visible sum
   const byMonthAll={};
   Object.keys({...byMonthService,...byMonthFuel}).forEach(m=>{
     byMonthAll[m]=(byMonthService[m]||0)+(byMonthFuel[m]||0);
@@ -2626,13 +2654,13 @@ function renderAnalytics(){
   const maxMonth=Math.max(...months.map(m=>byMonthAll[m]),1);
   const visibleTotal=months.reduce((s,m)=>s+(byMonthAll[m]||0),0);
 
-  // Unikátní měsíce pro průměry
+  // Unique months for averages
   const allMonths=new Set([...Object.keys(byMonthService),...Object.keys(byMonthFuel)]);
   const monthCount=allMonths.size||1;
   const avgServicePerMonth=serviceCost/monthCount;
   const avgFuelPerMonth=fuelCost/monthCount;
 
-  // Kategorie (bez nákupu vozidla — ten jde samostatně)
+  // Categories (excluding vehicle purchase — shown separately)
   const byCat={};
   recs.filter(r=>r.cat!=='Nákup vozidla').forEach(r=>{const c=r.cat||'Ostatní';byCat[c]=(byCat[c]||0)+(r.qty||1)*(r.price||0);});
   if(fuels.length){const fk=cs?'Palivo':'Fuel';byCat[fk]=(byCat[fk]||0)+fuelCost;}
@@ -2829,15 +2857,15 @@ function renderAnalytics(){
   requestAnimationFrame(positionChartTooltips);
 }
 
-// ─── ANALYTICS — POROVNÁNÍ VOZIDEL ───────────────────────────
+// ─── ANALYTICS — VEHICLE COMPARISON ───────────────────────────
 function renderAnalyticsCompareContent(el, tabBarHtml, cs){
-  // Vybereme auta k porovnání: respektujeme výběr v car switcheru.
-  // null = všechna aktivní, '__all__' = všechna vč. neaktivních, carId = jen to jedno (=> hint)
+  // Pick the cars to compare: respect the car switcher selection.
+  // null = all active, '__all__' = all incl. inactive, carId = just that one (⇒ hint)
   const allActive=state.cars.filter(c=>!isCarArchived(c));
   const comparePool=state.analyticsCarId==='__all__'
     ?state.cars
     :state.analyticsCarId&&state.analyticsCarId!=='__all__'
-      ?state.cars  // uživatel vybral jedno auto → stejně porovnáme všechna (hint níže)
+      ?state.cars  // user picked a single car → still compare all (hint below)
       :allActive;
 
   if(comparePool.length<2){
@@ -2845,14 +2873,14 @@ function renderAnalyticsCompareContent(el, tabBarHtml, cs){
     return;
   }
 
-  // Pokud uživatel vybral jedno konkrétní auto, zobrazíme hint
+  // If the user picked one specific car, show a hint
   const singleSelectedHint=(state.analyticsCarId&&state.analyticsCarId!=='__all__'&&state.analyticsCarId!==null)
     ?`<div style="font-size:.78rem;color:var(--text3);margin-bottom:16px;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border)">`
      +(cs?'Porovnání zobrazuje všechna vozidla. Pro výběr skupiny použijte přepínač vozidla výše.':'Comparison shows all vehicles. Use the vehicle switcher above to limit to active / all.')
      +`</div>`
     :'';
 
-  // Spočítáme metriky pro každé auto — hodnota null = data nejsou k dispozici
+  // Compute metrics for each car — value null = data not available
   const carStats=comparePool.map(car=>{
     const km=getKmDriven(car.id);
     const svcCost=getServiceCost(car.id);
@@ -2861,10 +2889,10 @@ function renderAnalyticsCompareContent(el, tabBarHtml, cs){
     const liters=getTotalLiters(car.id);
     const avgC=avgConsumptionVal(car.id);
     const fuels=getCarFuels(car.id);
-    // Počet aktivních měsíců = unikátní YYYY-MM ve všech záznamech a tankováních
+    // Number of active months = unique YYYY-MM across all records and fuel entries
     const allDates=[...getCarRecords(car.id).map(r=>r.date),...fuels.map(f=>f.date)].filter(Boolean);
     const monthCount=new Set(allDates.map(d=>d.slice(0,7))).size||1;
-    // Nájezd za posledních 12 měsíců
+    // Mileage over the last 12 months
     const _cutoff=new Date(); _cutoff.setFullYear(_cutoff.getFullYear()-1);
     const _cutoffStr=_cutoff.toISOString().slice(0,10);
     const _odoEntries=[
@@ -2889,27 +2917,27 @@ function renderAnalyticsCompareContent(el, tabBarHtml, cs){
     };
   });
 
-  // Helper: sestaví ranking kartu pro jednu metriku
-  // lowerIsBetter=true → nejnižší hodnota = zelená (lepší)
-  // lowerIsBetter=false → neutrální (informativní), výšší = teplá barva
+  // Helper: build a ranking card for a single metric.
+  // lowerIsBetter=true → lowest value = green (best)
+  // lowerIsBetter=false → neutral (informational), higher = warm colour
   function buildRankingCard(titleCs, titleEn, hintCs, hintEn, getValue, formatVal, lowerIsBetter){
     const title=cs?titleCs:titleEn;
 
-    // Rozděl na auta s daty a bez
+    // Split into cars with data and without
     const withData=carStats.filter(s=>getValue(s)!=null).sort((a,b)=>{
       const va=getValue(a), vb=getValue(b);
       return lowerIsBetter?(va-vb):(vb-va); // best first
     });
     const noData=carStats.filter(s=>getValue(s)==null);
 
-    if(!withData.length) return ''; // metrika nemá žádná data → kartu nezobrazíme
+    if(!withData.length) return ''; // metric has no data at all → hide the card
 
     const maxVal=Math.max(...withData.map(s=>getValue(s)));
 
     const rowsHtml=withData.map((s,i)=>{
       const val=getValue(s);
       const barPct=maxVal>0?(val/maxVal*100).toFixed(1):0;
-      // Barevná třída: best = první, worst = poslední (jen pokud ≥2 auta s daty)
+      // Colour class: best = first, worst = last (only when ≥2 cars with data)
       let cls='cmp-mid';
       if(withData.length>=2){
         if(i===0) cls='cmp-best';
@@ -2929,7 +2957,7 @@ function renderAnalyticsCompareContent(el, tabBarHtml, cs){
       </div>`;
     }).join('');
 
-    // Auta bez dat na konci, šedě
+    // Cars without data at the end, greyed out
     const naRowsHtml=noData.map(s=>{
       const carName=esc(`${s.car.make||''} ${s.car.model||''}`.trim()||s.car.id);
       const plate=s.car.plate?`<span class="cmp-row-plate">${esc(s.car.plate)}</span>`:'';
@@ -2947,7 +2975,7 @@ function renderAnalyticsCompareContent(el, tabBarHtml, cs){
     </div>`;
   }
 
-  // Definice metrik — pořadí = vizuální pořadí karet
+  // Metric definitions — order = visual card order
   const fmtKm=v=>`${fmtNum(v)} km`;
   const fmtCzkKm=v=>`${fmtNum(v,2)} Kč/km`;
   const fmtConsumption=v=>`${fmtNum(v,1)} l/100km`;
@@ -2984,8 +3012,8 @@ function renderAnalyticsCompareContent(el, tabBarHtml, cs){
       s=>s.km12m, fmtKm, false),
   ].filter(Boolean).join('');
 
-  // ── Srovnávací tabulka (detail) ──────────────────────────
-  // Sloupce = metriky, řádky = auta
+  // ── Comparison table (detail) ────────────────────────────
+  // Columns = metrics, rows = cars
   const tableCols=[
     {key:'km',         labelCs:'Nájezd',          labelEn:'Mileage',        fmt:fmtKm,          lower:false},
     {key:'totalCost',  labelCs:'Náklady celkem',   labelEn:'Total costs',    fmt:fmtCzk,         lower:true},
@@ -2996,7 +3024,7 @@ function renderAnalyticsCompareContent(el, tabBarHtml, cs){
     {key:'avgServicePerMonth',labelCs:'Servis/měsíc', labelEn:'Service/month', fmt:fmtCzk,       lower:true},
   ];
 
-  // Pro každý sloupec najdi min/max (jen z aut s daty)
+  // For each column find min/max (only from cars that have data)
   const colMinMax=tableCols.map(col=>{
     const vals=carStats.map(s=>s[col.key]).filter(v=>v!=null);
     return{min:vals.length?Math.min(...vals):null, max:vals.length?Math.max(...vals):null};
@@ -3009,7 +3037,7 @@ function renderAnalyticsCompareContent(el, tabBarHtml, cs){
     +tableCols.map(col=>`<th data-action="cmpTableSort" data-key="${col.key}">${cs?col.labelCs:col.labelEn}${_arrow(col.key)}</th>`).join('')
     +'</tr>';
 
-  // Seřazení řádků dle aktivního sloupce
+  // Sort rows by the active column
   const sortedPool=_sk==null?[...comparePool]:[...comparePool].sort((a,b)=>{
     if(_sk==='_name'){
       const na=`${a.make||''} ${a.model||''}`.trim().toLowerCase();
@@ -3095,7 +3123,7 @@ function positionChartTooltips(){
 
 // ─── REMINDERS PAGE ──────────────────────────────────────────
 // ─── AUTO-GENERATED REMINDERS ────────────────────────────────
-// Dynamicky generované připomínky — nevyžadují ukládání do state
+// Dynamically generated reminders — do not require persistence in state
 function getAutoReminders(car){
   const cs=state.lang==='cs';
   const today=new Date();today.setHours(0,0,0,0);
@@ -3120,15 +3148,15 @@ function getAutoReminders(car){
   dateRem(cs?'Havarijní pojištění':'Comprehensive ins.', car.insurance, car.insuranceWarn||30);
   dateRem(cs?'Asistenční služby':'Roadside assistance', car.assist, car.assistWarn||30);
 
-  // Přezutí pneumatik — pouze pokud je zapnuto v nastavení, auto jízdy-schopné a není HV
+  // Tyre swap — only if enabled in settings, car is drivable and not historic
   if(state.settings.tireReminders && isCarDriving(car) && car.classification!=='historic'){
     const year=today.getFullYear();
-    // Letní přezutí: upozornit 30 dní před 31.3.
-    const summerDeadline=new Date(year, 2, 31); // 31.3.
-    const winterDeadline=new Date(year, 10, 1); // 1.11.
-    // Pokud jsme v zimním období (1.11.–31.3.), upozornit na letní přezutí
+    // Summer swap: alert 30 days before 31 March
+    const summerDeadline=new Date(year, 2, 31); // 31 Mar
+    const winterDeadline=new Date(year, 10, 1); // 1 Nov
+    // If we are in the winter period (1 Nov – 31 Mar), alert about the summer swap
     const inWinter=today.getMonth()>=10||today.getMonth()<=2; // Nov–Mar
-    // Příští letní přezutí
+    // Next summer swap
     let nextSummer=new Date(year, 2, 31);
     if(today>nextSummer) nextSummer=new Date(year+1, 2, 31);
     const diffSummer=Math.round((nextSummer-today)/86400000);
@@ -3143,7 +3171,7 @@ function getAutoReminders(car){
         detail:diffSummer<0?`${Math.abs(diffSummer)} ${t('days')} ${cs?'prošlé':'overdue'}`:`${diffSummer} ${t('days')}`,
         meta:cs?'Termín: 31. 3.':'Deadline: 31 Mar', auto:true});
     }
-    // Příští zimní přezutí
+    // Next winter swap
     let nextWinter=new Date(year, 10, 1);
     if(today>nextWinter) nextWinter=new Date(year+1, 10, 1);
     const diffWinter=Math.round((nextWinter-today)/86400000);
@@ -3160,7 +3188,7 @@ function getAutoReminders(car){
     }
   }
 
-  // Výměna oleje v převodovce (automatická převodovka)
+  // Gearbox oil change (automatic transmission)
   if(car.hasAutomatic&&car.gearboxOilInterval&&car.gearboxOilLastKm){
     const maxOdo=getMaxOdo(car.id);
     const left=(car.gearboxOilLastKm+car.gearboxOilInterval)-maxOdo;
@@ -3174,7 +3202,7 @@ function getAutoReminders(car){
         meta:`${fmtNum(car.gearboxOilLastKm)} + ${fmtNum(car.gearboxOilInterval)} km`, auto:true});
     }
   }
-  // Výměna oleje ve čtyřkolce (pohon 4×4)
+  // 4x4 transfer-case oil change (4x4 drive)
   if(car.has4x4&&car.xferOilInterval&&car.xferOilLastKm){
     const maxOdo=getMaxOdo(car.id);
     const left=(car.xferOilLastKm+car.xferOilInterval)-maxOdo;
@@ -3198,10 +3226,10 @@ function renderRemindersPage(){
 
   // No inline picker — uses title-bar picker injected by renderPage()
   const pickedCar=state.remindersCarId?getCar(state.remindersCarId):null;
-  const allActiveCarsRem=state.cars.filter(c=>!isCarArchived(c)); // bez vyřazených
+  const allActiveCarsRem=state.cars.filter(c=>!isCarArchived(c)); // excluding decommissioned
   const reminderCars=pickedCar?[pickedCar]:allActiveCarsRem;
 
-  // Rozdělit na j.-schopná (V provozu / Na prodej) a pozastavená (V depozitu / V renovaci)
+  // Split into drivable (Operational / For sale) and suspended (Storage / In restoration)
   const activeRC = reminderCars.filter(c => !isCarSuspended(c));
   const suspendedRC = reminderCars.filter(c => isCarSuspended(c));
   const hasHistoric = activeRC.some(c => c.classification==='historic');
@@ -3219,8 +3247,8 @@ function renderRemindersPage(){
         detail=left<=0?`${fmtNum(Math.abs(left))} km ${cs?'prošlé':'overdue'}`:
                `${fmtNum(left)} km ${t('km_left')}`;
       }else if(rem.type==='date'&&rem.date){
-        // Pokud je zadán čas, počítáme přesně k minutě; jinak proti poledni
-        // daného dne (stávající chování). Zachovává dosavadní > / < 0 smántiku.
+        // With an explicit time, compare down to the minute; without it compare
+        // against noon of the day (existing behaviour). Preserves the > / < 0 semantics.
         const nowD=new Date();
         const iso=rem.time?`${rem.date}T${rem.time}:00`:`${rem.date}T12:00:00`;
         const d=new Date(iso);
@@ -3257,7 +3285,7 @@ function renderRemindersPage(){
     </div>`;
   }
 
-  // Pomocná funkce — vyrenderuje auto + manual blok pro daný seznam aut
+  // Helper — renders the auto + manual block for a given list of cars
   function renderRemindersFor(cars){
     const autoRem  = cars.flatMap(c=>getAutoReminders(c));
     const manualR  = cars.flatMap(c=>state.reminders.filter(r=>r.carId===c.id));
@@ -3303,23 +3331,23 @@ function renderRemindersPage(){
 }
 
 // ─── SERVICE / JOBS ──────────────────────────────────────────
-// Plánovaný servis (work orders) — auto má naplánovanou návštěvu dílny
-// s konkrétními úkony, stavem (planned/in_progress/done/cancelled)
-// a odhadovanou cenou. Po dokončení lze jedním klikem převést do Records.
+// Planned service (work orders) — the car has a scheduled shop visit
+// with specific tasks, a status (planned/in_progress/done/cancelled)
+// and an estimated price. When finished it can be converted to a record in one click.
 
-// State machine: planned ↔ in_progress → done   (z libovolného stavu → cancelled)
+// State machine: planned ↔ in_progress → done   (from any state → cancelled)
 
-// Najde aktivní (in_progress) job pro vozidlo — využívá Fleet badge.
+// Find the active (in_progress) job for a vehicle — used by the Fleet badge.
 function getActiveJobForCar(carId){
   return state.jobs.find(j=>j.carId===carId && j.status==='in_progress');
 }
-// Najde nejbližší naplánovaný job pro vozidlo (planned, nejnižší startDate).
+// Find the nearest planned job for a vehicle (status planned, lowest startDate).
 function getNextPlannedJobForCar(carId){
   return state.jobs
     .filter(j=>j.carId===carId && j.status==='planned')
     .sort((a,b)=>(a.startDate||'').localeCompare(b.startDate||''))[0];
 }
-// Set unikátních dílen z historie (datalist autocomplete v modalu).
+// Set of unique shops from history (datalist autocomplete in the modal).
 function getKnownShops(){
   const set=new Set();
   state.jobs.forEach(j=>{ if(j.shop) set.add(j.shop); });
@@ -3354,7 +3382,7 @@ function renderServicePage(){
       ? `${fmtDate(j.startDate)} → ${fmtDate(j.endDate)}`
       : fmtDate(j.startDate);
 
-    // Stav-specifické akce v footeru
+    // State-specific actions in the footer
     let actions = '';
     if(j.status==='planned'){
       actions = `
@@ -3431,7 +3459,7 @@ function toggleJobSection(id){
   body.style.display = isCollapsed ? 'none' : '';
 }
 
-// Toggle sekce Archiv na Fleet stránce (sbalitelná, default rozbalená).
+// Toggle the Archive section on the Fleet page (collapsible, default expanded).
 function toggleArchiveSection(){
   state.archiveCollapsed = !(state.archiveCollapsed===true);
   const grid = document.getElementById('fleet-archive-grid');
@@ -3440,7 +3468,7 @@ function toggleArchiveSection(){
   if(head) head.classList.toggle('collapsed', state.archiveCollapsed);
 }
 
-// Toggle sekce Pozastavená vozidla v Reminders (default sbaleno).
+// Toggle the Suspended vehicles section in Reminders (default collapsed).
 function toggleRemindersSuspended(){
   state.remindersSuspendedCollapsed = !(state.remindersSuspendedCollapsed===false);
   const grid = document.getElementById('reminders-suspended-grid');
@@ -3454,7 +3482,7 @@ function toggleRemindersSuspended(){
 }
 
 // ─── JOB MODAL ───────────────────────────────────────────────
-// Render seznamu task řádků — každý je editovatelný + smazatelný
+// Render the task-row list — each row is editable + removable
 function renderJobTasksList(tasks){
   const cs = state.lang==='cs';
   const list = document.getElementById('j-tasks-list');
@@ -3472,7 +3500,7 @@ function renderJobTasksList(tasks){
     </div>`).join('');
 }
 
-// State používaný jen v rámci otevřeného modalu (drží rozpracované tasks)
+// State scoped to the open modal (holds in-progress tasks)
 let _jobModalTasks = [];
 
 function openJobModal(jobId){
@@ -3481,8 +3509,9 @@ function openJobModal(jobId){
   const job = jobId ? state.jobs.find(j=>j.id===jobId) : null;
   document.getElementById('job-modal-title').textContent = job ? t('edit_job') : t('new_job');
 
-  // Vozidlo — vyřazená (decommissioned) se k servisu nenabízejí.
-  // Pokud edituji existující zakázku na již vyřazené auto, ponechám ji v seznamu (jinak by hodnota zmizela).
+  // Vehicle — decommissioned cars are not offered for service.
+  // If we are editing an existing job on an already-decommissioned car, keep
+  // it in the list (otherwise its value would disappear).
   const carSel = document.getElementById('j-car');
   const eligibleCars = state.cars.filter(c => !isCarArchived(c) || (job && job.carId===c.id));
   carSel.innerHTML = eligibleCars.map(c=>{
@@ -3494,7 +3523,7 @@ function openJobModal(jobId){
   // Stav
   document.getElementById('j-status').value = job?.status || 'planned';
 
-  // Dílna + datalist
+  // Shop + datalist
   document.getElementById('j-shop').value = job?.shop || '';
   const dl = document.getElementById('j-shop-list');
   dl.innerHTML = getKnownShops().map(s=>`<option value="${esc(s)}">`).join('');
@@ -3504,11 +3533,11 @@ function openJobModal(jobId){
   setDateTriple('j-start', job?.startDate || today);
   setDateTriple('j-end',   job?.endDate   || '');
 
-  // Cena a poznámka
+  // Price and note
   document.getElementById('j-cost').value = job?.estimatedCost ?? '';
   document.getElementById('j-note').value = job?.notes || '';
 
-  // Tasks (clone, edituji kopii — applneme až při save)
+  // Tasks (cloned, edited on the copy — applied only on save)
   _jobModalTasks = job?.tasks ? job.tasks.map(tk=>({text:tk.text,done:!!tk.done})) : [];
   renderJobTasksList(_jobModalTasks);
 
@@ -3519,7 +3548,7 @@ function openJobModal(jobId){
 function addJobTask(){
   _jobModalTasks.push({text:'',done:false});
   renderJobTasksList(_jobModalTasks);
-  // Focus posledního inputu pro plynulé zadávání
+  // Focus the last input for smooth entry
   const inputs = document.querySelectorAll('#j-tasks-list input[type="text"]');
   inputs[inputs.length-1]?.focus();
 }
@@ -3550,7 +3579,7 @@ function saveJob(){
   if(endDate===null) errors.push(cs?'Neplatné datum konce':'Invalid end date');
   if(startDate && endDate && endDate<startDate) errors.push(cs?'Konec musí být po začátku':'End date must be after start');
 
-  // Odfiltrovat prázdné tasks (uživatel může nechat řádek nevyplněný)
+  // Drop empty tasks (user may leave a row blank)
   const tasks = _jobModalTasks.map(tk=>({text:(tk.text||'').trim(),done:!!tk.done})).filter(tk=>tk.text);
 
   if(errors.length){
@@ -3579,7 +3608,7 @@ function deleteJob(id){
   renderAll();
 }
 
-// Změna stavu z karty (bez otevření modalu) — planned → in_progress, cancel atd.
+// Change status from the card (without opening the modal) — planned → in_progress, cancel, etc.
 function setJobStatus(id, newStatus){
   const job = state.jobs.find(j=>j.id===id);
   if(!job) return;
@@ -3591,7 +3620,7 @@ function setJobStatus(id, newStatus){
   renderAll();
 }
 
-// Toggle jednotlivého tasku přímo z karty (bez otevření modalu)
+// Toggle a single task directly from the card (without opening the modal)
 function toggleJobTask(id, idx){
   const job = state.jobs.find(j=>j.id===id);
   if(!job || !job.tasks || !job.tasks[idx]) return;
@@ -3602,50 +3631,50 @@ function toggleJobTask(id, idx){
 }
 
 // Konverze job → record + posun stavu na 'done'
-// Otevře record modal předvyplněný (kategorie Servis a opravy, popis = výčet úkonů,
-// cena = estimatedCost, datum = endDate||startDate). Po uložení záznamu se job
-// posune na 'done' (záznam je single source of truth pro náklady).
+// Opens the record modal pre-filled (category 'Servis a opravy', description = task
+// list, price = estimatedCost, date = endDate||startDate). After the record is
+// saved the job moves to 'done' (the record becomes the single source of truth for cost).
 function convertJobToRecord(id){
   const job = state.jobs.find(j=>j.id===id);
   if(!job) return;
   const cs = state.lang==='cs';
 
-  // Posuneme job na 'done' rovnou (zachová se v sekci „Dokončeno")
+  // Move the job to 'done' right away (it stays in the „Done“ section)
   job.status = 'done';
   if(!job.endDate) job.endDate = new Date().toISOString().slice(0,10);
   job.updatedAt = new Date().toISOString();
 
-  // Předvyplníme record modal
+  // Pre-fill the record modal
   openRecordModal();
   const carSel = document.getElementById('r-car');
   if(carSel) carSel.value = job.carId;
-  // Kategorie: 'Servis a opravy' (kanonický CS klíč, viz CATEGORIES.cs)
+  // Category: 'Servis a opravy' (canonical CS key, see CATEGORIES.cs)
   const catSel = document.getElementById('r-cat');
   if(catSel) catSel.value = 'Servis a opravy';
-  // Datum
+  // Date
   setDateTriple('r-date', job.endDate || job.startDate);
-  // Popis: dílna + výčet úkonů
+  // Description: shop + task list
   const tasksText = (job.tasks||[]).map(tk=>tk.text).filter(Boolean).join(', ');
   const descParts = [];
   if(job.shop) descParts.push(job.shop);
   if(tasksText) descParts.push(tasksText);
   const descEl = document.getElementById('r-desc');
   if(descEl) descEl.value = descParts.join(' — ').slice(0,200);
-  // Cena
+  // Cost
   if(job.estimatedCost){
     document.getElementById('r-qty').value = 1;
     document.getElementById('r-price').value = job.estimatedCost;
   }
-  // Poznámka
+  // Note
   if(job.notes){
     const noteEl = document.getElementById('r-note');
     if(noteEl) noteEl.value = job.notes;
   }
-  // Tachometr — předvyplníme aktuální max odo (uživatel může upravit)
+  // Odometer — pre-fill the current max odo (user can adjust)
   const odoEl = document.getElementById('r-odo');
   if(odoEl && !odoEl.value) odoEl.value = getMaxOdo(job.carId) || '';
 
-  saveData(); // uložíme změnu stavu jobu i bez potvrzení záznamu
+  saveData(); // persist the job status change even without confirming the record
   showToast(t('job_converted'),'success');
 }
 
@@ -3667,8 +3696,8 @@ function openRecordModal(recordId){
   const carSel=document.getElementById('r-car');
   carSel.innerHTML=state.cars.map(c=>`<option value="${esc(c.id)}" ${(rec?rec.carId:state.currentCarId)===c.id?'selected':''}>${esc(c.make||'')} ${esc(c.model||c.name||'')} ${c.plate?'('+esc(c.plate)+')':''}</option>`).join('');
   const catSel=document.getElementById('r-cat');
-  // Nový záznam: první položka je prázdný placeholder, uživatel musí vybrat
-  // Editace: předvybrána stávající kategorie záznamu
+  // New record: first option is an empty placeholder, user must pick one.
+  // Edit: pre-selects the record's existing category.
   const placeholderOpt = rec
     ? ''
     : `<option value="" disabled selected hidden>${state.lang==='cs'?'— Vyberte kategorii —':'— Select category —'}</option>`;
@@ -3733,7 +3762,7 @@ function openFuelModal(fuelId){
   document.getElementById('f-full-label').textContent=state.lang==='cs'?'Plná nádrž':'Full tank';
   document.getElementById('fuel-errors').innerHTML='';
   document.getElementById('fuel-calc').style.display='none';
-  // Live calc — používáme oninput přímo na elementech (bez addEventListener aby se nepřidávaly duplicity)
+  // Live calc — attach oninput directly on the elements (avoids duplicate listeners from addEventListener)
   const fLiters=document.getElementById('f-liters');
   const fCost=document.getElementById('f-cost');
   fLiters.oninput=updateFuelCalc;
@@ -3789,7 +3818,7 @@ function deleteFuel(id){
 
 // ─── CAR MODAL ───────────────────────────────────────────────
 // ─── TYRE HELPERS ────────────────────────────────────────────
-// Povolené rychlostní indexy (dle ETRTO normy)
+// Allowed speed indexes (per ETRTO standard)
 const TYRE_SPEED_INDEXES = new Set(['F','G','J','K','L','M','N','P','Q','R','S','T','H','U','V','W','Y','Z','ZR']);
 
 // Generuje HTML pole pro jednu sadu pneumatik (summer/winter/allseason)
@@ -3813,7 +3842,7 @@ function toggleTyreMode(){
     : (cs?'Sezónní pneumatiky (letní + zimní)':'Seasonal tyres (summer + winter)');
 }
 
-// Přečte data jedné osy z formuláře (axle: 'front' nebo 'rear')
+// Read data for a single axle from the form (axle: 'front' or 'rear')
 function getTyreAxle(set, axle){
   const g = id => document.getElementById(`c-tyre-${set}-${axle}-${id}`)?.value||'';
   const width=parseInt(g('width'))||null;
@@ -3827,7 +3856,7 @@ function getTyreAxle(set, axle){
   return {width,aspect,rim,load,speed,plow,phigh};
 }
 
-// Přečte celou sadu (přední + zadní) z formuláře
+// Read the whole set (front + rear) from the form
 function getTyreSet(set){
   const sameEl = document.getElementById(`c-tyre-${set}-same`);
   const same = sameEl ? sameEl.checked : true;
@@ -3838,7 +3867,7 @@ function getTyreSet(set){
   return {same, front, rear, ...(mfgDate?{mfgDate}:{})};
 }
 
-// Zapíše data jedné osy do formuláře
+// Write data for a single axle into the form
 function setTyreAxle(set, axle, data){
   if(!data) return;
   const fields = ['width','aspect','rim','load','speed','plow','phigh'];
@@ -3848,21 +3877,21 @@ function setTyreAxle(set, axle, data){
   });
 }
 
-// Zapíše celou sadu (přední + zadní) do formuláře
-// Podporuje starý formát (data.width přímo na root) pro zpětnou kompatibilitu
+// Write the whole set (front + rear) into the form.
+// Supports the legacy format (data.width directly on root) for backward compatibility.
 function setTyreSet(set, data){
   if(!data) return;
-  // Detekce starého formátu: data má přímo width/aspect/rim (bez front/rear)
+  // Detect legacy format: data has width/aspect/rim directly (no front/rear)
   const isLegacy = data.width !== undefined || data.aspect !== undefined;
   if(isLegacy){
-    // Starý formát → použij jako přední, zadní nechat prázdné, same=true
+    // Legacy format → apply as front, leave rear empty, same=true
     setTyreAxle(set, 'front', data);
     const sameEl = document.getElementById(`c-tyre-${set}-same`);
     if(sameEl) sameEl.checked = true;
     toggleTyreSame(set);
     return;
   }
-  // Nový formát
+  // New format
   const sameEl = document.getElementById(`c-tyre-${set}-same`);
   if(sameEl) sameEl.checked = data.same !== false;
   toggleTyreSame(set);
@@ -3872,7 +3901,7 @@ function setTyreSet(set, data){
   if(mfgEl) mfgEl.value = data.mfgDate||'';
 }
 
-// Formátuje jednu osu jako řetězec: "235/45 R17 97Y 2.2/2.5 bar"
+// Format a single axle as a string: "235/45 R17 97Y 2.2/2.5 bar"
 function tyreAxleSummary(a){
   if(!a) return '';
   const parts=[];
@@ -3883,21 +3912,21 @@ function tyreAxleSummary(a){
   return parts.join(' ');
 }
 
-// Formátuje celou sadu — vrátí řetězec nebo objekt {front, rear} pro zobrazení
-// Podporuje starý formát (přímé width na root)
+// Format the whole set — returns a string or {front, rear} object for display.
+// Supports the legacy format (width directly on root).
 function tyreSummary(t){
   if(!t) return '';
-  // Starý formát — data přímo na root objektu
+  // Legacy format — data directly on the root object
   if(t.width !== undefined || t.aspect !== undefined) return tyreAxleSummary(t);
-  // Nový formát
+  // New format
   const f = tyreAxleSummary(t.front);
   const r = tyreAxleSummary(t.rear);
-  if(t.same || !r) return f; // přední = zadní, vrátí jen jeden řetězec
+  if(t.same || !r) return f; // front = rear, return a single string
   if(!f) return r;
-  return {front: f, rear: r}; // objekt pro víceřádkové zobrazení
+  return {front: f, rear: r}; // object for multi-line display
 }
 
-// Přepne viditelnost zadní nápravy podle toggleu "Přední = zadní"
+// Toggle rear-axle visibility based on the “Front = rear” toggle
 function toggleTyreSame(set){
   const sameEl  = document.getElementById(`c-tyre-${set}-same`);
   const rearDiv = document.getElementById(`c-tyre-${set}-rear-section`);
@@ -3914,7 +3943,7 @@ function renderTyreTab(car){
   const cs = state.lang==='cs';
   const allSeason = car?.tyreAllSeason||false;
 
-  // Pomocník: pole pro jednu osu (axle = 'front' | 'rear')
+  // Helper: fields for one axle (axle = 'front' | 'rear')
   const axleFields = (set, axle, plow_ph='2.2', phigh_ph='2.5') => `
     <div class="form-group">
       <label class="form-label">${cs?'Šířka (mm)':'Width (mm)'}</label>
@@ -3947,7 +3976,7 @@ function renderTyreTab(car){
     </div>
     <div class="form-group"></div>`;
 
-  // Celá sekce jedné sady: přední náprava + toggle + zadní náprava
+  // Whole section for one set: front axle + toggle + rear axle
   const setSection = (set, isSame) => `
     <div class="form-section-label full" style="margin-top:4px;border-left-color:var(--text2)">
       ${cs?'Přední náprava':'Front axle'}
@@ -3982,11 +4011,11 @@ function renderTyreTab(car){
         style="font-family:var(--font-mono)" maxlength="20">
     </div>`;
 
-  // Určíme výchozí same pro každou sadu
+  // Determine the default 'same' flag for each set
   const getSame = (set) => {
     const d = car?.tyres?.[set];
-    if(!d) return true;               // prázdná sada → same=true
-    if(d.width !== undefined) return true; // starý formát → same=true
+    if(!d) return true;               // empty set → same=true
+    if(d.width !== undefined) return true; // legacy format → same=true
     return d.same !== false;
   };
 
@@ -4022,7 +4051,7 @@ function renderTyreTab(car){
       </div>
     </div>`;
 
-  // Naplnit hodnotami ze stávajícího záznamu
+  // Fill with values from the existing record
   if(car?.tyres){
     ['summer','winter','allseason'].forEach(set=>{
       if(car.tyres[set]) setTyreSet(set, car.tyres[set]);
@@ -4030,45 +4059,25 @@ function renderTyreTab(car){
   }
 }
 
-function switchCarTab(name,btn){
-  document.querySelectorAll('.modal-tab').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.modal-tab-content').forEach(c=>c.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('car-tab-'+name).classList.add('active');
-  // Tyre tab se renderuje on-demand (lazy) — potřebuje znát aktuální auto
-  if(name==='tyres') renderTyreTab(getCar(state.editingCarId));
-}
-
-// openCarModal je alias pro zpětnou kompatibilitu (sidebar edit buttony)
-function openCarModal(carId){ openCarEdit(carId); }
-
 function openCarEdit(carId){
   state.editingCarId = carId || null;
   state.editReturnPage = state.currentPage || 'fleet';
   state.openSection = 'basic';
-  // Inicializuj drivetrain stav z existujícího vozidla
+  // Initialise drivetrain state from the existing vehicle
   const _editCar = carId ? getCar(carId) : null;
   _carEditDrivetrain = {hasAutomatic: _editCar?.hasAutomatic||false, has4x4: _editCar?.has4x4||false};
   if(carId){
-    // Existující vozidlo → inline edit stránka
+    // Existing vehicle → inline edit page
     state.currentCarId = carId;
     showPage('vehicle-edit');
   } else {
-    // Nové vozidlo → wizard
+    // New vehicle → wizard
     state.wizardStep = 1;
     showPage('vehicle-wizard');
   }
 }
 
-function updateStatusToggleLabel(isActive){
-  // (zachováno kvůli zpětné kompatibilitě starých volajících — v3.15 již nepoužíváno)
-  const lbl=document.getElementById('c-status-text');
-  if(!lbl) return;
-  lbl.textContent=isActive?(state.lang==='cs'?'V provozu':'Operational'):(state.lang==='cs'?'V depozitu':'In storage');
-  lbl.style.color=isActive?'var(--green)':'var(--text3)';
-}
-
-// Skryje/ukáže pole prodejní cena + URL podle aktuálního stavu (jen když for_sale)
+// Show / hide the sale-price + URL fields based on the current status (only when for_sale)
 function toggleSaleFields(){
   const sel = document.getElementById('c-status');
   const isSale = sel && sel.value==='for_sale';
@@ -4078,12 +4087,9 @@ function toggleSaleFields(){
   if(u) u.style.display = isSale ? '' : 'none';
 }
 
-// Handler pro change na #c-status — přepíná viditelnost prodejních polí
-function onCarStatusChange(){ toggleSaleFields(); }
+// ── Drivetrain features (automatic gearbox / 4x4 drive) ──
 
-// ── Drivetrain features (automatická převodovka / pohon 4×4) ──
-
-// Uloží aktuální stav přepínačů pohonu (voláno z onchange na togglech)
+// Save the current state of the drivetrain toggles (called from onchange handlers)
 function saveCarEditDrivetrain(){
   const cs=state.lang==='cs';
   const autoEl=document.getElementById('c-has-automatic');
@@ -4095,14 +4101,14 @@ function saveCarEditDrivetrain(){
   // Synchronizace i se wizard draftem
   _wizardDraftData['_hasAutomatic']=hasAuto;
   _wizardDraftData['_has4x4']=has4x4;
-  // Aktualizace popisků toggles
+  // Refresh toggle labels
   const autoText=document.getElementById('c-has-automatic-text');
   const x4Text=document.getElementById('c-has-4x4-text');
   if(autoText){autoText.textContent=hasAuto?(cs?'Ano':'Yes'):(cs?'Ne':'No');autoText.style.color=hasAuto?'var(--green)':'';}
   if(x4Text){x4Text.textContent=has4x4?(cs?'Ano':'Yes'):(cs?'Ne':'No');x4Text.style.color=has4x4?'var(--green)':'';}
 }
 
-// Vrátí HTML string pro sekci "Základní informace" (včetně drivetrain přepínačů)
+// Returns the HTML string for the "Basic info" section (including drivetrain toggles)
 function buildBasicSectionForm(cs){
   return `<div class='form-grid'>
   <div class='form-group'>
@@ -4140,7 +4146,7 @@ function buildBasicSectionForm(cs){
   </div>
   <div class='form-group'>
     <label class='form-label' id='c-status-label'>${cs?'Stav':'Status'}</label>
-    <select class='form-select' id='c-status' data-onchange="onCarStatusChange" required>
+    <select class='form-select' id='c-status' data-onchange="toggleSaleFields" required>
       <option value="">${esc(t('car_status_placeholder'))}</option>
       ${CAR_STATUSES.map(s=>`<option value="${s}">${esc(t('car_status_'+s))}</option>`).join('')}
     </select>
@@ -4209,7 +4215,63 @@ function buildBasicSectionForm(cs){
 </div>`;
 }
 
-// Vrátí HTML string pro sekci "Servis" (s podmíněnými sekcemi pro převodovku a 4×4)
+// Returns HTML string for the "Documents & dates" section (STK, Emise, POV,
+// Havarijni pojisteni, Asistencni sluzby). Shared between the vehicle edit
+// page and the new-vehicle wizard step 2. The `cs` param is currently unused —
+// labels are Czech-only for both languages by design; kept in the signature
+// for consistency with sibling builders and future i18n.
+function buildDocsSectionForm(cs){
+  return `
+<div class='form-grid'>
+  <div class='form-section-label'>STK – Technická prohlídka</div>
+  <div class='form-group'><label class='form-label'>Platnost do</label>
+    <div class='date-triple' id='c-stk-wrap'>
+      <input type='number' class='dt-d' id='c-stk-d' placeholder='DD' min='1' max='31'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-stk-m' placeholder='MM' min='1' max='12'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-stk-y' placeholder='RRRR' min='1900' max='2099'>
+    </div>
+  </div>
+  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-stk-warn' value='30'></div>
+  <div class='form-section-label'>Emise – Měření emisí</div>
+  <div class='form-group'><label class='form-label'>Platnost do</label>
+    <div class='date-triple' id='c-emission-wrap'>
+      <input type='number' class='dt-d' id='c-emission-d' placeholder='DD' min='1' max='31'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-emission-m' placeholder='MM' min='1' max='12'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-emission-y' placeholder='RRRR' min='1900' max='2099'>
+    </div>
+  </div>
+  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-emission-warn' value='30'></div>
+  <div class='form-section-label'>POV – Povinné ručení</div>
+  <div class='form-group'><label class='form-label'>Platnost do</label>
+    <div class='date-triple' id='c-pov-wrap'>
+      <input type='number' class='dt-d' id='c-pov-d' placeholder='DD' min='1' max='31'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-pov-m' placeholder='MM' min='1' max='12'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-pov-y' placeholder='RRRR' min='1900' max='2099'>
+    </div>
+  </div>
+  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-pov-warn' value='30'></div>
+  <div class='form-section-label'>Havarijní pojištění (volitelné)</div>
+  <div class='form-group'><label class='form-label'>Platnost do</label>
+    <div class='date-triple' id='c-ins-wrap'>
+      <input type='number' class='dt-d' id='c-ins-d' placeholder='DD' min='1' max='31'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-ins-m' placeholder='MM' min='1' max='12'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-ins-y' placeholder='RRRR' min='1900' max='2099'>
+    </div>
+  </div>
+  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-ins-warn' value='30'></div>
+  <div class='form-section-label'>Asistenční služby (volitelné)</div>
+  <div class='form-group'><label class='form-label'>Platnost do</label>
+    <div class='date-triple' id='c-assist-wrap'>
+      <input type='number' class='dt-d' id='c-assist-d' placeholder='DD' min='1' max='31'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-assist-m' placeholder='MM' min='1' max='12'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-assist-y' placeholder='RRRR' min='1900' max='2099'>
+    </div>
+  </div>
+  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-assist-warn' value='30'></div>
+</div>`;
+}
+
+// Returns the HTML string for the "Service" section (with conditional gearbox and 4x4 subsections)
 function buildServiceSectionForm(cs, hasAutomatic, has4x4){
   const showAuto=hasAutomatic?'':'none';
   const show4x4=has4x4?'':'none';
@@ -4256,7 +4318,7 @@ function saveCar(){
   const plate = document.getElementById('c-plate').value.trim().toUpperCase() || null;
   const vin = document.getElementById('c-vin').value.trim().toUpperCase() || null;
 
-  // Validace unikátnosti SPZ a VIN
+  // Uniqueness validation for plate and VIN
   if(plate && state.cars.some(c => c.plate === plate && c.id !== state.editingCarId)){
     showToast(state.lang==='cs'?'Tato SPZ je již evidována u jiného vozidla':'This license plate is already registered','error');
     return;
@@ -4265,7 +4327,7 @@ function saveCar(){
     showToast(state.lang==='cs'?'Toto VIN je již evidováno u jiného vozidla':'This VIN is already registered','error');
     return;
   }
-  // Stav je povinný — placeholder hodnota '' není přípustná.
+  // Status is mandatory — the placeholder value '' is not acceptable.
   const statusVal = document.getElementById('c-status')?.value || '';
   if(!CAR_STATUSES.includes(statusVal)){
     showToast(state.lang==='cs'?'Vyberte stav vozidla':'Please select a vehicle status','error');
@@ -4300,7 +4362,7 @@ function saveCar(){
     oilWarn:parseInt(document.getElementById('c-oil-warn').value)||1000,
     oilType:document.getElementById('c-oil-type').value.trim()||null,
     coolantType:document.getElementById('c-coolant-type').value.trim()||null,
-    // Automatická převodovka a pohon 4×4
+    // Automatic gearbox and 4x4 drive
     hasAutomatic:document.getElementById('c-has-automatic')?.checked||false,
     has4x4:document.getElementById('c-has-4x4')?.checked||false,
     gearboxOilInterval:parseInt(document.getElementById('c-gearbox-oil-interval')?.value)||null,
@@ -4312,7 +4374,7 @@ function saveCar(){
     note:document.getElementById('c-note').value.trim(),
     acquired:getDateTriple('c-acquired')||null,
     decommissioned:getDateTriple('c-decommissioned')||null,
-    // Pneumatiky — uložíme jen pokud byl tab otevřen (elementy existují)
+    // Tyres — only save when the tab was opened (elements exist)
     ...(document.getElementById('c-tyre-allseason')!==null ? {
       tyreAllSeason: document.getElementById('c-tyre-allseason').checked,
       tyres: {
@@ -4353,8 +4415,8 @@ function deleteCar(){
   showToast(state.lang==='cs'?'Vozidlo smazáno':'Vehicle deleted','success');
 }
 
-// Přesun vozidla do archivu (status → decommissioned).
-// Volá se z fleet karty (data-id) nebo z edit page footeru (bez data-id → aktuálně editované).
+// Move a vehicle to the archive (status → decommissioned).
+// Called from a fleet card (data-id) or from the edit-page footer (no data-id → currently edited).
 function archiveCar(id){
   const carId = id || state.editingCarId;
   const car = getCar(carId);
@@ -4366,7 +4428,7 @@ function archiveCar(id){
   car.status = 'decommissioned';
   if(!car.decommissioned) car.decommissioned = new Date().toISOString().slice(0,10);
   saveData();
-  // Pokud uživatel klikl z fleet karty, zůstaň na fleet; pokud z edit footeru, vrať na fleet.
+  // If the user clicked from a fleet card, stay on fleet; from the edit footer, return to fleet.
   if(state.editingCarId === carId){
     state.editingCarId = null;
     showPage('fleet');
@@ -4376,7 +4438,7 @@ function archiveCar(id){
   showToast(cs?'Vozidlo přesunuto do archivu':'Vehicle moved to archive','success');
 }
 
-// Vrátit vozidlo z archivu zpět do provozu.
+// Return a vehicle from the archive back into service.
 function unarchiveCar(id){
   const carId = id || state.editingCarId;
   const car = getCar(carId);
@@ -4386,7 +4448,7 @@ function unarchiveCar(id){
   car.decommissioned = null;
   saveData();
   if(state.editingCarId === carId){
-    renderAll(); // edit page se znovu vykreslí s aktuálním stavem
+    renderAll(); // edit page re-renders with the current state
   } else {
     renderAll();
   }
@@ -4403,7 +4465,7 @@ function openReminderModal(){
   const mEl=document.getElementById('rem-date-min');
   if(hEl) hEl.value='';
   if(mEl) mEl.value='';
-  // Notifikační checkbox — default zapnutý, pokud jsou notifikace pro appku zapnuté
+  // Notification checkbox — defaults to ON if notifications are enabled app-wide
   const notifyEl=document.getElementById('rem-notify');
   if(notifyEl){
     const enabled = !!state.settings.notificationsEnabled && _notifPermission()==='granted';
@@ -4426,13 +4488,13 @@ function openReminderModal(){
 function prefillReminderFromCar(carId){
   const car=getCar(carId);
   const maxOdo=getMaxOdo(carId)||0;
-  // Interval km — předvyplnit z profilu vozidla pokud existuje
+  // Interval km — pre-fill from the vehicle profile if available
   document.getElementById('rem-interval').value=car?.oilInterval||'';
-  // Naposledy při — předvyplnit poslední výměnu oleje z profilu, fallback na max odo
+  // Last done — pre-fill the last oil change from the profile, fallback to max odo
   document.getElementById('rem-lastdone').value=car?.oilLastKm||maxOdo||'';
   document.getElementById('rem-warn').value=car?.oilWarn||'1000';
   setDateTriple('rem-date','');
-  // Hint pod polem — zobrazit aktuální km vozidla
+  // Hint below the field — show the current vehicle km
   const hint=document.getElementById('rem-odo-hint');
   if(hint) hint.textContent=maxOdo>0?(state.lang==='cs'?`Aktuální stav: ${fmtNum(maxOdo)} km`:`Current odometer: ${fmtNum(maxOdo)} km`):'';
 }
@@ -4446,8 +4508,8 @@ function toggleReminderType(){
 function saveReminder(){
   const name=document.getElementById('rem-name').value.trim();
   if(!name){showToast(t('required_field'),'error');return;}
-  // Čas — dva volitelné inputy HH a MM, sestavíme HH:MM v 24h formátu.
-  // Pokud kterékoliv pole prázdné nebo mimo rozsah, čas se neuloží (null).
+  // Time — two optional inputs HH and MM, assembled into HH:MM in 24h format.
+  // If either is empty or out of range the time is not saved (null).
   const hh=parseInt(document.getElementById('rem-date-h')?.value,10);
   const mm=parseInt(document.getElementById('rem-date-min')?.value,10);
   let time=null;
@@ -4468,18 +4530,18 @@ function saveReminder(){
 function deleteReminder(id){state.reminders=state.reminders.filter(r=>r.id!==id);saveData();renderRemindersPage();}
 
 // ─── IMPORT / EXPORT ─────────────────────────────────────────
-// Verze schématu zálohy. Bumpni při změně tvaru (přidání/odebrání top-level polí).
+// Backup schema version. Bump when the shape changes (adding/removing top-level fields).
 const BACKUP_SCHEMA_VERSION = 2;
-const APP_VERSION = '3.17.0';
+const APP_VERSION = '3.18.0';
 
 function exportData(){
   const now=new Date();
   const pad=n=>String(n).padStart(2,'0');
   const ts=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-  // Pozn.: ukládáme VŠECHNA persistovaná data ze state — sjednoceno se saveData()
-  // (cars/records/fuels/reminders/jobs + settings + lang). Stavy aut (status: sold,
-  // decommissioned, for_sale, storage, in_restoration) i klasifikace jsou součástí
-  // car objektů a serializují se automaticky.
+  // Note: we persist ALL data from state — unified with saveData()
+  // (cars/records/fuels/reminders/jobs + settings + lang). Car statuses (sold,
+  // decommissioned, for_sale, storage, in_restoration) and classification are
+  // part of the car objects and serialize automatically.
   const payload={
     app:'MyCars',
     version:APP_VERSION,
@@ -4507,10 +4569,10 @@ function importData(e){
   reader.onload=ev=>{
     try{
       const raw=safeJsonParse(ev.target.result);
-      // Forward-compat check — pokud záloha pochází z novější verze aplikace
-      // (vyšší schema), upozorni uživatele, že jeho instalace je zastaralá
-      // a některá data se nemusí načíst správně (např. nový status auta
-      // se zahodí na fallback). Uživatel může pokračovat nebo zrušit.
+      // Forward-compat check — if the backup was produced by a newer version
+      // (higher schema), warn the user that their installation is out of date
+      // and some data may not load correctly (e.g. a new car status falls back
+      // to the default). The user may proceed or cancel.
       const fileSchema = (raw && typeof raw.schema==='number') ? raw.schema : 1;
       const fileVersion = (raw && typeof raw.version==='string') ? raw.version : null;
       if(fileSchema > BACKUP_SCHEMA_VERSION){
@@ -4527,15 +4589,15 @@ function importData(e){
       state.cars=d.cars;state.records=d.records;
       state.fuels=d.fuels;state.reminders=d.reminders;
       state.jobs=d.jobs||[];
-      // Settings/lang ze zálohy (sanitizeImported je už validuje).
+      // Settings/lang from the backup (sanitizeImported already validates them).
       if(d.settings) Object.assign(state.settings, d.settings);
       if(d.lang) state.lang=d.lang;
       if(state.cars.length)state.currentCarId=state.cars[0].id;
       state.filterCat='';state.search='';state.fuelSearch='';
       saveData();
-      applyTheme(); // pro případ, že se změnilo téma ze zálohy
+      applyTheme(); // in case the theme changed via the backup
       renderAll();
-      // Shrnutí — uživatel hned vidí, jestli sedí počty (vč. archivovaných aut).
+      // Summary — user sees the counts immediately (including archived cars).
       const archived=state.cars.filter(isCarArchived).length;
       const summary=cs
         ? `Importováno: ${state.cars.length} vozidel${archived?` (${archived} v archivu)`:''}, ${state.records.length} záznamů, ${state.fuels.length} tankování, ${state.reminders.length} připomínek, ${state.jobs.length} zakázek`
@@ -4556,16 +4618,15 @@ function showToast(msg,type=''){
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.className='';},2500);
 }
 
-// ── Modal overlay — klik mimo okno NEZAVÍRÁ formulář ─────────
-// Formuláře se zavírají pouze tlačítkem ✕ nebo Zrušit,
-// aby nedocházelo ke ztrátě rozepsaných dat.
+// ── Modal overlay — clicking outside the window does NOT close the form ─────────
+// Forms are only closed via the ✕ button or Cancel, to avoid losing typed data.
 
 // ─── DIARY PAGE ──────────────────────────────────────────────
-// Chronologický feed všech událostí napříč vozidly. Sloučí
-// records + fuels + jobs + lifecycle (acquired/decommissioned),
-// seřadí desc podle data a seskupí po měsících.
+// Chronological feed of every event across vehicles. Merges records +
+// fuels + jobs + lifecycle (acquired/decommissioned), sorts desc by date
+// and groups by month.
 
-// Vrátí pole událostí pro zadané car IDs. Každá událost má:
+// Returns an event array for the given car IDs. Every event has:
 //   { date: 'YYYY-MM-DD', type: 'record'|'fuel'|'job'|'lifecycle',
 //     subtype, carId, title, desc, cost, odo, color, sortKey }
 function buildDiaryEvents(carIds){
@@ -4576,7 +4637,7 @@ function buildDiaryEvents(carIds){
   const catSet = new Set(cats);
   const anyCat = catSet.size > 0;
 
-  // Records — vždy součástí, ale filtrované podle vybraných kategorií
+  // Records — always included, but filtered by the selected categories
   for(const r of state.records){
     if(!set.has(r.carId)) continue;
     if(anyCat && !catSet.has(r.cat)) continue;
@@ -4590,9 +4651,9 @@ function buildDiaryEvents(carIds){
     });
   }
 
-  // Fuel, jobs a lifecycle nemají kategorii. Pokud uživatel vybral
-  // konkrétní kategorie (cílí na records), schováme je. Bez vybrané
-  // kategorie ukážeme všechny události.
+  // Fuel, jobs and lifecycle have no category. If the user picked specific
+  // categories (targeting records), hide them. Without a chosen category we
+  // show every event.
   if(!anyCat){
     for(const f of state.fuels){
       if(!set.has(f.carId)) continue;
@@ -4673,7 +4734,7 @@ function buildDiaryEvents(carIds){
     }
   }
 
-  // Vyhledávání (full-text přes title, subtitle, cat, note, SPZ vozidla)
+  // Full-text search (title, subtitle, cat, note, vehicle plate)
   const q = (state.diarySearch||'').trim().toLowerCase();
   let filtered = evs;
   if(q){
@@ -4688,13 +4749,13 @@ function buildDiaryEvents(carIds){
     });
   }
 
-  // Seřadit desc (sortKey obsahuje datum-typ-id, takže events ze stejného dne
-  // mají deterministické pořadí)
+  // Sort desc (sortKey contains date-type-id so events from the same day
+  // have a deterministic order)
   filtered.sort((a,b)=>b.sortKey.localeCompare(a.sortKey));
   return filtered;
 }
 
-// Formát měsíčního headeru ("Červen 2026" / "June 2026")
+// Format the monthly header ("Červen 2026" / "June 2026")
 function diaryMonthLabel(yyyyMM){
   const [y,m] = yyyyMM.split('-');
   const dt = new Date(Number(y), Number(m)-1, 1);
@@ -4707,7 +4768,7 @@ function renderDiaryPage(){
   const el = document.getElementById('content');
   const cs = state.lang==='cs';
 
-  // Resolve scope (jaká auta)
+  // Resolve scope (which cars)
   const v = state.diaryCarId;
   let carIds;
   if(!v) carIds = state.cars.filter(c=>!isCarArchived(c)).map(c=>c.id);
@@ -4717,12 +4778,11 @@ function renderDiaryPage(){
 
   const events = buildDiaryEvents(carIds);
 
-  // Klikací chipy kategorií (multi-select). Prázdný výběr = vše.
+  // Clickable category chips (multi-select). Empty selection = all.
   const activeCats = new Set(Array.isArray(state.diaryCats)?state.diaryCats:[]);
-  // Spočítáme, které kategorie skutečně mají záznamy v aktuálním scope —
-  // prázdné chipy bychom zbytečně zabíraly místo, zejména na mobilu.
-  // Záměrně počítáme přes state.records (ne přes events), abychom viděli i
-  // kategorie schované filtrem.
+  // Count which categories actually have records in the current scope —
+  // empty chips would waste space, especially on mobile.
+  // We intentionally scan state.records (not events) so filtered-out categories still show.
   const carIdSet = new Set(carIds);
   const catCounts = Object.create(null);
   for(const r of state.records){
@@ -4732,8 +4792,8 @@ function renderDiaryPage(){
   const catChips = CATEGORIES[state.lang].map(c=>{
     const key = normalizeCat(c);
     const on = activeCats.has(key);
-    // Skryj kategorie, ve kterých nejsou žádné záznamy — pokud ovšem není
-    // vybraná (uživatel musí mít možnost ji odkliknout).
+    // Hide categories with no records — unless the category is currently
+    // selected (user must be able to click it off).
     if(!on && !catCounts[key]) return '';
     const color = CAT_COLORS[key] || 'var(--accent)';
     const style = on
@@ -4771,7 +4831,7 @@ function renderDiaryPage(){
     return;
   }
 
-  // Seskupení podle YYYY-MM
+  // Group by YYYY-MM
   const groups = new Map();
   for(const e of events){
     const key = (e.date||'').slice(0,7) || '0000-00';
@@ -4824,17 +4884,11 @@ function renderDiaryPage(){
 
 function setDiarySearch(val){
   state.diarySearch = val||'';
-  // Pouze re-render content (zachová focus v inputu via debounce? — render je rychlý, ale focus zmizí)
-  // Lehčí UX: filtrujeme jen po dlouhém kliknutí; pro jednoduchost re-rendrujeme a obnovíme focus
+  // Only re-render content (would keeping input focus need debouncing? — render is fast but focus is lost)
+  // Lightweight UX: filter on each keystroke; for simplicity we re-render and then restore focus.
   renderDiaryPage();
   const inp = document.getElementById('diary-search');
   if(inp){ inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
-}
-
-function setDiaryCat(val){
-  // Legacy single-select (zachováno pro zpětnou kompat) — přepneme do multi.
-  state.diaryCats = val ? [val] : [];
-  renderDiaryPage();
 }
 
 function toggleDiaryCat(cat){
@@ -4849,12 +4903,6 @@ function toggleDiaryCat(cat){
 function clearDiaryCats(){
   state.diaryCats = [];
   renderDiaryPage();
-}
-
-function toggleDiaryType(tk){
-  // Legacy — typy událostí už nejsou v UI, ale handler ponechán bez efektu
-  // pro případné staré data-action atributy (defenzivní).
-  return;
 }
 
 // ─── SETTINGS PAGE ───────────────────────────────────────────
@@ -4962,10 +5010,25 @@ function renderSettings(){
         <div class="section-title">${cs?'O aplikaci':'About'}</div>
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.17.0</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260701-002</span></div>
+          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.18.0</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260805-001</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
+          ${(()=>{
+            let saved='—';
+            try{
+              const raw=localStorage.getItem('mycars_v3');
+              if(raw){
+                const p=JSON.parse(raw);
+                const iso=p&&p.dataUpdatedAt;
+                if(iso){
+                  const dt=new Date(iso);
+                  if(!isNaN(dt)) saved=dt.toLocaleString(cs?'cs-CZ':'en-US');
+                }
+              }
+            }catch{}
+            return `<div class="settings-info-row"><span>${cs?'Poslední změna záznamů':'Last record change'}</span><span style="font-family:var(--font-mono);font-size:.85rem">${saved}</span></div>`;
+          })()}
           ${(()=>{
             const u=getStorageUsageSync();
             const kb=(u.used/1024).toFixed(1);
@@ -4981,9 +5044,54 @@ function renderSettings(){
         </div>
       </div>
 
-    </div><!-- /settings-two-col -->
+    </div><!-- /settings-two-col -->`;
+}
 
-    <!-- Full width: Data & import -->
+// ─── DATA MANAGEMENT PAGE ────────────────────────────────────
+function renderDataManagement(){
+  const el=document.getElementById('content');
+  const cs=state.lang==='cs';
+  const syncSupported = _sync.isSupported();
+  const syncActive = _sync.enabled;
+  const syncFolder = _sync.folderName;
+
+  el.innerHTML=`
+    ${syncSupported ? `
+    <div class="section-title">${cs?'Synchronizace':'Sync'}</div>
+    <div class="settings-grid" style="margin-bottom:28px;">
+      <div class="settings-card"${syncActive?' style="border-color:var(--green);"':''}>
+        <div class="settings-card-title" ${syncActive?'style="color:var(--green)"':''}>${cs?'Automatická záloha do složky':'Auto-backup to folder'}</div>
+        <div class="settings-card-desc">${cs
+          ?'Při každé změně dat se automaticky uloží záloha do zvolené složky. Pokud složku synchronizujete přes Nextcloud, Dropbox nebo Google Drive, budou data dostupná na všech vašich počítačích.'
+          :'Every data change is automatically saved to the chosen folder. If you sync it via Nextcloud, Dropbox, or Google Drive, your data will be available on all your computers.'}</div>
+        ${syncActive
+          ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);font-size:.82rem;">
+              <span style="color:var(--green);">●</span>
+              <span style="color:var(--text2)">${cs?'Aktivní':'Active'} — <strong style="color:var(--text)">${esc(syncFolder||'')}</strong></span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-ghost" data-action="syncWriteNow" style="flex:1;justify-content:center;">${cs?'Uložit nyní':'Save now'}</button>
+              <button class="btn btn-ghost" data-action="syncDisconnect" style="flex:1;justify-content:center;border-color:var(--red);color:var(--red);">${cs?'Odpojit':'Disconnect'}</button>
+            </div>`
+          : `<button class="btn btn-primary" data-action="syncPickFolder" style="width:100%;justify-content:center;margin-top:4px;">${cs?'Vybrat složku…':'Choose folder…'}</button>`
+        }
+      </div>
+      <div class="settings-card">
+        <div class="settings-card-title">${cs?'Jak to funguje':'How it works'}</div>
+        <div class="settings-card-desc" style="margin-bottom:0;line-height:1.8;">
+          ${cs
+            ?`<strong>1.</strong> Vyberte složku ve vašem Nextcloud/Dropbox/Google Drive.<br>
+              <strong>2.</strong> Při každé změně se do ní automaticky uloží <code style="color:var(--accent)">mycars_sync.json</code>.<br>
+              <strong>3.</strong> Na jiném PC otevřete MyCars — aplikace detekuje novější soubor a nabídne načtení.<br>
+              <strong>4.</strong> Funguje pouze v Chrome/Edge (File System Access API).`
+            :`<strong>1.</strong> Pick a folder in your Nextcloud/Dropbox/Google Drive.<br>
+              <strong>2.</strong> Every change auto-saves <code style="color:var(--accent)">mycars_sync.json</code> there.<br>
+              <strong>3.</strong> On another PC, open MyCars — it detects the newer file and offers to load it.<br>
+              <strong>4.</strong> Works only in Chrome/Edge (File System Access API).`}
+        </div>
+      </div>
+    </div>` : ''}
+
     <div class="section-title">${cs?'Import a export dat':'Data import & export'}</div>
     <div class="settings-grid" style="margin-bottom:28px;">
       <div class="settings-card">
@@ -5003,15 +5111,14 @@ function renderSettings(){
       </div>
     </div>
 
-    <!-- Full width: Delete data -->
-    <div class="section-title">${cs?'Mazání dat':'Delete data'}</div>
+    <div class="section-title" style="color:var(--amber)">${cs?'Nebezpečná zóna':'Danger zone'}</div>
     <div class="settings-grid" style="margin-bottom:28px;">
-      <div class="settings-card">
+      <div class="settings-card" style="border-color:var(--amber);">
         <div class="settings-card-title" style="color:var(--amber)">${cs?'Smazat provozní data':'Delete operational data'}</div>
         <div class="settings-card-desc">${cs?'Smaže záznamy servisu a tankování. Vozidla a jejich nastavení zůstanou zachována.':'Deletes service records and fuel entries. Vehicles and their settings will be kept.'}</div>
         <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:4px;border-color:var(--amber);color:var(--amber);" data-action="confirmDeleteOperational">${cs?'Smazat záznamy a tankování':'Delete records & fuel'}</button>
       </div>
-      <div class="settings-card">
+      <div class="settings-card" style="border-color:var(--red);">
         <div class="settings-card-title" style="color:var(--red)">${cs?'Smazat veškerá data':'Delete all data'}</div>
         <div class="settings-card-desc">${cs?'Nevratně smaže všechna vozidla, záznamy, tankování a připomínky. Tuto akci nelze vzít zpět.':'Permanently deletes all vehicles, records, fuel entries and reminders. This cannot be undone.'}</div>
         <button class="btn btn-danger" data-action="confirmDeleteAll" style="width:100%;justify-content:center;margin-top:4px;">${cs?'Smazat vše':'Delete all'}</button>
@@ -5106,40 +5213,245 @@ document.addEventListener('click', e => {
   }
 });
 
+// ─── FILE SYNC (File System Access API) ──────────────────────
+// Provides auto-backup to a user-chosen synced folder (Nextcloud/Dropbox/etc.)
+// On startup, checks if the synced file is newer → offers to load it.
+// On every saveData(), writes the current state to the synced file.
+const _sync = (function(){
+  const DB_NAME = 'mycars_sync';
+  const STORE = 'handles';
+  const KEY = 'syncDir';
+  const FILENAME = 'mycars_sync.json';
+  let _dirHandle = null;
+  let _enabled = false;
+  let _lastWriteTs = null; // avoid write storms
+  let _suppressNextCheck = false; // after a local save, don't immediately re-prompt
+
+  // ── IndexedDB helpers (for persisting directory handle) ──
+  function _openDB(){
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore(STORE); };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function _saveHandle(handle){
+    const db = await _openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).put(handle, KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function _loadHandle(){
+    const db = await _openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const req = tx.objectStore(STORE).get(KEY);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function _clearHandle(){
+    const db = await _openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).delete(KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  // ── Check if File System Access API is available ──
+  function isSupported(){
+    return typeof window.showDirectoryPicker === 'function';
+  }
+
+  // ── Initialize: try to restore previous handle ──
+  async function init(){
+    if(!isSupported()) return;
+    try{
+      const handle = await _loadHandle();
+      if(!handle) return;
+      // Verify permission is still granted (silent check)
+      const perm = await handle.queryPermission({mode:'readwrite'});
+      if(perm === 'granted'){
+        _dirHandle = handle;
+        _enabled = true;
+      }
+    }catch(e){
+      console.warn('[Sync] init failed:', e);
+    }
+  }
+
+  // ── User picks a directory ──
+  async function pickFolder(){
+    if(!isSupported()) return false;
+    try{
+      const handle = await window.showDirectoryPicker({mode:'readwrite'});
+      _dirHandle = handle;
+      _enabled = true;
+      await _saveHandle(handle);
+      // Write immediately so the folder isn't empty
+      await writeFile();
+      return true;
+    }catch(e){
+      if(e.name !== 'AbortError') console.warn('[Sync] pickFolder:', e);
+      return false;
+    }
+  }
+
+  // ── Disconnect sync ──
+  async function disconnect(){
+    _dirHandle = null;
+    _enabled = false;
+    await _clearHandle();
+  }
+
+  // ── Write current state to synced file ──
+  async function writeFile(){
+    if(!_enabled || !_dirHandle) return;
+    try{
+      // Throttle: don't write more than once per 2 seconds
+      const now = Date.now();
+      if(_lastWriteTs && (now - _lastWriteTs) < 2000) return;
+      _lastWriteTs = now;
+
+      const perm = await _dirHandle.queryPermission({mode:'readwrite'});
+      if(perm !== 'granted'){
+        const req = await _dirHandle.requestPermission({mode:'readwrite'});
+        if(req !== 'granted'){ _enabled = false; return; }
+      }
+      const payload = {
+        app:'MyCars', version:APP_VERSION, schema:BACKUP_SCHEMA_VERSION,
+        syncedAt: new Date().toISOString(),
+        dataUpdatedAt: state.dataUpdatedAt || null,
+        lang: state.lang,
+        settings: state.settings,
+        cars: state.cars,
+        records: state.records,
+        fuels: state.fuels,
+        reminders: state.reminders,
+        jobs: state.jobs,
+      };
+      const fileHandle = await _dirHandle.getFileHandle(FILENAME, {create:true});
+      const writable = await fileHandle.createWritable();
+      await writable.write(JSON.stringify(payload, null, 2));
+      await writable.close();
+      _suppressNextCheck = true;
+    }catch(e){
+      console.warn('[Sync] writeFile failed:', e);
+    }
+  }
+
+  // ── Read synced file and check if newer ──
+  async function checkForUpdate(){
+    if(!_enabled || !_dirHandle) return;
+    if(_suppressNextCheck){ _suppressNextCheck = false; return; }
+    try{
+      const perm = await _dirHandle.queryPermission({mode:'readwrite'});
+      if(perm !== 'granted') return;
+      let fileHandle;
+      try{ fileHandle = await _dirHandle.getFileHandle(FILENAME); }
+      catch{ return; } // file doesn't exist yet
+      const file = await fileHandle.getFile();
+      const text = await file.text();
+      const remote = safeJsonParse(text);
+      if(!remote || !remote.dataUpdatedAt) return;
+      const localTs = state.dataUpdatedAt;
+      if(!localTs) return; // no local data timestamp → nothing to compare
+      const remoteDate = new Date(remote.dataUpdatedAt);
+      const localDate = new Date(localTs);
+      if(remoteDate <= localDate) return; // local is same or newer
+      // Remote is newer → prompt user
+      const cs = state.lang === 'cs';
+      const remoteStr = remoteDate.toLocaleString(cs?'cs-CZ':'en-US');
+      const localStr = localDate.toLocaleString(cs?'cs-CZ':'en-US');
+      const msg = cs
+        ? `V synchronizované složce byla nalezena novější záloha.\n\nZáloha: ${remoteStr}\nLokální data: ${localStr}\n\nNačíst novější data ze zálohy?`
+        : `A newer backup was found in the synced folder.\n\nBackup: ${remoteStr}\nLocal data: ${localStr}\n\nLoad newer data from backup?`;
+      if(!confirm(msg)) return;
+      // Load the remote data
+      const d = sanitizeImported(remote);
+      state.cars = d.cars; state.records = d.records;
+      state.fuels = d.fuels; state.reminders = d.reminders;
+      state.jobs = d.jobs || [];
+      if(d.settings) Object.assign(state.settings, d.settings);
+      if(d.lang) state.lang = d.lang;
+      state.dataUpdatedAt = remote.dataUpdatedAt;
+      if(state.cars.length) state.currentCarId = state.cars[0].id;
+      state.filterCat=''; state.search=''; state.fuelSearch='';
+      _prevContentSig = _contentSig(); // reset change detection
+      saveData();
+      applyTheme();
+      setLang(state.lang);
+      renderAll();
+      showToast(cs?'Data synchronizována':'Data synchronized','success');
+    }catch(e){
+      console.warn('[Sync] checkForUpdate failed:', e);
+    }
+  }
+
+  // ── Public API ──
+  return {
+    isSupported, init, pickFolder, disconnect, writeFile, checkForUpdate,
+    get enabled(){ return _enabled; },
+    get folderName(){
+      try{ return _dirHandle ? _dirHandle.name : null; }catch{ return null; }
+    }
+  };
+})();
+
 loadData();setLang(state.lang);setupDatePickers();
 
+// ─── FILE SYNC STARTUP ───────────────────────────────────────
+// Initialize the File System Access sync and check for newer remote data.
+(async function(){
+  try{
+    await _sync.init();
+    if(_sync.enabled){
+      // Small delay to let the UI settle before prompting
+      setTimeout(()=>{ _sync.checkForUpdate(); }, 1500);
+    }
+  }catch(e){ console.warn('[Sync] startup:', e); }
+})();
+
 // ─── NOTIFICATION SCHEDULER ───────────────────────────────────
-// Po startu (až se appka usadí) jednorázová kontrola, pak každých 15 minut.
-// Interval funguje pouze pokud je záložka otevřená — fakt: pro background push by
-// bylo potřeba SW + Push API + server. To je mimo scope této PWA.
+// After startup (once the app settles) run a one-off check, then every 15 minutes.
+// The interval only ticks while the tab is open — background push would require
+// SW + Push API + a server, which is out of scope for this PWA.
 setTimeout(function(){ try{ checkAndNotifyReminders(); }catch(_){} }, 2000);
 setInterval(function(){ try{ checkAndNotifyReminders(); }catch(_){} }, 15 * 60 * 1000);
-// Když se uživatel vrátí na záložku, znovu zkontrolovat (možná uplynul den)
+// When the user returns to the tab, re-check (a day may have passed)
 document.addEventListener('visibilitychange', function(){
   if(document.visibilityState === 'visible'){
     try{ checkAndNotifyReminders(); }catch(_){}
+    // Also check for newer synced data when returning to tab
+    if(_sync.enabled) _sync.checkForUpdate();
   }
 });
 
 // ─── TABLE SCROLL INDICATOR ───────────────────────────────────
-// Přidá třídu .scrollable na .table-scroll pokud obsah přesahuje šířku (zobrazí gradient)
+// Add class .scrollable to .table-scroll when content overflows horizontally (shows gradient)
 function updateTableScrollIndicators(){
   document.querySelectorAll('.table-scroll').forEach(el=>{
     el.classList.toggle('scrollable', el.scrollWidth > el.clientWidth + 4);
   });
 }
-// Observer na resize — reaguje na změnu velikosti okna
+// Resize observer — reacts to window size changes
 const _tableScrollObserver = new ResizeObserver(updateTableScrollIndicators);
-// Pozorujeme #content-scroll aby observer zachytil i dynamicky renderované tabulky
+// Observe #content-scroll so the observer also catches dynamically rendered tables
 const _contentScrollEl = document.getElementById('content-scroll');
 if(_contentScrollEl) _tableScrollObserver.observe(_contentScrollEl);
-// Volat také po každém renderu stránky (hook do renderPage)
+// Also call after every page render (hook into renderPage)
 const _origRenderPage = renderPage;
 renderPage = function(){ _origRenderPage.apply(this, arguments); setTimeout(updateTableScrollIndicators, 50); };
 
-// ─── DATE-TRIPLE: inputmode pro mobilní klávesnici ─────────────
-// Všechny date-triple inputy v statickém HTML — dynamicky vygenerované dostávají
-// inputmode přes initDateTripleNav (voláno z openModal)
+// ─── DATE-TRIPLE: inputmode for the mobile keyboard ─────────────
+// All date-triple inputs in the static HTML — dynamically generated ones get
+// inputmode via initDateTripleNav (called from openModal).
 document.querySelectorAll('.date-triple input').forEach(inp=>{
   inp.setAttribute('inputmode','numeric');
 });
@@ -5155,25 +5467,37 @@ function cmpTableSort(key){
   renderAnalytics();
 }
 
-let csvParsedRows = []; // výsledek parsování, čeká na potvrzení
-let _cmpTableSort  = {key: null, dir: 1}; // stav řazení tabulky porovnání
+let csvParsedRows = []; // parsing result, awaiting confirmation
+let _cmpTableSort  = {key: null, dir: 1}; // comparison table sort state
 
 function openCsvImportModal(){
   if(!state.cars.length){showToast('Nejprve přidej vozidlo','error');return;}
-  // Naplnit datalist vozidel
-  const dl = document.getElementById('csv-car-list');
-  dl.innerHTML = state.cars.map(c=>{
+  const cs=state.lang==='cs';
+  // Populate car select with optgroups
+  const sel = document.getElementById('csv-car-select');
+  const active = state.cars.filter(c=>!isCarArchived(c));
+  const inactive = state.cars.filter(c=>isCarArchived(c));
+  const carOpt = c => {
     const label=`${c.make||''} ${c.model||''}${c.plate?' ('+c.plate+')':''}`.trim();
-    return `<option value="${esc(label)}"></option>`;
-  }).join('');
-  // Necháme prázdné – uživatel si vybere sám
-  const searchEl = document.getElementById('csv-car-search');
-  if(searchEl) searchEl.value='';
+    return `<option value="${esc(c.id)}">${esc(label)}</option>`;
+  };
+  let html=`<option value="" disabled selected>— ${cs?'Vyberte vozidlo':'Select vehicle'} —</option>`;
+  if(active.length){
+    html+=`<optgroup label="${cs?'Aktivní':'Active'}">`;
+    html+=active.map(carOpt).join('');
+    html+='</optgroup>';
+  }
+  if(inactive.length){
+    html+=`<optgroup label="${cs?'Archiv':'Archive'}">`;
+    html+=inactive.map(carOpt).join('');
+    html+='</optgroup>';
+  }
+  sel.innerHTML=html;
   // Reset do kroku 1
   document.getElementById('csv-step-1').style.display = '';
   document.getElementById('csv-step-2').style.display = 'none';
   document.getElementById('csv-import-btn').style.display = 'none';
-  document.getElementById('csv-filename').textContent = 'Žádný soubor nevybrán';
+  document.getElementById('csv-filename').textContent = cs?'Žádný soubor nevybrán':'No file selected';
   // Reset typu na placeholder
   const typeEl = document.getElementById('csv-type');
   typeEl.value = '';
@@ -5182,13 +5506,10 @@ function openCsvImportModal(){
   openModal('csv-modal');
 }
 
-// Resolves typed car label → car ID; returns null when no exact match
+// Resolves selected car → car ID; returns null when nothing selected
 function _getCsvCarId(){
-  const q=(document.getElementById('csv-car-search').value||'').trim().toLowerCase();
-  return state.cars.find(c=>{
-    const label=`${c.make||''} ${c.model||''}${c.plate?' ('+c.plate+')':''}`.trim().toLowerCase();
-    return label===q;
-  })?.id||null;
+  const val=document.getElementById('csv-car-select').value;
+  return val||null;
 }
 
 function csvTypeChanged(){
@@ -5222,9 +5543,9 @@ function handleCsvFile(event){
   reader.readAsText(file, 'UTF-8');
 }
 
-// ── Parsovací utility ────────────────────────────────────────
+// ── Parsing utilities ─────────────────────────────────────────
 
-// Odstraní mezery (včetně \xa0) a "Kč", převede českou čárku na tečku → číslo
+// Strip whitespace (including \xa0) and "Kč", convert the Czech comma to a dot → number
 function parseCzNum(s){
   if(!s) return 0;
   const clean = s.replace(/\xa0/g,'').replace(/\s/g,'').replace('Kč','').replace(',','.').trim();
@@ -5232,7 +5553,7 @@ function parseCzNum(s){
   return isNaN(n) ? 0 : n;
 }
 
-// Odstraní \xa0 z tachometru a převede na int
+// Strip \xa0 from the odometer and convert to int
 function parseOdo(s){
   if(!s) return null;
   const clean = s.replace(/\xa0/g,'').replace(/\s/g,'').replace(',','.');
@@ -5248,7 +5569,7 @@ function csvDateToISO(s){
   return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
 }
 
-// Mapování textového typu paliva na interní id
+// Map textual fuel type to internal id
 function csvFuelTypeToId(s){
   const v = (s||'').trim().toLowerCase();
   if(v.includes('diesel premium')) return 'dp';
@@ -5262,7 +5583,7 @@ function csvFuelTypeToId(s){
   return 'p95'; // fallback
 }
 
-// Jednoduché CSV parsování (zvládne quoted fields s čárkou uvnitř)
+// Simple CSV parsing (handles quoted fields with commas inside)
 function parseCSV(text){
   const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
   const result = [];
@@ -5281,7 +5602,7 @@ function parseCSV(text){
   return result;
 }
 
-// ── Parsování a náhled ───────────────────────────────────────
+// ── Parsing and preview ───────────────────────────────────────
 
 function parseCsvPreview(text){
   const type = document.getElementById('csv-type').value;
@@ -5304,7 +5625,7 @@ function parseCsvPreview(text){
 }
 
 function parseCsvRecords(headers, dataRows, out, errors){
-  // Flexibilní mapování sloupců podle názvu hlavičky
+  // Flexible column mapping by header name
   const hi = name => headers.findIndex(h=>h.toLowerCase().includes(name.toLowerCase()));
   const iDatum    = hi('datum');
   const iTacho    = hi('tachom');
@@ -5319,7 +5640,7 @@ function parseCsvRecords(headers, dataRows, out, errors){
     const popis   = (iSouc>=0 ? row[iPopis] : row[iPopis]||'').trim();
     if(!popis){ errors.push(`Řádek ${i+2}: chybí popis — přeskočen`); return; }
 
-    // Qty a cena: zkusíme jednotkovou cenu, fallback na celkovou/qty
+    // Qty and price: try the unit price, fallback to total/qty
     const qty    = parseCzNum(row[iSouc]);
     const jedCena= parseCzNum(row[iJedCena]);
     const celCena= parseCzNum(row[iCelCena]);
@@ -5374,7 +5695,7 @@ function parseCsvFuel(headers, dataRows, out, errors){
   });
 }
 
-// ── Render náhledu ───────────────────────────────────────────
+// ── Preview rendering ──────────────────────────────────────────
 
 function renderCsvPreview(type, rows, errors){
   document.getElementById('csv-step-1').style.display = 'none';
@@ -5437,7 +5758,7 @@ function renderCsvPreview(type, rows, errors){
   if(okCount === 0) showToast('Žádné platné řádky k importu','error');
 }
 
-// ── Potvrzení importu ────────────────────────────────────────
+// ── Import confirmation ────────────────────────────────────────
 
 function confirmCsvImport(){
   const type  = document.getElementById('csv-type').value;
@@ -5447,7 +5768,7 @@ function confirmCsvImport(){
   if(!validRows.length){ showToast('Žádné platné řádky','error'); return; }
 
   if(type === 'records'){
-    // Smazat stávající servisní záznamy pro toto vozidlo před importem
+    // Remove existing service records for this vehicle before import
     const deletedCount = state.records.filter(r=>r.carId===carId).length;
     state.records = state.records.filter(r=>r.carId!==carId);
     validRows.forEach(r=>{
@@ -5462,7 +5783,7 @@ function confirmCsvImport(){
     });
     showToast(`Importováno ${validRows.length} záznamů${deletedCount?` (smazáno ${deletedCount} stávajících)`:''}`, 'success');
   } else {
-    // Smazat stávající tankování pro toto vozidlo před importem
+    // Remove existing fuel entries for this vehicle before import
     const deletedCount = state.fuels.filter(f=>f.carId===carId).length;
     state.fuels = state.fuels.filter(f=>f.carId!==carId);
     validRows.forEach(r=>{
@@ -5653,12 +5974,12 @@ function triggerPwaInstall() {
 }
 
 // ─── EVENT DELEGATION ────────────────────────────────────────
-// Nahrazuje všechny inline onclick/onchange/oninput/onkeydown atributy.
-// Každý element používá data-action / data-onchange / data-oninput / data-onkeydown
-// plus případné data-id, data-page, data-col, data-dir, data-lang, data-theme,
+// Replaces every inline onclick/onchange/oninput/onkeydown attribute.
+// Each element uses data-action / data-onchange / data-oninput / data-onkeydown
+// plus optional data-id, data-page, data-col, data-dir, data-lang, data-theme,
 // data-field, data-set, data-stop-propagation atributy.
 
-// ── Wrapper funkce pro dříve inline JS ───────────────────────
+// ── Wrapper functions for previously inline JS ───────────────────────
 function confirmDeleteAll() {
   const cs = state.lang === 'cs';
   if (!confirm(cs ? 'Opravdu smazat veškerá data? Tuto akci nelze vzít zpět.' : 'Delete all data? This cannot be undone.')) return;
@@ -5739,7 +6060,7 @@ function setNotificationsEnabled(checked){
     renderPage();
     return;
   }
-  // permission === 'default' → vyžádat
+  // permission === 'default' → request it
   Notification.requestPermission().then(function(p){
     if(p === 'granted'){
       state.settings.notificationsEnabled = true;
@@ -5765,8 +6086,8 @@ function testNotification(){
   } catch(_){}
 }
 
-// Vypočte (sc, body) pro reminder. Vrací null pokud `ok` (nic nenotifikujeme).
-// Logika musí zůstat v souladu s renderReminderCard (tam je primární zdroj).
+// Computes (sc, body) for a reminder. Returns null when `ok` (nothing to notify).
+// The logic must stay in sync with renderReminderCard (that is the primary source).
 function _reminderNotifyPayload(rem){
   const cs = state.lang === 'cs';
   let sc = 'ok';
@@ -5810,15 +6131,15 @@ function checkAndNotifyReminders(){
   if(!Array.isArray(state.reminders) || !state.reminders.length) return;
   const cs = state.lang === 'cs';
   const now = Date.now();
-  const DAY = 23 * 3600 * 1000; // anti-spam: max 1× za 23 h na ten samý reminder
+  const DAY = 23 * 3600 * 1000; // anti-spam: max once per 23 h for the same reminder
   let dirty = false;
   for(const rem of state.reminders){
     if(rem.notify === false) continue;
-    // Skip auta v depozitu/renovaci (auto-připomínky se generují jinde, ale i pro
-    // manuální má smysl: pokud je auto pozastavené, neotravujeme)
+    // Skip cars in storage/restoration (auto-reminders are generated elsewhere,
+    // but for manual reminders too: a paused car should not be nagged)
     const car = rem.carId ? getCar(rem.carId) : null;
     if(car && isCarSuspended(car)) continue;
-    // Anti-spam — pokud jsme nedávno notifikovali tu samou připomínku, počkáme
+    // Anti-spam — if we recently notified this reminder, hold off
     if(rem.lastNotifiedAt){
       const last = new Date(rem.lastNotifiedAt).getTime();
       if(!isNaN(last) && (now - last) < DAY) continue;
@@ -5844,7 +6165,7 @@ function checkAndNotifyReminders(){
       };
       rem.lastNotifiedAt = new Date().toISOString();
       dirty = true;
-    } catch(_){ /* notifikace mohla selhat (např. quota) — ticho dál */ }
+    } catch(_){ /* notification may fail (e.g. quota) — stay silent */ }
   }
   if(dirty) saveData();
 }
@@ -5865,7 +6186,7 @@ document.addEventListener('click', function _clickDispatch(e) {
     // Navigation
     case 'showPage':            showPage(d.page); break;
     // Modals — open
-    case 'openCarModal':        openCarModal(d.id); break;
+    case 'openCarEdit':         openCarEdit(d.id); break;
     case 'openFuelModal':       openFuelModal(d.id); break;
     case 'openRecordModal':     openRecordModal(); break;
     case 'openReminderModal':   openReminderModal(); break;
@@ -5893,6 +6214,10 @@ document.addEventListener('click', function _clickDispatch(e) {
     case 'deleteJob':           deleteJob(d.id); break;
     case 'confirmDeleteAll':         confirmDeleteAll(); break;
     case 'confirmDeleteOperational': confirmDeleteOperational(); break;
+    // File Sync
+    case 'syncPickFolder':      _sync.pickFolder().then(ok=>{ if(ok) renderPage(); }); break;
+    case 'syncDisconnect':      _sync.disconnect().then(()=> renderPage()); break;
+    case 'syncWriteNow':        _sync.writeFile().then(()=> showToast(state.lang==='cs'?'Záloha uložena':'Backup saved','success')); break;
     // Jobs (Service)
     case 'openJobModal':        openJobModal(d.id); break;
     case 'saveJob':             saveJob(); break;
@@ -5921,12 +6246,9 @@ document.addEventListener('click', function _clickDispatch(e) {
     case 'selectRemindersCar':  selectRemindersCar(d.id); break;
     case 'selectDiaryCar':      selectDiaryCar(d.id); break;
     case 'setAnalyticsTab':     setAnalyticsTab(d.tab); break;
-    case 'toggleDiaryType':     toggleDiaryType(d.tk); break;
     case 'toggleDiaryCat':      toggleDiaryCat(d.cat); break;
     case 'clearDiaryCats':      clearDiaryCats(); break;
-    case 'cmpTableSort':         cmpTableSort(d.key); break;
-    case 'cmpTableSort':         cmpTableSort(d.key); break;
-    case 'cmpTableSort':         cmpTableSort(d.key); break;
+    case 'cmpTableSort':        cmpTableSort(d.key); break;
     case 'switchCar':           switchCar(d.id); break;
     // UI toggles
     case 'toggleSidebar':       toggleSidebar(); break;
@@ -5965,11 +6287,10 @@ document.addEventListener('change', function _changeDispatch(e) {
     case 'toggleTyreMode':          toggleTyreMode(); break;
     case 'toggleTyreSame':          toggleTyreSame(el.dataset.set); break;
     case 'setFilterCat':            setFilterCat(el.value); break;
-    case 'setDiaryCat':             setDiaryCat(el.value); break;
     case 'setTireReminders':        setTireReminders(el.checked); break;
     case 'setNotificationsEnabled': setNotificationsEnabled(el.checked); break;
     case 'saveCarEditDrivetrain':   saveCarEditDrivetrain(); break;
-    case 'onCarStatusChange':       onCarStatusChange(); break;
+    case 'toggleSaleFields':        toggleSaleFields(); break;
     case 'toggleJobModalTask':      toggleJobModalTask(Number(el.dataset.idx), el.checked); break;
   }
 });

@@ -23,32 +23,32 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <!--
-  Content-Security-Policy: pragmatická politika pro single-file PWA.
-  Aplikace nemá inline ani vzdálené skripty (vše je v mycars.js), takže
-  script-src je restriktivní:
-   - connect-src 'self' brání exfiltraci dat z localStorage na cizí endpoint přes fetch/XHR,
-   - script-src bez 'unsafe-eval' a bez 'unsafe-inline' blokuje eval, remote i inline skripty,
-   - object-src/base-uri 'none' blokují <object>/<embed>/<base> injekce,
-   - require-trusted-types-for 'script' vynutí TrustedHTML pro innerHTML a další DOM
-     sinks; trusted-types mycars-html povoluje jedinou pojmenovanou policy, kterou
-     vytváří mycars.js. Externí kód (rozšíření, future supply-chain) tak nemůže
-     zapsat libovolné HTML do DOMu bez průchodu naší policy.
+  Content-Security-Policy: a pragmatic policy for a single-file PWA.
+  The app has no inline or remote scripts (everything lives in mycars.js), so
+  script-src is restrictive:
+   - connect-src 'self' prevents localStorage exfiltration to a foreign endpoint via fetch/XHR,
+   - script-src without 'unsafe-eval' and without 'unsafe-inline' blocks eval, remote and inline scripts,
+   - object-src/base-uri 'none' block <object>/<embed>/<base> injection,
+   - require-trusted-types-for 'script' enforces TrustedHTML for innerHTML and other DOM
+     sinks; trusted-types mycars-html allows the single named policy created by
+     mycars.js. External code (extensions, future supply-chain) therefore cannot
+     write arbitrary HTML to the DOM without going through our policy.
 -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; worker-src 'self'; require-trusted-types-for 'script'; trusted-types mycars-html;">
-<!-- Permissions-Policy: PWA nepotřebuje přístup ke kameře/mikrofonu/geolokaci atd. -->
+<!-- Permissions-Policy: this PWA needs no access to camera/microphone/geolocation/etc. -->
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), midi=(), interest-cohort=()">
 <title>MyCars — Evidence vozidel</title>
 <link rel="manifest" href="manifest.json">
-<!-- theme-color: barva systémového status baru (iOS Safari, Chrome, Samsung Internet).
-     Varianty pro dark/light schéma — status bar navazuje na topbar (--surface). Bez media
-     query fallback (default = dark) pro browsery, které media atribut ignorují. -->
+<!-- theme-color: color of the system status bar (iOS Safari, Chrome, Samsung Internet).
+     Variants for dark/light schemes — status bar matches the topbar (--surface). Without
+     a media query, the default is dark for browsers that ignore the media attribute. -->
 <meta name="theme-color" content="#0f1018">
 <meta name="theme-color" content="#0f1018" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<!-- black-translucent: iOS status bar průhledný, obsah teče pod něj (edge-to-edge).
-     Kombinuje se s env(safe-area-inset-top) v CSS níže. -->
+<!-- black-translucent: iOS status bar is transparent, content flows underneath (edge-to-edge).
+     Combined with env(safe-area-inset-top) in the CSS below. -->
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MyCars">
 <link rel="apple-touch-icon" id="ati" sizes="180x180">
@@ -58,22 +58,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" crossorigin="anonymous" referrerpolicy="no-referrer">
 <style>
   :root {
-    /* color-scheme: říká browseru, kterou variantu nativního UI (time/date picker,
-       scrollbar, form controls) má použít. Bez něj se v dark tématu zobrazí
-       světlý nativní time picker, který s appkou neladí. */
+    /* color-scheme: tells the browser which variant of native UI (time/date picker,
+       scrollbar, form controls) to use. Without it, the dark theme would show a
+       light native time picker that clashes with the app. */
     color-scheme: dark;
 
     /* ── Safe-area insets (build 029) ───────────────────────────────────
-       Kaskáda fallbacků pro iOS notch / Dynamic Island / home indicator
-       i pro Android/Samsung s punch-hole nebo gesture nav barem.
-       Vrstva A: constant()   — iOS 11.0–11.1 legacy syntax (bude přepsáno níže).
-       Vrstva B: env(..., 0px) — moderní syntax + druhý argument = fallback
-                                  pro browsery, kde proměnná není definovaná
-                                  (desktop Chrome, starý Android, Firefox <65).
-       Vrstva C: max(baseline, var(--s*)) na jednotlivých selektorech níže
-                                  zaručí minimální padding i když env vrátí 0.
-       Vrstva D: JS pojistka v mycars.js pro iOS PWA edge-case, kde env=0
-                                  přestože reálně jsme pod status barem. */
+       Fallback cascade for iOS notch / Dynamic Island / home indicator
+       and Android/Samsung punch-hole or gesture nav bars.
+       Layer A: constant()   — iOS 11.0–11.1 legacy syntax (overwritten below).
+       Layer B: env(..., 0px) — modern syntax + second arg = fallback for
+                                  browsers where the variable is not defined
+                                  (desktop Chrome, old Android, Firefox <65).
+       Layer C: max(baseline, var(--s*)) on individual selectors below guarantees
+                                  a minimum padding even when env returns 0.
+       Layer D: JS fallback in mycars.js for the iOS PWA edge case where env=0
+                                  even though we are below the status bar. */
     --sat: constant(safe-area-inset-top);
     --sab: constant(safe-area-inset-bottom);
     --sal: constant(safe-area-inset-left);
@@ -281,27 +281,28 @@
   body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; min-height: 100dvh; overflow-x: hidden; -webkit-font-smoothing: antialiased; line-height: 1.5 }
 
   /* ── Layout — mobile first ──────────────────────── */
-  /* height: 100vh (fallback) + 100dvh (moderní browsery — nemění se, když se
-     v Safari/Chrome objeví/skryje URL bar). Android Samsung Internet od v14 dvh podporuje. */
+  /* height: 100vh (fallback) + 100dvh (modern browsers — does not shift when
+     the URL bar shows/hides in Safari/Chrome). Android Samsung Internet supports dvh since v14. */
   #app { display: flex; height: 100vh; height: 100dvh; overflow: hidden; position: relative }
   #sidebar { width: var(--sidebar-w); min-width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; transition: transform .25s cubic-bezier(.4,0,.2,1); z-index: 100 }
   #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0 }
-  /* #topbar: výška roste o safe-area-inset-top (Dynamic Island / status bar / punch-hole),
-     obsah je vertikálně vycentrovaný v 60px zóně POD safe-area paddingem. Horizontální
-     padding používá max(baseline, var(--sa*)) — na zařízení bez notche baseline vyhraje. */
+  /* #topbar: height grows by safe-area-inset-top (Dynamic Island / status bar / punch-hole);
+     content is vertically centered inside the 60px zone BELOW the safe-area padding. Horizontal
+     padding uses max(baseline, var(--sa*)) — on devices without a notch the baseline wins. */
   #topbar { height: calc(60px + var(--sat)); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: var(--sat) max(22px, var(--sar)) 0 max(22px, var(--sal)); gap: 10px; flex-shrink: 0; background: var(--surface); position: relative; justify-content: space-between }
-  /* #content-scroll: padding-bottom pro home indicator / Android gesture bar tak,
-     aby poslední řádek šel odscrollovat NAD indikátor a nezůstal pod ním. */
+  /* #content-scroll: padding-bottom for the home indicator / Android gesture bar so
+     the last row can be scrolled ABOVE the indicator and does not stay hidden below it. */
   #content-scroll { flex: 1; overflow-y: auto; padding-bottom: var(--sab) }
   .content-inner { max-width: 1400px; margin: 0 auto; padding: 26px max(26px, var(--sar)) 26px max(26px, var(--sal)) }
   #sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 99; backdrop-filter: blur(2px) }
   #sidebar-overlay.active { display: block }
 
-  /* Mobile: sidebar jako drawer */
+  /* Mobile: sidebar as a drawer */
   @media (max-width: 768px) {
-    /* Drawer: safe-area padding aby menu-header nešel pod status bar a spodek drawer
-       nekolidoval s home indicator / Android gesture bar. padding-left kryje landscape
-       Dynamic Island vlevo. height: 100dvh fallback pro Chrome/Safari s URL barem. */
+    /* Drawer: safe-area padding so the menu header does not slide under the status bar
+       and the bottom of the drawer does not collide with the home indicator / Android
+       gesture bar. padding-left covers landscape Dynamic Island on the left.
+       height: 100dvh fallback for Chrome/Safari with the URL bar. */
     #sidebar { position: fixed; top: 0; left: 0; height: 100vh; height: 100dvh; width: min(85vw, 300px); min-width: 0; transform: translateX(-100%); box-shadow: 4px 0 24px rgba(0,0,0,.5); padding-top: var(--sat); padding-bottom: var(--sab); padding-left: var(--sal) }
     #sidebar.open { transform: translateX(0) }
     .content-inner { padding: 20px max(16px, var(--sar)) 20px max(16px, var(--sal)) }
@@ -361,11 +362,11 @@
     .stat-value { font-size: 1.25rem }
     .stat-label { font-size: .66rem }
     .stat-sub { font-size: .66rem }
-    /* Topbar na velmi úzkých: zmenšit gap, aby se 4 ikony vešly.
-       Safe-area max() zaručí, že v landscape s Dynamic Island tlačítka nezmizí pod něj. */
+    /* Topbar on very narrow screens: reduce gap so all 4 icons fit.
+       safe-area max() ensures the buttons stay accessible under a landscape Dynamic Island. */
     #topbar { padding: var(--sat) max(10px, var(--sar)) 0 max(10px, var(--sal)); gap: 6px }
     .content-inner { padding: 16px max(12px, var(--sar)) 16px max(12px, var(--sal)) }
-    /* Car switcher menu přes celou šířku obrazovky pod topbarem. */
+    /* Car switcher menu spans the full viewport width beneath the topbar. */
     .csw-menu { left: 8px !important; right: 8px !important; min-width: 0 !important; max-width: none !important; width: auto !important }
   }
   @media (max-width: 360px) {
@@ -492,7 +493,7 @@
   /* ── Tables ─────────────────────────────────── */
   .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden }
   .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; position: relative }
-  /* Fade gradient naznačuje horizontální scroll */
+  /* Fade gradient hints at horizontal scroll */
   .table-scroll::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 32px; background: linear-gradient(to left, var(--surface), transparent); pointer-events: none; opacity: 0; transition: opacity .2s }
   .table-scroll.scrollable::after { opacity: 1 }
   .table-header { display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: transparent; flex-wrap: wrap }
@@ -558,39 +559,34 @@
   .row-btn .edit-icon { display: inline-block; transform: rotate(90deg); line-height: 1 }
 
   /* ── Modals ─────────────────────────────────── */
-  /* Overlay padding s max(baseline, safe-area) — na iPhone landscape s Dynamic Island
-     vlevo se modal odsune tak, aby na něj nešáhla; na desktopu (env=0) zůstane 20px. */
+  /* Overlay padding uses max(baseline, safe-area) — on iPhone landscape with a
+     left-side Dynamic Island the modal shifts to keep clear of it; on desktop
+     (env=0) it stays at 20px. */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: max(20px, var(--sat)) max(20px, var(--sar)) max(20px, var(--sab)) max(20px, var(--sal)); backdrop-filter: blur(4px); opacity: 0; pointer-events: none; transition: opacity .2s }
   .modal-overlay.open { opacity: 1; pointer-events: all }
   .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 12px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; transform: translateY(12px); transition: transform .2s; box-shadow: 0 24px 64px rgba(0,0,0,.5) }
   .modal.wide { max-width: 700px }
   .modal-overlay.open .modal { transform: translateY(0) }
-  /* Mobile: modal jako bottom sheet — snazší ovládání palcem.
-     padding-top: var(--sat) aby modal-head nešel pod status bar (bottom sheet u velmi
-     vysokých modalů dosáhne k horní hraně). padding-bottom: 0 (bottom sheet visí u
-     spodní hrany), safe-area-bottom řešíme v .modal-foot níže. */
+  /* Mobile: modal as a bottom sheet — easier thumb reach.
+     padding-top: var(--sat) so modal-head does not slide under the status bar (a very
+     tall modal reaches the top edge). padding-bottom: 0 (bottom sheet clings to the
+     bottom edge); safe-area-bottom is handled in .modal-foot below. */
   @media (max-width: 600px) {
     .modal-overlay { align-items: flex-end; padding: var(--sat) 0 0 0 }
     .modal { border-radius: 20px 20px 0 0; max-height: 92vh; max-height: 92dvh; max-width: 100%; transform: translateY(100%) }
     .modal.wide { max-width: 100% }
     .modal-overlay.open .modal { transform: translateY(0) }
-    /* 1 sloupec ve formuláři — pole jsou dostatečně široká pro palec */
+    /* 1-column form — fields are wide enough for thumb entry */
     .modal .form-grid { grid-template-columns: 1fr }
     .modal .form-grid .full { grid-column: 1 }
   }
   .modal-head { padding: 20px 22px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px }
   .modal-head h2 { font-size: 1.05rem; font-weight: 600; flex: 1; letter-spacing: -.02em }
-  .modal-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 22px }
-  .modal-tab { padding: 10px 16px; border: none; background: none; color: var(--text2); font-family: var(--font); font-size: .84rem; font-weight: 400; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s }
-  .modal-tab:hover { color: var(--text) }
-  .modal-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500 }
-  .modal-tab-content { display: none }
-  .modal-tab-content.active { display: block }
   .modal-close { width: 40px; height: 40px; border: 1px solid var(--border2); background: none; color: var(--text2); border-radius: var(--radius-sm); cursor: pointer; font-size: .95rem; display: flex; align-items: center; justify-content: center; transition: all .12s; flex-shrink: 0 }
   .modal-close:hover { border-color: var(--red); color: var(--red) }
   .modal-body { padding: 22px }
-  /* padding-bottom: max(16px, var(--sab)) aby akce (Uložit/Zrušit) v bottom sheet
-     modalu nešly pod iOS home indicator / Android gesture navigation bar. */
+  /* padding-bottom: max(16px, var(--sab)) so actions (Save/Cancel) in the bottom
+     sheet modal do not slide under the iOS home indicator / Android gesture nav bar. */
   .modal-foot { padding: 16px 22px max(16px, var(--sab)); border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap }
 
   /* ── Forms ──────────────────────────────────── */
@@ -604,10 +600,10 @@
   .form-input.error { border-color: var(--red) }
   .form-error { font-size: .78rem; color: var(--red) }
   .form-textarea { resize: vertical; min-height: 68px }
-  /* Time-double — vlastní HH:MM dva number inputy ve stejném stylu jako
-     .date-triple. Vyhneme se nativnímu <input type="time">, který v 12h locale
-     OS interpretoval 16 jako 4 PM + skrýval AM/PM pole. Tady kontrolujeme vstup
-     sami, vždy 24h formát, žádný browser picker. */
+  /* Time-double — custom HH:MM built from two number inputs, styled like
+     .date-triple. Avoids native <input type="time">, which under 12h OS locale
+     interpreted 16 as 4 PM and hid the AM/PM field. Here we validate input
+     ourselves, always in 24h format, no browser picker. */
   .time-double { display: inline-flex; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); transition: border-color .15s; overflow: hidden; position: relative }
   .time-double:focus-within { border-color: var(--accent) }
   .time-double.error { border-color: var(--red) }
@@ -738,7 +734,7 @@
   .job-card.planned     { border-left: 3px solid var(--amber) }
   .job-card.done        { border-left: 3px solid var(--green); opacity: .85 }
   .job-card.cancelled   { border-left: 3px solid var(--text3); opacity: .65 }
-  /* Zakázka pro vyřazené vozidlo — viditelné ztlumení */
+  /* Job for a decommissioned vehicle — visibly dimmed */
   .job-card.archived    { opacity: .65 }
   .job-card.archived:hover { opacity: .9 }
   .job-card-head { display: flex; align-items: flex-start; gap: 10px }
@@ -760,7 +756,7 @@
   .job-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--border) }
   .job-actions .btn { font-size: .76rem; padding: 6px 11px; min-height: 32px }
   .job-section-collapse { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; padding: 6px 0 }
-  /* Sekce s šipkou potřebují víc vzduchu mezi border-left a chevronem, ať šipka „nelepí" na modrý proužek (override section-title padding-left: 10px). */
+  /* Sections with a chevron need more breathing room between the border-left and the chevron so the arrow does not "stick" to the blue strip (overrides section-title padding-left: 10px). */
   .section-title.job-section-collapse { padding-left: 18px }
   .job-section-collapse .chev { transition: transform .2s; color: var(--text3); font-size: .7rem }
   .job-section-collapse.collapsed .chev { transform: rotate(-90deg) }
@@ -783,7 +779,7 @@
     .diary-toolbar { gap: 6px; margin-bottom: 12px; flex-wrap: nowrap; align-items: center }
     .diary-search-wrap { flex: 0 1 45%; min-width: 0 }
     .diary-search { font-size: .82rem; padding: 8px 10px }
-    /* Chipy single-row s vodorovným scrollem — šetří vertikální prostor */
+    /* Chips in a single scrolling row — saves vertical space */
     .diary-chips {
       flex: 1 1 auto;
       flex-wrap: nowrap;
@@ -799,7 +795,7 @@
     }
     .diary-chips::-webkit-scrollbar { display: none }
     .diary-chip { flex: 0 0 auto; font-size: .72rem; padding: 5px 9px; min-height: 28px }
-    /* Counter schovaný — počet je vidět v měsíčních headrech */
+    /* Counter hidden — the count is visible in each month header */
     .diary-count { display: none }
   }
 
@@ -864,9 +860,9 @@
   .car-header-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0 }
   .car-header-info { flex: 1; min-width: 0 }
   .car-header-name { font-size: 1.15rem; font-weight: 600; letter-spacing: -.02em }
-  /* FIX (mobile audit): odstraněn `word-break: break-all`, který lámal i uvnitř
-     běžných slov ("Die\nsel"). `overflow-wrap: anywhere` pořád zalomí
-     extrémně dlouhé řetězce (VIN, URL), ale respektuje slovní hranice. */
+  /* FIX (mobile audit): removed `word-break: break-all`, which also broke inside
+     regular words ("Die\nsel"). `overflow-wrap: anywhere` still wraps
+     extremely long strings (VIN, URL) but respects word boundaries. */
   .car-header-meta { font-size: .78rem; color: var(--text2); margin-top: 4px; font-family: var(--font-mono); white-space: normal; overflow-wrap: anywhere }
 
   /* ── Doc cards ──────────────────────────────── */
@@ -955,7 +951,7 @@
   .car-color-dot-glow {
     box-shadow: 0 0 0 2px rgba(0,0,0,.4), 0 0 7px 2px var(--dot-color, #888);
   }
-  /* Tmavé/nevýrazné barvy: světlý ring místo glow */
+  /* Dark / low-contrast colors: light ring instead of glow */
   .car-color-dot-ring {
     box-shadow: 0 0 0 1.5px rgba(255,255,255,.45), 0 0 0 3px rgba(255,255,255,.12);
   }
@@ -1022,11 +1018,11 @@
   .edit-section-chevron.open { transform: rotate(90deg); color: var(--accent) }
   .edit-section-body { border-top: 1px solid var(--border); padding: 22px 18px; display: none }
   .edit-section-body.open { display: block }
-  /* Sticky save bar — žije UVNITŘ .content-inner jako position:sticky, takže
-     sdílí přesně stejnou šířku (vč. odsazení scrollbaru) jako .edit-section karty.
-     Tím jsou tlačítka zarovnaná na pixel s levým/pravým okrajem obsahu.
-     Negativní bottom margin „sní" spodní padding .content-inner (26px desktop /
-     20px mobile), aby bar při scrollu úplně dolů přilnul přesně k dolní hraně. */
+  /* Sticky save bar — lives INSIDE .content-inner as position:sticky, so it shares
+     the exact same width (including scrollbar allowance) as the .edit-section cards.
+     That aligns the buttons pixel-perfectly with the left/right content edges.
+     A negative bottom margin "eats" the bottom padding of .content-inner (26px desktop /
+     20px mobile) so when scrolled all the way down the bar hugs the bottom edge. */
   .edit-sticky-bar { position: sticky; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; margin: 16px 0 -26px; padding: 10px 16px; z-index: 90; box-shadow: 0 -4px 24px rgba(0,0,0,.28) }
   .edit-sticky-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100% }
   .edit-sticky-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap }
@@ -1039,7 +1035,7 @@
   /* Tiny extra room under the form, before the sticky bar starts */
   .edit-accordion-outer { padding-bottom: 12px }
 
-  /* Topbar: na mid breakpointu (768–900px) schovat texty tlačítek, zobrazit jen ikony */
+  /* Topbar: at the mid breakpoint (768–900px) hide button labels, show icons only */
   @media (max-width: 900px) and (min-width: 769px) {
     #add-fuel-btn .btn-label,
     #add-record-btn .btn-label { display: none }
@@ -1049,7 +1045,7 @@
     .topbar-search-wrap { max-width: 200px }
   }
 
-  /* ── Reminders grid — kompaktnější na malém telefonu ──── */
+  /* ── Reminders grid — more compact on small phones ──── */
   @media (max-width: 480px) {
     .reminders-grid { grid-template-columns: 1fr }
     .reminder-card { padding: 14px 16px }
@@ -1093,12 +1089,12 @@
   }
 
   /* ── Car edit page: full-width single-column layout on wide screens ──── */
-  /* Na úzkých obrazovkách zůstává accordion (sbalitelné sekce, max-width 720px),
-     na širokých jsou všechny sekce vždy otevřené pod sebou v plné šířce. */
+  /* On narrow screens keep the accordion (collapsible sections, max-width 720px);
+     on wide screens all sections are always open below one another at full width. */
   .edit-accordion-outer { max-width: 720px; margin: 0 auto }
   @media (min-width: 1200px) {
     .edit-accordion-outer { max-width: none }
-    .edit-section-body { display: block !important } /* všechny sekce vždy viditelné */
+    .edit-section-body { display: block !important } /* all sections always visible */
     .edit-section-head { cursor: default }
     .edit-section-head:hover { background: transparent }
     .edit-section-chevron { display: none }
@@ -1128,6 +1124,7 @@
     </div>
 
     <div style="border-top:1px solid var(--border);padding:8px 12px;margin-top:auto;">
+      <button class="nav-btn" data-action="showPage" data-page="data-management" id="nav-data-management" title="Správa dat"><span data-cs="Správa dat" data-en="Data management">Správa dat</span></button>
       <button class="nav-btn" data-action="showPage" data-page="settings" id="nav-settings" title="Nastavení"><span data-cs="Nastavení" data-en="Settings">Nastavení</span></button>
     </div>
 
@@ -1346,8 +1343,7 @@
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label required">Vozidlo</label>
-            <input type="text" class="form-input" id="csv-car-search" placeholder="Zadejte vozidlo" autocomplete="off" list="csv-car-list">
-            <datalist id="csv-car-list"></datalist>
+            <select class="form-select" id="csv-car-select"></select>
           </div>
           <div class="form-group">
             <label class="form-label required">Typ importu</label>

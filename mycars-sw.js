@@ -1,6 +1,6 @@
 /**
  * MyCars — Service Worker
- * Version: 3.15.0 · Build: 20260616-007
+ * Version: 3.17.2 · Build: 20260702-004
  *
  * Strategy: Cache-first for the app shell (HTML, SW itself).
  * On activation, old caches are purged so updates take effect
@@ -12,7 +12,7 @@
  * after the first visit.
  */
 
-const CACHE_NAME = 'mycars-v36';
+const CACHE_NAME = 'mycars-v40';
 const FONTS_CACHE = 'mycars-fonts-v1';
 // Maximum age of a cached Google Fonts response before it must be re-validated
 // from the network (mitigates serving a compromised cached asset indefinitely).
@@ -59,8 +59,8 @@ self.addEventListener('fetch', event => {
     event.respondWith((async () => {
       try {
         const response = await fetch(event.request);
-        // Cachujeme jen ne-opaque, úspěšné odpovědi — opaque cross-origin
-        // odpovědi nelze ověřit (status=0) a měly by se neukládat.
+        // Cache only non-opaque successful responses — opaque cross-origin
+        // responses cannot be validated (status=0) and should not be stored.
         if (response && response.ok && response.type !== 'opaque') {
           const cache = await caches.open(FONTS_CACHE);
           // Tag with timestamp via custom header on a cloned response

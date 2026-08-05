@@ -1,6 +1,6 @@
 # MyCars — Vehicle Maintenance Tracker
 
-**Version:** 3.17.0 · **Build:** 20260630-006
+**Version:** 3.18.0 · **Build:** 20260805-001
 **Author:** kraah  
 **License:** GNU GPL v3 (with §7 attribution requirement — see `LICENSE`)  
 **Live:** https://kraah4.github.io/MyCars/MyCars.html  
@@ -51,7 +51,8 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 | **Analytics** | Expense charts, monthly trends, and categorized stats (Costs, Service, Fuel). **Comparison tab** ranks all vehicles by avg. consumption, cost/km, avg. monthly cost, avg. service cost, total cost, and mileage; includes a full detail comparison table |
 | **Reminders** | Km-based and date-based reminders with status indicators; suspended vehicles (storage / in restoration) are folded into their own collapsible section, decommissioned ones are hidden |
 | **Service** | Planned-service work orders (jobs) — see the *Service & planned jobs* section below |
-| **Settings** | Appearance (theme), language, tyre reminders, **reminder notifications** (opt-in Web Notifications), JSON backup, CSV import, data management, app info |
+| **Data management** | File sync setup, JSON export/import, CSV import, and data deletion (operational or full reset). Dangerous operations are visually separated in a "Danger zone" section |
+| **Settings** | Appearance (theme), language, tyre reminders, **reminder notifications** (opt-in Web Notifications), PWA installation, usage statistics, app info |
 
 ---
 
@@ -320,10 +321,38 @@ Vehicle switcher (top-bar dropdown) and the *Active* section of the Fleet page l
 
 ## Data Backup
 
+### File Sync (automatic cross-device backup)
+
+MyCars supports automatic file-based synchronization via the **File System Access API** (Chrome/Edge only). When enabled, the app writes a `mycars_sync.json` file to a user-chosen folder on every data change. If that folder is synchronized via Nextcloud, Dropbox, Google Drive, or iCloud Drive, data becomes available on all connected computers.
+
+**Setup:**
+
+1. Open **Data management** → Synchronization → **Choose folder…**
+2. Pick a folder inside your cloud-synced directory (e.g. `Nextcloud/MyCars/`)
+3. Grant read/write permission when prompted (one-time)
+
+**Behaviour:**
+
+- Every data change (new record, edit, deletion) auto-saves `mycars_sync.json` to the chosen folder (throttled to max 1 write per 2 seconds)
+- On app startup and when returning to the tab, the app checks if the synced file is newer than local data
+- If a newer version is found, a confirmation dialog appears: *"A newer backup was found. Load it?"* — data is never overwritten silently
+- The directory handle is persisted in IndexedDB, so the connection survives browser restarts
+- If permission is revoked (e.g. browser restart on some systems), the app will request it again on next write
+
+**Limitations:**
+
+- File System Access API is available only in **Chrome and Edge** (desktop). Firefox, Safari, and all mobile browsers do not support it — use manual JSON export/import on those platforms
+- Not a real-time sync — changes propagate only when both machines are online and the cloud client has synced the file
+- No conflict resolution — if two machines edit data simultaneously before syncing, the newer timestamp wins (after user confirmation)
+
+**Disconnect:** Data management → Synchronization → **Disconnect** removes the folder association. The `mycars_sync.json` file remains in the folder but is no longer updated.
+
+---
+
 ### JSON export / import
 
-- **Export:** Settings → Export backup → downloads `mycars_YYYY-MM-DD-HHMMSS.json`. Exports the full state — vehicles, records, fuel entries, reminders, jobs **plus** `settings` (theme, tyre reminders) and `lang`. The file carries `app: "MyCars"`, `version`, and a numeric `schema` field for forward-compatibility detection.
-- **Import:** Settings → Import backup → replaces all existing data. The import summary toast shows counts of restored vehicles (incl. archive), records, fuel entries, reminders and jobs. If the backup's `schema` is newer than this build, the app shows a confirmation prompt warning that some fields may be lost — cancel to abort cleanly without touching existing data.
+- **Export:** Data management → Export backup → downloads `mycars_YYYY-MM-DD-HHMMSS.json`. Exports the full state — vehicles, records, fuel entries, reminders, jobs **plus** `settings` (theme, tyre reminders) and `lang`. The file carries `app: "MyCars"`, `version`, and a numeric `schema` field for forward-compatibility detection.
+- **Import:** Data management → Import backup → replaces all existing data. The import summary toast shows counts of restored vehicles (incl. archive), records, fuel entries, reminders and jobs. If the backup's `schema` is newer than this build, the app shows a confirmation prompt warning that some fields may be lost — cancel to abort cleanly without touching existing data.
 
 > ⚠️ Import is destructive — it overwrites everything. Always export a backup first.
 
@@ -344,7 +373,7 @@ Import historical data exported from spreadsheets (e.g. Google Sheets).
 
 ### Import modal
 
-- **Vehicle** — searchable filter input above the dropdown (type any part of make, model or plate)
+- **Vehicle** — dropdown `<select>` with vehicles grouped into **Active** and **Archive** optgroups for clear visual separation
 - **Import type** — must be explicitly selected (starts with a blank placeholder) to prevent accidental wrong-type imports
 
 ### Service records CSV
