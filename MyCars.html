@@ -1072,9 +1072,9 @@
   .wizard-step-info { flex: 1; font-size: .78rem; color: var(--text3) }
 
   /* ── Records master-detail layout (desktop) ────────────── */
-  .records-layout { display: grid; grid-template-columns: 1fr; gap: 0 }
+  .records-layout { display: block }
   .records-master { min-width: 0 }
-  .records-detail { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; position: sticky; top: 20px; align-self: start; max-height: calc(100vh - 120px); flex-direction: column }
+  .records-detail { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; max-height: calc(100vh - 120px); flex-direction: column; margin-top: 20px }
   .records-detail-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text3); padding: 48px 20px; text-align: center; min-height: 280px; gap: 8px }
   .records-detail-empty-icon { font-size: 1.8rem; opacity: .25; margin-bottom: 6px }
   .records-detail-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0 }
@@ -1083,9 +1083,18 @@
   .records-detail-foot { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; flex-shrink: 0; background: var(--surface) }
   .records-master tbody tr { cursor: pointer }
   .records-master tbody tr.record-selected { background: var(--accent-dim) !important }
+  .records-master table { min-width: 0 }
+  .records-master .col-qty,
+  .records-master .col-uprice { display: none }
+  @media (min-width: 769px) and (max-width: 999px) {
+    .records-master .col-odo { display: none }
+  }
   @media (min-width: 1200px) {
-    .records-layout { grid-template-columns: minmax(0,1fr) 400px; gap: 20px; align-items: start }
     .records-detail { display: flex }
+  }
+  @media (min-width: 1400px) {
+    .records-master .col-qty,
+    .records-master .col-uprice { display: table-cell }
   }
 
   /* ── Car edit page: full-width single-column layout on wide screens ──── */

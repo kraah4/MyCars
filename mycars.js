@@ -2336,11 +2336,11 @@ function renderRecords(){
     </div>
     <div class="table-scroll"><table><thead><tr>
       <th data-action="sortBy" data-col="date">${t('date')} ${sa('date')}</th>
-      <th data-action="sortBy" data-col="odo">${t('odo')} ${sa('odo')}</th>
+      <th class="col-odo" data-action="sortBy" data-col="odo">${t('odo')} ${sa('odo')}</th>
       <th data-action="sortBy" data-col="desc">${t('desc')} ${sa('desc')}</th>
       <th data-action="sortBy" data-col="cat">${t('cat')} ${sa('cat')}</th>
-      <th class="td-right" data-action="sortBy" data-col="qty">${t('qty')} ${sa('qty')}</th>
-      <th class="td-right" data-action="sortBy" data-col="price">${t('unit_price')} ${sa('price')}</th>
+      <th class="td-right col-qty" data-action="sortBy" data-col="qty">${t('qty')} ${sa('qty')}</th>
+      <th class="td-right col-uprice" data-action="sortBy" data-col="price">${t('unit_price')} ${sa('price')}</th>
       <th class="td-right" data-action="sortBy" data-col="total">${t('total_price')} ${sa('total')}</th>
       <th></th>
     </tr></thead><tbody>
@@ -2348,11 +2348,11 @@ function renderRecords(){
       const sid=safeId(r.id);
       return `<tr data-rid="${esc(r.id)}" data-action="selectRecord" data-id="${sid}" class="${state.selectedRecordId===r.id?'record-selected':''}">
       <td class="td-mono td-muted">${fmtDate(r.date)}</td>
-      <td class="td-mono td-muted">${fmtNum(r.odo)}</td>
+      <td class="td-mono td-muted col-odo">${fmtNum(r.odo)}</td>
       <td>${esc(r.desc)}${r.note?`<br><small style="color:var(--text3)">${esc(r.note)}</small>`:''}</td>
       <td><span class="cat-badge" style="background:${CAT_COLORS[r.cat]||'#555'}22;color:${CAT_COLORS[r.cat]||'#aaa'}">${esc(getCatDisplay(r.cat))}</span></td>
-      <td class="td-right td-mono">${fmtNum(r.qty,r.qty%1?2:0)}</td>
-      <td class="td-right td-mono">${fmtMoney(r.price)}</td>
+      <td class="td-right td-mono col-qty">${fmtNum(r.qty,r.qty%1?2:0)}</td>
+      <td class="td-right td-mono col-uprice">${fmtMoney(r.price)}</td>
       <td class="td-right td-mono">${fmtMoney((r.qty||1)*(r.price||0))}</td>
       <td><div class="row-actions">
         <button class="row-btn" data-action="selectRecord" data-id="${sid}" data-stop-propagation="1" title="${state.lang==='cs'?'Upravit záznam':'Edit record'}"><span class="edit-icon">✏</span></button>
@@ -4532,7 +4532,7 @@ function deleteReminder(id){state.reminders=state.reminders.filter(r=>r.id!==id)
 // ─── IMPORT / EXPORT ─────────────────────────────────────────
 // Backup schema version. Bump when the shape changes (adding/removing top-level fields).
 const BACKUP_SCHEMA_VERSION = 2;
-const APP_VERSION = '3.18.0';
+const APP_VERSION = '3.18.1';
 
 function exportData(){
   const now=new Date();
@@ -5010,8 +5010,8 @@ function renderSettings(){
         <div class="section-title">${cs?'O aplikaci':'About'}</div>
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.18.0</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260805-001</span></div>
+          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.18.1</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260805-002</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           ${(()=>{
