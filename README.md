@@ -1,6 +1,6 @@
 # MyCars — Vehicle Maintenance Tracker
 
-**Version:** 3.18.4 · **Build:** 20260824-006
+**Version:** 3.19.0 · **Build:** 20260824-008
 **Author:** kraah  
 **License:** GNU GPL v3 (with §7 attribution requirement — see `LICENSE`)  
 **Live:** https://kraah4.github.io/MyCars/MyCars.html  
@@ -75,7 +75,7 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 | Decommission date | no | Date the vehicle was retired (auto-filled to today when archived if missing) |
 | Colour | no | Visual identifier dot in the sidebar |
 | Tyres | no | Summer / winter / all-season sets, each with **front and rear axle** parameters: width, aspect ratio, rim diameter, load index, speed index, tyre pressure (low/high load). A “Front = rear” toggle hides the rear fields when both axles share the same specification. Each set also has an optional **manufacture date** field (free text, e.g. `2023` or DOT week/year code `2350`). |
-| Documents | no | STK, Emissions, Liability insurance, Comprehensive insurance — each with expiry date + warning threshold (days) |
+| Documents | no | STK, Emissions, Liability insurance, Comprehensive insurance, Roadside assistance, Motorway vignette — each with expiry date + warning threshold (days) |
 | Oil service | no | Interval (km), last done at (km), warning threshold (km remaining) |
 | Notes | no | Free text |
 
@@ -114,7 +114,7 @@ The application uses a fixed set of 6 categories to organise expenses.
 | Category | Typical items |
 | --- | --- |
 | **Vehicle purchase** | Acquisition cost — excluded from cost/km and monthly chart |
-| **Administration** | Insurance (liability/comprehensive), MOT/STK, registration transfer, fees, fines |
+| **Administration** | Insurance (liability/comprehensive), MOT/STK, motorway vignette, registration transfer, fees, fines |
 | **Fluids & consumables** | Engine oil, washer fluid, coolant, brake fluid, AdBlue |
 | **Service & repairs** | All mechanical repairs, filters, brakes, engine parts, timing belt, diagnostics, labour |
 | **Tyres & wheels** | Tyre purchase, fitting, balancing, rims, seasonal change, alignment |
@@ -527,6 +527,8 @@ The `settings` object inside the stored JSON:
       "emission": null, "emissionWarn": 30,
       "pov": null, "povWarn": 30,
       "insurance": "2026-05-01", "insuranceWarn": 30,
+      "assist": null, "assistWarn": 30,
+      "vignette": "2026-01-31", "vignetteWarn": 30,
       "oilInterval": 10000, "oilLastKm": 89450, "oilWarn": 1000,
       "acquired": "2024-04-12", "decommissioned": null,
       "salePrice": null, "saleAdUrl": null,

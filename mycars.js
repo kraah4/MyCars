@@ -924,6 +924,7 @@ function _vCar(c){
   c.povWarn             = _vInt(c.povWarn, 0, 3650);
   c.insuranceWarn       = _vInt(c.insuranceWarn, 0, 3650);
   c.assistWarn          = _vInt(c.assistWarn, 0, 3650);
+  c.vignetteWarn        = _vInt(c.vignetteWarn, 0, 3650);
   c.salePrice           = _vNum(c.salePrice);
   // dates (ISO YYYY-MM-DD)
   c.stk             = _vDate(c.stk);
@@ -933,6 +934,7 @@ function _vCar(c){
   c.acquired        = _vDate(c.acquired);
   c.decommissioned  = _vDate(c.decommissioned);
   c.assist          = _vDate(c.assist);
+  c.vignette        = _vDate(c.vignette);
   // enums and structured values
   c.fuelType        = _vEnum(c.fuelType, _FUEL_TYPE_KEYS);
   c.color           = _vColor(c.color);     // safe for `style="background:${color}"` interpolation in carDotHtml
@@ -1520,6 +1522,7 @@ function fillCarForm(car){
   setDateTriple('c-pov',    car?.pov||'');    setVal('c-pov-warn',    car?.povWarn??30);
   setDateTriple('c-ins',    car?.insurance||'');setVal('c-ins-warn',  car?.insuranceWarn??30);
   setDateTriple('c-assist', car?.assist||''); setVal('c-assist-warn', car?.assistWarn??30);
+  setDateTriple('c-vignette', car?.vignette||''); setVal('c-vignette-warn', car?.vignetteWarn??30);
   // Service
   setVal('c-oil-interval', car?.oilInterval||'');
   setVal('c-oil-last',     car?.oilLastKm||'');
@@ -1573,7 +1576,7 @@ function sectionSummary(section, car){
   }
   if(section==='docs'){
     const today=new Date(); today.setHours(0,0,0,0);
-    const dates=[{n:'STK',d:car.stk,w:car.stkWarn},{n:cs?'Emise':'Emiss.',d:car.emission,w:car.emissionWarn},{n:'POV',d:car.pov,w:car.povWarn}];
+    const dates=[{n:'STK',d:car.stk,w:car.stkWarn},{n:cs?'Emise':'Emiss.',d:car.emission,w:car.emissionWarn},{n:'POV',d:car.pov,w:car.povWarn},{n:cs?'Dálnice':'Vignette',d:car.vignette,w:car.vignetteWarn}];
     const due=dates.filter(x=>{ if(!x.d) return false; const diff=Math.round((new Date(x.d+'T12:00:00')-today)/86400000); return diff<(x.w||30); });
     if(due.length) return due.map(x=>x.n).join(', ');
     const next=dates.filter(x=>x.d).sort((a,b)=>a.d.localeCompare(b.d))[0];
@@ -1809,14 +1812,14 @@ let _carEditDrivetrain = {hasAutomatic:false, has4x4:false};
 
 function _saveWizardDraft(){
   const ids=['c-make','c-model','c-year','c-plate','c-vin','c-fueltype','c-startodo','c-note',
-    'c-stk-warn','c-emission-warn','c-pov-warn','c-ins-warn','c-assist-warn',
+    'c-stk-warn','c-emission-warn','c-pov-warn','c-ins-warn','c-assist-warn','c-vignette-warn',
     'c-oil-interval','c-oil-last','c-oil-warn','c-oil-type','c-coolant-type',
     'c-gearbox-oil-interval','c-gearbox-oil-last','c-gearbox-oil-warn',
     'c-4x4-oil-interval','c-4x4-oil-last','c-4x4-oil-warn'];
   ids.forEach(id=>{ const el=document.getElementById(id); if(el) _wizardDraftData[id]=el.value; });
   // Date triples — only capture triples that exist in the current step's DOM,
   // otherwise the previously entered value from another step would be wiped.
-  ['c-acquired','c-decommissioned','c-stk','c-emission','c-pov','c-ins','c-assist'].forEach(p=>{
+  ['c-acquired','c-decommissioned','c-stk','c-emission','c-pov','c-ins','c-assist','c-vignette'].forEach(p=>{
     if(document.getElementById(p+'-wrap')) _wizardDraftData[p]=getDateTriple(p);
   });
   _wizardDraftData['_color']=state.selectedColor;
@@ -1838,10 +1841,10 @@ function _loadWizardDraft(){
   const d=_wizardDraftData;
   if(!Object.keys(d).length) return;
   const ids=['c-make','c-model','c-year','c-plate','c-vin','c-fueltype','c-startodo','c-note',
-    'c-stk-warn','c-emission-warn','c-pov-warn','c-ins-warn','c-assist-warn',
+    'c-stk-warn','c-emission-warn','c-pov-warn','c-ins-warn','c-assist-warn','c-vignette-warn',
     'c-oil-interval','c-oil-last','c-oil-warn','c-oil-type','c-coolant-type'];
   ids.forEach(id=>{ const el=document.getElementById(id); if(el&&d[id]!==undefined) el.value=d[id]; });
-  ['c-acquired','c-decommissioned','c-stk','c-emission','c-pov','c-ins','c-assist'].forEach(p=>{
+  ['c-acquired','c-decommissioned','c-stk','c-emission','c-pov','c-ins','c-assist','c-vignette'].forEach(p=>{
     if(d[p]!==undefined) setDateTriple(p,d[p]||'');
   });
   if(d['_color']){ state.selectedColor=d['_color']; document.querySelectorAll('.color-swatch').forEach(s=>{ s.classList.toggle('selected',s.dataset.color===state.selectedColor); }); }
@@ -2003,6 +2006,7 @@ function renderFleet(){
       ${car.emission?docLabel(cs?'Emise':'Emiss.',car.emission,car.emissionWarn,cs?'Měření emisí':'Emission Check'):''}
       ${car.insurance?docLabel(cs?'Havar':'Comp.',car.insurance,car.insuranceWarn,cs?'Havarjní pojištění':'Comprehensive Insurance'):''}
       ${car.assist?docLabel(cs?'Asist':'Assist',car.assist,car.assistWarn,cs?'Asistenční služby':'Roadside Assistance'):''}
+      ${car.vignette?docLabel(cs?'Dálnice':'Vignette',car.vignette,car.vignetteWarn,cs?'Dálniční známka':'Motorway vignette'):''}
       ${car.hasAutomatic?`<span class="fleet-doc-pill" style="background:var(--amber-dim);color:var(--amber);border-color:transparent">${cs?'Automat':'Auto'}</span>`:''}
       ${car.has4x4?`<span class="fleet-doc-pill" style="background:var(--amber-dim);color:var(--amber);border-color:transparent">4×4</span>`:''}
     </div>`;
@@ -2011,7 +2015,7 @@ function renderFleet(){
     const docStatuses=isActive?[
       docStatus(car.stk,car.stkWarn),docStatus(car.pov,car.povWarn),
       docStatus(car.emission,car.emissionWarn),docStatus(car.insurance,car.insuranceWarn),
-      docStatus(car.assist,car.assistWarn)
+      docStatus(car.assist,car.assistWarn),docStatus(car.vignette,car.vignetteWarn)
     ]:[];
     const oilLeft=isActive&&car.oilInterval&&car.oilLastKm?(car.oilLastKm+car.oilInterval)-maxOdo:999999;
     const oilSc=oilLeft<=0?'due':oilLeft<=(car.oilWarn||1000)?'warn':'ok';
@@ -2165,6 +2169,7 @@ function renderDashboard(){
       ${docCard(t('pov'),car.pov,car.povWarn,cs?'Povinné ručení':'Liability Insurance')}
       ${car.insurance?docCard(state.lang==='cs'?'Havarijní poj.':'Comp. ins.',car.insurance,car.insuranceWarn,state.lang==='cs'?'Havarijní pojištění':'Comprehensive Insurance'):''}
       ${car.assist?docCard(state.lang==='cs'?'Asistence':'Assistance',car.assist,car.assistWarn,state.lang==='cs'?'Asistenční služby':'Roadside Assistance'):''}
+      ${car.vignette?docCard(state.lang==='cs'?'Dálniční zn.':'Vignette',car.vignette,car.vignetteWarn,state.lang==='cs'?'Dálniční známka':'Motorway vignette'):''}
       `}
     </div>
 
@@ -2248,6 +2253,7 @@ function buildAlerts(car){
   chkDate(t('insurance_expires'),car.pov,car.povWarn);
   chkDate(car.insurance?(state.lang==='cs'?'Havarijní pojištění':'Comp. insurance'):null,car.insurance,car.insuranceWarn);
   chkDate(car.assist?(state.lang==='cs'?'Asistenční služby':'Roadside assistance'):null,car.assist,car.assistWarn);
+  chkDate(car.vignette?(state.lang==='cs'?'Dálniční známka':'Motorway vignette'):null,car.vignette,car.vignetteWarn);
   const maxOdo=getMaxOdo(car.id);
   if(car.oilInterval&&car.oilLastKm){
     const left=(car.oilLastKm+car.oilInterval)-maxOdo;
@@ -3163,6 +3169,7 @@ function getAutoReminders(car){
   dateRem(cs?'Pojištění POV':'Liability ins.', car.pov, car.povWarn||30);
   dateRem(cs?'Havarijní pojištění':'Comprehensive ins.', car.insurance, car.insuranceWarn||30);
   dateRem(cs?'Asistenční služby':'Roadside assistance', car.assist, car.assistWarn||30);
+  dateRem(cs?'Dálniční známka':'Motorway vignette', car.vignette, car.vignetteWarn||30);
 
   // Tyre swap — only if enabled in settings, car is drivable and not historic
   if(state.settings.tireReminders && isCarDriving(car) && car.classification!=='historic'){
@@ -4234,59 +4241,77 @@ function buildBasicSectionForm(cs){
 </div>`;
 }
 
-// Returns HTML string for the "Documents & dates" section (STK, Emise, POV,
-// Havarijni pojisteni, Asistencni sluzby). Shared between the vehicle edit
-// page and the new-vehicle wizard step 2. The `cs` param is currently unused —
-// labels are Czech-only for both languages by design; kept in the signature
-// for consistency with sibling builders and future i18n.
+// Returns HTML string for the "Documents & dates" section (STK, Emissions, POV,
+// Comprehensive insurance, Roadside assistance, Motorway vignette). Shared
+// between the vehicle edit page and the new-vehicle wizard step 2.
 function buildDocsSectionForm(cs){
+  const L = {
+    stk:        cs?'STK – Technická prohlídka':'MOT / STK – Technical inspection',
+    emission:   cs?'Emise – Měření emisí':'Emissions check',
+    pov:        cs?'POV – Povinné ručení':'Liability insurance',
+    ins:        cs?'Havarijní pojištění':'Comprehensive insurance',
+    assist:     cs?'Asistenční služby':'Roadside assistance',
+    vignette:   cs?'Dálniční známka':'Motorway vignette',
+    validUntil: cs?'Platnost do':'Valid until',
+    warnDays:   cs?'Varovat (dní předem)':'Warn (days ahead)',
+    yearPh:     cs?'RRRR':'YYYY',
+  };
   return `
 <div class='form-grid'>
-  <div class='form-section-label'>STK – Technická prohlídka</div>
-  <div class='form-group'><label class='form-label'>Platnost do</label>
+  <div class='form-section-label'>${L.stk}</div>
+  <div class='form-group'><label class='form-label'>${L.validUntil}</label>
     <div class='date-triple' id='c-stk-wrap'>
       <input type='number' class='dt-d' id='c-stk-d' placeholder='DD' min='1' max='31'>
       <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-stk-m' placeholder='MM' min='1' max='12'>
-      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-stk-y' placeholder='RRRR' min='1900' max='2099'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-stk-y' placeholder='${L.yearPh}' min='1900' max='2099'>
     </div>
   </div>
-  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-stk-warn' value='30'></div>
-  <div class='form-section-label'>Emise – Měření emisí</div>
-  <div class='form-group'><label class='form-label'>Platnost do</label>
+  <div class='form-group'><label class='form-label'>${L.warnDays}</label><input type='number' class='form-input' id='c-stk-warn' value='30'></div>
+  <div class='form-section-label'>${L.emission}</div>
+  <div class='form-group'><label class='form-label'>${L.validUntil}</label>
     <div class='date-triple' id='c-emission-wrap'>
       <input type='number' class='dt-d' id='c-emission-d' placeholder='DD' min='1' max='31'>
       <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-emission-m' placeholder='MM' min='1' max='12'>
-      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-emission-y' placeholder='RRRR' min='1900' max='2099'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-emission-y' placeholder='${L.yearPh}' min='1900' max='2099'>
     </div>
   </div>
-  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-emission-warn' value='30'></div>
-  <div class='form-section-label'>POV – Povinné ručení</div>
-  <div class='form-group'><label class='form-label'>Platnost do</label>
+  <div class='form-group'><label class='form-label'>${L.warnDays}</label><input type='number' class='form-input' id='c-emission-warn' value='30'></div>
+  <div class='form-section-label'>${L.pov}</div>
+  <div class='form-group'><label class='form-label'>${L.validUntil}</label>
     <div class='date-triple' id='c-pov-wrap'>
       <input type='number' class='dt-d' id='c-pov-d' placeholder='DD' min='1' max='31'>
       <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-pov-m' placeholder='MM' min='1' max='12'>
-      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-pov-y' placeholder='RRRR' min='1900' max='2099'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-pov-y' placeholder='${L.yearPh}' min='1900' max='2099'>
     </div>
   </div>
-  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-pov-warn' value='30'></div>
-  <div class='form-section-label'>Havarijní pojištění (volitelné)</div>
-  <div class='form-group'><label class='form-label'>Platnost do</label>
+  <div class='form-group'><label class='form-label'>${L.warnDays}</label><input type='number' class='form-input' id='c-pov-warn' value='30'></div>
+  <div class='form-section-label'>${L.ins}</div>
+  <div class='form-group'><label class='form-label'>${L.validUntil}</label>
     <div class='date-triple' id='c-ins-wrap'>
       <input type='number' class='dt-d' id='c-ins-d' placeholder='DD' min='1' max='31'>
       <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-ins-m' placeholder='MM' min='1' max='12'>
-      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-ins-y' placeholder='RRRR' min='1900' max='2099'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-ins-y' placeholder='${L.yearPh}' min='1900' max='2099'>
     </div>
   </div>
-  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-ins-warn' value='30'></div>
-  <div class='form-section-label'>Asistenční služby (volitelné)</div>
-  <div class='form-group'><label class='form-label'>Platnost do</label>
+  <div class='form-group'><label class='form-label'>${L.warnDays}</label><input type='number' class='form-input' id='c-ins-warn' value='30'></div>
+  <div class='form-section-label'>${L.assist}</div>
+  <div class='form-group'><label class='form-label'>${L.validUntil}</label>
     <div class='date-triple' id='c-assist-wrap'>
       <input type='number' class='dt-d' id='c-assist-d' placeholder='DD' min='1' max='31'>
       <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-assist-m' placeholder='MM' min='1' max='12'>
-      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-assist-y' placeholder='RRRR' min='1900' max='2099'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-assist-y' placeholder='${L.yearPh}' min='1900' max='2099'>
     </div>
   </div>
-  <div class='form-group'><label class='form-label'>Varovat (dní předem)</label><input type='number' class='form-input' id='c-assist-warn' value='30'></div>
+  <div class='form-group'><label class='form-label'>${L.warnDays}</label><input type='number' class='form-input' id='c-assist-warn' value='30'></div>
+  <div class='form-section-label'>${L.vignette}</div>
+  <div class='form-group'><label class='form-label'>${L.validUntil}</label>
+    <div class='date-triple' id='c-vignette-wrap'>
+      <input type='number' class='dt-d' id='c-vignette-d' placeholder='DD' min='1' max='31'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-m' id='c-vignette-m' placeholder='MM' min='1' max='12'>
+      <span class='dt-sep'>.</span><input type='number' class='dt-y' id='c-vignette-y' placeholder='${L.yearPh}' min='1900' max='2099'>
+    </div>
+  </div>
+  <div class='form-group'><label class='form-label'>${L.warnDays}</label><input type='number' class='form-input' id='c-vignette-warn' value='30'></div>
 </div>`;
 }
 
@@ -4401,6 +4426,8 @@ function saveCar(){
     insuranceWarn:parseInt(gv('c-ins-warn'))||30,
     assist:gDate('c-assist'),
     assistWarn:parseInt(gv('c-assist-warn'))||30,
+    vignette:gDate('c-vignette'),
+    vignetteWarn:parseInt(gv('c-vignette-warn'))||30,
     oilInterval:parseInt(gv('c-oil-interval'))||null,
     oilLastKm:parseInt(gv('c-oil-last'))||null,
     oilWarn:parseInt(gv('c-oil-warn'))||1000,
@@ -4576,7 +4603,7 @@ function deleteReminder(id){state.reminders=state.reminders.filter(r=>r.id!==id)
 // ─── IMPORT / EXPORT ─────────────────────────────────────────
 // Backup schema version. Bump when the shape changes (adding/removing top-level fields).
 const BACKUP_SCHEMA_VERSION = 2;
-const APP_VERSION = '3.18.4';
+const APP_VERSION = '3.19.0';
 
 function exportData(){
   const now=new Date();
@@ -5054,8 +5081,8 @@ function renderSettings(){
         <div class="section-title">${cs?'O aplikaci':'About'}</div>
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.18.4</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260824-006</span></div>
+          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.19.0</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260824-008</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           ${(()=>{
@@ -5082,6 +5109,23 @@ function renderSettings(){
               <div style="flex:1;min-width:60px;max-width:120px;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${u.pct.toFixed(1)}%;background:${color};transition:width .3s"></div></div>
               <span style="font-family:var(--font-mono);font-size:.75rem;white-space:nowrap">${kb} KB / ~${limitKb} MB</span>
             </span></div>`;
+          })()}
+          ${(()=>{
+            let sizeStr='—';
+            try{
+              const payload={
+                app:'MyCars', version:APP_VERSION, schema:BACKUP_SCHEMA_VERSION,
+                exportedAt:new Date().toISOString(),
+                lang:state.lang, settings:state.settings,
+                cars:state.cars, records:state.records, fuels:state.fuels,
+                reminders:state.reminders, jobs:state.jobs,
+              };
+              const bytes=new Blob([JSON.stringify(payload,null,2)]).size;
+              sizeStr = bytes>=1048576
+                ? (bytes/1048576).toFixed(2)+' MB'
+                : (bytes/1024).toFixed(1)+' KB';
+            }catch{}
+            return `<div class="settings-info-row"><span>${cs?'Velikost zálohy':'Backup size'}</span><span style="font-family:var(--font-mono);font-size:.85rem">${sizeStr}</span></div>`;
           })()}
           <div class="settings-info-row"><span>${cs?'Dokumentace':'Documentation'}</span><span><a href="README.md" target="_blank" rel="noopener noreferrer" style="color:var(--accent);text-decoration:none;">README.md ↗</a></span></div>
           <div class="settings-info-row"><span>${cs?'Licence':'Licence'}</span><span><a href="https://www.gnu.org/licenses/gpl-3.0-standalone.html" target="_blank" rel="noopener noreferrer" style="color:var(--accent);text-decoration:none;">GNU GPL v3 ↗</a></span></div>

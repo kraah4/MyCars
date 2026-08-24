@@ -42,7 +42,8 @@
       },
       "tyreAllSeason": false,
       "stk": "2027-06-01",
-      "ins": "2026-05-01"
+      "ins": "2026-05-01",
+      "vignette": "2026-01-31"
     },
     {
       "id": "c_audi_a4",
@@ -91,6 +92,7 @@
       "tyreAllSeason": false,
       "stk": "2027-05-15",
       "ins": "2026-06-01",
+      "vignette": "2027-01-31",
       "classification": "standard"
     },
     {
@@ -109,6 +111,7 @@
       "tyres": false,
       "stk": "2027-04-10",
       "ins": "2026-03-15",
+      "vignette": "2026-01-31",
       "classification": "youngtimer",
       "salePrice": 720000,
       "saleAdUrl": "https://www.sauto.cz/osobni/detail/honda/civic/type-r"
@@ -168,6 +171,7 @@
       "tyreAllSeason": false,
       "stk": "2026-11-15",
       "ins": "2026-11-15",
+      "vignette": "2027-01-31",
       "classification": "standard"
     },
     {
