@@ -507,9 +507,13 @@ function setDateTriple(prefix, iso){
 }
 // Read the triple of inputs and return an ISO date or ''.
 function getDateTriple(prefix){
-  const d=document.getElementById(prefix+'-d').value;
-  const m=document.getElementById(prefix+'-m').value;
-  const y=document.getElementById(prefix+'-y').value;
+  const dEl=document.getElementById(prefix+'-d');
+  const mEl=document.getElementById(prefix+'-m');
+  const yEl=document.getElementById(prefix+'-y');
+  if(!dEl||!mEl||!yEl)return'';
+  const d=dEl.value;
+  const m=mEl.value;
+  const y=yEl.value;
   if(!d&&!m&&!y)return'';
   if(!d||!m||!y)return null; // incomplete
   const iso=`${y.padStart(4,'0')}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -1726,13 +1730,13 @@ function renderVehicleWizard(){
       <div class="wizard-body">
         ${stepForms[step-1]}
       </div>
-    </div>
-    <div class="wizard-sticky">
-      <span class="wizard-step-info">${cs?'Krok':'Step'} ${step} ${cs?'z':'of'} ${steps.length}</span>
-      ${step>1?`<button class="btn btn-ghost" data-action="wizardBack">← ${cs?'Zpět':'Back'}</button>`:''}
-      ${step<steps.length
-        ?`<button class="btn btn-primary" data-action="wizardNext">${cs?'Další':'Next'} →</button>`
-        :`<button class="btn btn-primary" data-action="saveCar">${cs?'Vytvořit vozidlo':'Create vehicle'}</button>`}
+      <div class="wizard-sticky">
+        <span class="wizard-step-info">${cs?'Krok':'Step'} ${step} ${cs?'z':'of'} ${steps.length}</span>
+        ${step>1?`<button class="btn btn-ghost" data-action="wizardBack">← ${cs?'Zpět':'Back'}</button>`:''}
+        ${step<steps.length
+          ?`<button class="btn btn-primary" data-action="wizardNext">${cs?'Další':'Next'} →</button>`
+          :`<button class="btn btn-primary" data-action="saveCar">${cs?'Vytvořit vozidlo':'Create vehicle'}</button>`}
+      </div>
     </div>`;
 
   // For step 1 pre-fill nothing (new car); for step 4 render tyre tab
@@ -3412,6 +3416,7 @@ function renderServicePage(){
       ${tasksList}
       ${tasksTotal>0?`<div class="job-cost">${tasksDone}/${tasksTotal} ${cs?'úkonů hotovo':'tasks done'}</div>`:''}
       ${j.estimatedCost?`<div class="job-cost">${cs?'Odhad':'Estimate'}: <strong>${fmtMoney(j.estimatedCost)}</strong></div>`:''}
+      ${j.finalCost?`<div class="job-cost">${cs?'Konečná cena':'Final cost'}: <strong>${fmtMoney(j.finalCost)}</strong></div>`:''}
       ${j.notes?`<div class="job-cost" style="white-space:pre-wrap">${esc(j.notes)}</div>`:''}
       <div class="job-actions">${actions}</div>
     </div>`;
@@ -3535,6 +3540,7 @@ function openJobModal(jobId){
 
   // Price and note
   document.getElementById('j-cost').value = job?.estimatedCost ?? '';
+  document.getElementById('j-final-cost').value = job?.finalCost ?? '';
   document.getElementById('j-note').value = job?.notes || '';
 
   // Tasks (cloned, edited on the copy — applied only on save)
@@ -3572,6 +3578,7 @@ function saveJob(){
   const startDate = getDateTriple('j-start');
   const endDate = getDateTriple('j-end');
   const estimatedCost = parseFloat(document.getElementById('j-cost').value) || 0;
+  const finalCost = parseFloat(document.getElementById('j-final-cost').value) || 0;
   const notes = document.getElementById('j-note').value.trim();
 
   if(!carId) errors.push(cs?'Vyberte vozidlo':'Select a vehicle');
@@ -3590,10 +3597,10 @@ function saveJob(){
   if(state.editingJobId){
     const idx = state.jobs.findIndex(j=>j.id===state.editingJobId);
     if(idx>=0){
-      state.jobs[idx] = {...state.jobs[idx], carId, status, shop, startDate, endDate:endDate||'', estimatedCost, notes, tasks, updatedAt:new Date().toISOString()};
+      state.jobs[idx] = {...state.jobs[idx], carId, status, shop, startDate, endDate:endDate||'', estimatedCost, finalCost, notes, tasks, updatedAt:new Date().toISOString()};
     }
   } else {
-    state.jobs.push({id:uid(),carId,status,shop,startDate,endDate:endDate||'',estimatedCost,notes,tasks,createdAt:new Date().toISOString()});
+    state.jobs.push({id:uid(),carId,status,shop,startDate,endDate:endDate||'',estimatedCost,finalCost,notes,tasks,createdAt:new Date().toISOString()});
   }
   saveData();
   closeModal('job-modal');
@@ -4131,7 +4138,7 @@ function buildBasicSectionForm(cs){
   </div>
   <div class='form-group'><label class='form-label'>${cs?'Rok výroby':'Year'}</label><input type='number' class='form-input' id='c-year' placeholder='2008' min='1900' max='2099'></div>
   <div class='form-group'><label class='form-label'>SPZ</label><input type='text' class='form-input' id='c-plate' maxlength='16' placeholder='1Z3 4567' style='text-transform:uppercase'></div>
-  <div class='form-group full'><label class='form-label'>VIN</label><div style='display:flex;gap:6px;align-items:center'><input type='text' class='form-input' id='c-vin' maxlength='32' placeholder='TMBBG61Z982...' style='text-transform:uppercase;flex:1'><button type='button' class='row-btn' data-action='copyVin' title='${cs?'Kopírovat VIN':'Copy VIN'}'>📋</button></div></div>
+  <div class='form-group full span2'><label class='form-label'>VIN</label><div style='display:flex;gap:6px;align-items:center'><input type='text' class='form-input' id='c-vin' maxlength='32' placeholder='TMBBG61Z982...' style='text-transform:uppercase;flex:1'><button type='button' class='row-btn' data-action='copyVin' title='${cs?'Kopírovat VIN':'Copy VIN'}'>📋</button></div></div>
   <div class='form-group'>
     <label class='form-label required'>${cs?'Typ paliva':'Fuel type'}</label>
     <select class='form-select' id='c-fueltype'>
@@ -4289,7 +4296,6 @@ function buildServiceSectionForm(cs, hasAutomatic, has4x4){
   <div class='form-group' id='c-gearbox-int-grp' style='display:${showAuto}'><label class='form-label'>${cs?'Interval (km)':'Interval (km)'}</label><input type='number' class='form-input' id='c-gearbox-oil-interval' placeholder='60000'></div>
   <div class='form-group' id='c-gearbox-last-grp' style='display:${showAuto}'><label class='form-label'>${cs?'Naposledy při (km)':'Last done (km)'}</label><input type='number' class='form-input' id='c-gearbox-oil-last' placeholder='245448'></div>
   <div class='form-group' id='c-gearbox-warn-grp' style='display:${showAuto}'><label class='form-label'>${cs?'Varovat (km zbývá)':'Warn (km left)'}</label><input type='number' class='form-input' id='c-gearbox-oil-warn' value='1000'></div>
-  <div class='form-group' style='display:${showAuto}'></div>
   <div class='form-section-label' id='x4-section-label' style='display:${show4x4}'>
     ${cs?'Výměna oleje ve čtyřkolce':'4×4 oil change'}
     <span style='display:block;font-weight:400;color:var(--text3);font-size:.7rem;margin-top:1px'>${cs?'pohon 4×4':'4×4 drive'}</span>
@@ -4297,10 +4303,8 @@ function buildServiceSectionForm(cs, hasAutomatic, has4x4){
   <div class='form-group' id='c-4x4-int-grp' style='display:${show4x4}'><label class='form-label'>${cs?'Interval (km)':'Interval (km)'}</label><input type='number' class='form-input' id='c-4x4-oil-interval' placeholder='60000'></div>
   <div class='form-group' id='c-4x4-last-grp' style='display:${show4x4}'><label class='form-label'>${cs?'Naposledy při (km)':'Last done (km)'}</label><input type='number' class='form-input' id='c-4x4-oil-last' placeholder='245448'></div>
   <div class='form-group' id='c-4x4-warn-grp' style='display:${show4x4}'><label class='form-label'>${cs?'Varovat (km zbývá)':'Warn (km left)'}</label><input type='number' class='form-input' id='c-4x4-oil-warn' value='1000'></div>
-  <div class='form-group' style='display:${show4x4}'></div>
   <div class='form-section-label'>${cs?'Chladící kapalina':'Coolant'}</div>
   <div class='form-group'><label class='form-label'>${cs?'Typ chladící kapaliny':'Coolant type'}</label><input type='text' class='form-input' id='c-coolant-type' maxlength='100' placeholder='G13 / G12+'></div>
-  <div class='form-group'></div>
   <div class='form-section-label'>${cs?'Poznámka k vozidlu':'Vehicle notes'}</div>
   <div class='form-group full'><textarea class='form-textarea' id='c-note' rows='3' maxlength='2000' placeholder='${cs?'Poznámky...':'Notes...'}'></textarea></div>
 </div>`;

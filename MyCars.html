@@ -592,6 +592,7 @@
   /* ── Forms ──────────────────────────────────── */
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px }
   .form-grid .full { grid-column: 1/-1 }
+  .form-grid .span2 { grid-column: 1/-1 }
   .form-group { display: flex; flex-direction: column; gap: 6px }
   .form-label { font-size: .78rem; font-weight: 600; color: var(--text2); letter-spacing: .02em }
   .form-label.required::after { content: ' *'; color: var(--accent) }
@@ -1054,7 +1055,13 @@
     .jobs-grid { grid-template-columns: 1fr }
     .job-card { padding: 14px 16px }
   }
-  .wizard-wrap { max-width: 660px; margin: 0 auto; padding-bottom: 110px }
+  .wizard-wrap { max-width: 820px; margin: 0 auto; padding-bottom: 20px }
+  @media (min-width: 1200px) {
+    .wizard-wrap { max-width: 960px }
+    .wizard-wrap .form-grid { grid-template-columns: 1fr 1fr 1fr }
+    .wizard-wrap .form-grid .full { grid-column: 1/-1 }
+    .wizard-wrap .form-grid .span2 { grid-column: span 2 }
+  }
   .wizard-progress { display: flex; align-items: center; margin-bottom: 28px }
   .wizard-dot { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .82rem; font-weight: 700; flex-shrink: 0; border: 2px solid; transition: all .2s }
   .wizard-dot.done { background: var(--accent); border-color: var(--accent); color: #02061a }
@@ -1065,10 +1072,16 @@
   .wizard-step-label { font-size: .72rem; color: var(--text3); margin-top: 8px; text-align: center; font-weight: 500 }
   .wizard-header { margin-bottom: 20px }
   .wizard-header-title { font-size: 1.1rem; font-weight: 700; letter-spacing: -.02em }
+  @media (min-width: 1200px) {
+    .wizard-header-title { font-size: 1.25rem }
+  }
   .wizard-header-sub { font-size: .82rem; color: var(--text2); margin-top: 4px }
   .wizard-body { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 20px }
-  .wizard-sticky { position: fixed; bottom: 0; left: var(--sidebar-w); right: 0; background: var(--surface); border-top: 2px solid var(--border2); padding: 12px 24px; display: flex; gap: 10px; align-items: center; z-index: 90; box-shadow: 0 -4px 24px rgba(0,0,0,.35) }
-  @media (max-width: 768px) { .wizard-sticky { left: 0; padding: 10px 16px } }
+  @media (min-width: 1200px) {
+    .wizard-body { padding: 28px 32px }
+  }
+  .wizard-sticky { background: var(--surface); border-top: 2px solid var(--border2); padding: 16px 20px; display: flex; gap: 10px; align-items: center; margin-top: 20px; border-radius: var(--radius); border: 1px solid var(--border) }
+  @media (max-width: 768px) { .wizard-sticky { padding: 12px 16px } }
   .wizard-step-info { flex: 1; font-size: .78rem; color: var(--text3) }
 
   /* ── Records master-detail layout (desktop) ────────────── */
@@ -1322,7 +1335,7 @@
         <div class="form-group"><label class="form-label required" data-cs="Začátek" data-en="Start">Začátek</label><div class="date-triple" id="j-start-wrap"><input type="number" class="dt-d" id="j-start-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="j-start-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="j-start-y" placeholder="RRRR" min="1900" max="2099"></div></div>
         <div class="form-group"><label class="form-label" data-cs="Konec" data-en="End">Konec</label><div class="date-triple" id="j-end-wrap"><input type="number" class="dt-d" id="j-end-d" placeholder="DD" min="1" max="31"><span class="dt-sep">.</span><input type="number" class="dt-m" id="j-end-m" placeholder="MM" min="1" max="12"><span class="dt-sep">.</span><input type="number" class="dt-y" id="j-end-y" placeholder="RRRR" min="1900" max="2099"></div></div>
         <div class="form-group"><label class="form-label" data-cs="Odhadovaná cena (Kč)" data-en="Estimated cost (CZK)">Odhadovaná cena (Kč)</label><input type="number" class="form-input" id="j-cost" step="1" min="0" placeholder="8500"></div>
-        <div class="form-group"></div>
+        <div class="form-group"><label class="form-label" data-cs="Konečná cena (Kč)" data-en="Final cost (CZK)">Konečná cena (Kč)</label><input type="number" class="form-input" id="j-final-cost" step="1" min="0" placeholder="9200"></div>
         <div class="form-group full">
           <label class="form-label" data-cs="Úkony" data-en="Tasks">Úkony</label>
           <div id="j-tasks-list" style="display:flex;flex-direction:column;gap:6px;"></div>
