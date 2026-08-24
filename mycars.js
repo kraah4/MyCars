@@ -169,7 +169,10 @@
     policy = window.trustedTypes.createPolicy('mycars-html', {
       // Identity: stringify + tag as TrustedHTML. Call sites already escape
       // user data via `esc()`, so no sanitizer is needed at this level.
-      createHTML: function(s){ return String(s); }
+      createHTML: function(s){ return String(s); },
+      // Identity: stringify + tag as TrustedScriptURL. Only used by the SW
+      // registration below with a hard-coded same-origin path.
+      createScriptURL: function(s){ return String(s); }
     });
   } catch (e) {
     // CSP rejected the policy (e.g. misconfigured). Without a policy every
@@ -179,6 +182,10 @@
     console.warn('MyCars: Trusted Types policy could not be created:', e);
     return;
   }
+  // Expose so a few well-known call sites (SW register) can produce
+  // TrustedScriptURL. The policy is not enumerable/configurable so it cannot
+  // be replaced by third-party code at runtime.
+  Object.defineProperty(window, '__mycarsTT', { value: policy });
 
   // Wrap the `Element.prototype.innerHTML` setter: pre-convert the string to
   // TrustedHTML, then invoke the original IDL setter. TT enforcement sees
@@ -501,9 +508,13 @@ function fmtDate(d){
 // Write an ISO date (YYYY-MM-DD) into the triple of inputs identified by prefix.
 function setDateTriple(prefix, iso){
   const m=iso?iso.match(/^(\d{4})-(\d{2})-(\d{2})$/):null;
-  document.getElementById(prefix+'-d').value=m?parseInt(m[3]):'';
-  document.getElementById(prefix+'-m').value=m?parseInt(m[2]):'';
-  document.getElementById(prefix+'-y').value=m?m[1]:'';
+  const dEl=document.getElementById(prefix+'-d');
+  const mEl=document.getElementById(prefix+'-m');
+  const yEl=document.getElementById(prefix+'-y');
+  if(!dEl||!mEl||!yEl) return; // triple not in DOM (e.g. wizard step without this field)
+  dEl.value=m?parseInt(m[3]):'';
+  mEl.value=m?parseInt(m[2]):'';
+  yEl.value=m?m[1]:'';
 }
 // Read the triple of inputs and return an ISO date or ''.
 function getDateTriple(prefix){
@@ -1803,9 +1814,10 @@ function _saveWizardDraft(){
     'c-gearbox-oil-interval','c-gearbox-oil-last','c-gearbox-oil-warn',
     'c-4x4-oil-interval','c-4x4-oil-last','c-4x4-oil-warn'];
   ids.forEach(id=>{ const el=document.getElementById(id); if(el) _wizardDraftData[id]=el.value; });
-  // Date triples
+  // Date triples — only capture triples that exist in the current step's DOM,
+  // otherwise the previously entered value from another step would be wiped.
   ['c-acquired','c-decommissioned','c-stk','c-emission','c-pov','c-ins','c-assist'].forEach(p=>{
-    _wizardDraftData[p]=getDateTriple(p);
+    if(document.getElementById(p+'-wrap')) _wizardDraftData[p]=getDateTriple(p);
   });
   _wizardDraftData['_color']=state.selectedColor;
   const stSel=document.getElementById('c-status');
@@ -4152,7 +4164,7 @@ function buildBasicSectionForm(cs){
     </select>
   </div>
   <div class='form-group'>
-    <label class='form-label' id='c-status-label'>${cs?'Stav':'Status'}</label>
+    <label class='form-label required' id='c-status-label'>${cs?'Stav':'Status'}</label>
     <select class='form-select' id='c-status' data-onchange="toggleSaleFields" required>
       <option value="">${esc(t('car_status_placeholder'))}</option>
       ${CAR_STATUSES.map(s=>`<option value="${s}">${esc(t('car_status_'+s))}</option>`).join('')}
@@ -4311,16 +4323,41 @@ function buildServiceSectionForm(cs, hasAutomatic, has4x4){
 }
 
 function saveCar(){
-  const make=document.getElementById('c-make').value.trim();
-  const model=document.getElementById('c-model').value.trim();
-  const fuelType=document.getElementById('c-fueltype').value;
+  // In wizard mode only the current step is rendered — capture what's currently
+  // in the DOM into the draft first so we can safely read every field from
+  // either the DOM (edit / current wizard step) or the accumulated draft.
+  const isWizard = !state.editingCarId;
+  if(isWizard) _saveWizardDraft();
+  const draft = isWizard ? _wizardDraftData : {};
+  const gv = (id, draftKey) => {
+    const el = document.getElementById(id);
+    if(el) return el.value;
+    const k = draftKey || id;
+    return draft[k] !== undefined && draft[k] !== null ? String(draft[k]) : '';
+  };
+  const gc = (id, draftKey) => {
+    const el = document.getElementById(id);
+    if(el) return !!el.checked;
+    return draftKey ? !!draft[draftKey] : false;
+  };
+  const gDate = (prefix) => {
+    if(document.getElementById(prefix+'-wrap')){
+      const v = getDateTriple(prefix);
+      if(v) return v;
+    }
+    return draft[prefix] || null;
+  };
+
+  const make = gv('c-make').trim();
+  const model = gv('c-model').trim();
+  const fuelType = gv('c-fueltype');
 
   if(!make){showToast(state.lang==='cs'?'Značka je povinná':'Make is required','error');return;}
   if(!model){showToast(state.lang==='cs'?'Model je povinný':'Model is required','error');return;}
   if(!fuelType){showToast(state.lang==='cs'?'Typ paliva je povinný':'Fuel type is required','error');return;}
 
-  const plate = document.getElementById('c-plate').value.trim().toUpperCase() || null;
-  const vin = document.getElementById('c-vin').value.trim().toUpperCase() || null;
+  const plate = gv('c-plate').trim().toUpperCase() || null;
+  const vin = gv('c-vin').trim().toUpperCase() || null;
 
   // Uniqueness validation for plate and VIN
   if(plate && state.cars.some(c => c.plate === plate && c.id !== state.editingCarId)){
@@ -4332,7 +4369,7 @@ function saveCar(){
     return;
   }
   // Status is mandatory — the placeholder value '' is not acceptable.
-  const statusVal = document.getElementById('c-status')?.value || '';
+  const statusVal = gv('c-status', '_status');
   if(!CAR_STATUSES.includes(statusVal)){
     showToast(state.lang==='cs'?'Vyberte stav vozidla':'Please select a vehicle status','error');
     document.getElementById('c-status')?.focus();
@@ -4341,43 +4378,46 @@ function saveCar(){
 
   const data={
     make,model,
-    year:parseInt(document.getElementById('c-year').value)||null,
+    year:parseInt(gv('c-year'))||null,
     plate,
     vin,
-    fuelType:document.getElementById('c-fueltype').value,
+    fuelType,
     status:statusVal,
-    classification:document.getElementById('c-classification')?.value || 'standard',
-    salePrice:parseInt(document.getElementById('c-sale-price')?.value)||null,
-    saleAdUrl:(document.getElementById('c-sale-url')?.value||'').trim()||null,
-    startOdo:parseInt(document.getElementById('c-startodo').value)||0,
-    color:state.selectedColor,
-    stk:getDateTriple('c-stk')||null,
-    stkWarn:parseInt(document.getElementById('c-stk-warn').value)||30,
-    emission:getDateTriple('c-emission')||null,
-    emissionWarn:parseInt(document.getElementById('c-emission-warn').value)||30,
-    pov:getDateTriple('c-pov')||null,
-    povWarn:parseInt(document.getElementById('c-pov-warn').value)||30,
-    insurance:getDateTriple('c-ins')||null,
-    insuranceWarn:parseInt(document.getElementById('c-ins-warn').value)||30,
-    assist:getDateTriple('c-assist')||null,
-    assistWarn:parseInt(document.getElementById('c-assist-warn').value)||30,
-    oilInterval:parseInt(document.getElementById('c-oil-interval').value)||null,
-    oilLastKm:parseInt(document.getElementById('c-oil-last').value)||null,
-    oilWarn:parseInt(document.getElementById('c-oil-warn').value)||1000,
-    oilType:document.getElementById('c-oil-type').value.trim()||null,
-    coolantType:document.getElementById('c-coolant-type').value.trim()||null,
+    classification: (function(){
+      const c = gv('c-classification', '_classification');
+      return CAR_CLASSIFICATIONS.includes(c) ? c : 'standard';
+    })(),
+    salePrice:parseInt(gv('c-sale-price', '_salePrice'))||null,
+    saleAdUrl:(gv('c-sale-url', '_saleAdUrl')||'').trim()||null,
+    startOdo:parseInt(gv('c-startodo'))||0,
+    color:(draft['_color']||state.selectedColor),
+    stk:gDate('c-stk'),
+    stkWarn:parseInt(gv('c-stk-warn'))||30,
+    emission:gDate('c-emission'),
+    emissionWarn:parseInt(gv('c-emission-warn'))||30,
+    pov:gDate('c-pov'),
+    povWarn:parseInt(gv('c-pov-warn'))||30,
+    insurance:gDate('c-ins'),
+    insuranceWarn:parseInt(gv('c-ins-warn'))||30,
+    assist:gDate('c-assist'),
+    assistWarn:parseInt(gv('c-assist-warn'))||30,
+    oilInterval:parseInt(gv('c-oil-interval'))||null,
+    oilLastKm:parseInt(gv('c-oil-last'))||null,
+    oilWarn:parseInt(gv('c-oil-warn'))||1000,
+    oilType:gv('c-oil-type').trim()||null,
+    coolantType:gv('c-coolant-type').trim()||null,
     // Automatic gearbox and 4x4 drive
-    hasAutomatic:document.getElementById('c-has-automatic')?.checked||false,
-    has4x4:document.getElementById('c-has-4x4')?.checked||false,
-    gearboxOilInterval:parseInt(document.getElementById('c-gearbox-oil-interval')?.value)||null,
-    gearboxOilLastKm:parseInt(document.getElementById('c-gearbox-oil-last')?.value)||null,
-    gearboxOilWarn:parseInt(document.getElementById('c-gearbox-oil-warn')?.value)||1000,
-    xferOilInterval:parseInt(document.getElementById('c-4x4-oil-interval')?.value)||null,
-    xferOilLastKm:parseInt(document.getElementById('c-4x4-oil-last')?.value)||null,
-    xferOilWarn:parseInt(document.getElementById('c-4x4-oil-warn')?.value)||1000,
-    note:document.getElementById('c-note').value.trim(),
-    acquired:getDateTriple('c-acquired')||null,
-    decommissioned:getDateTriple('c-decommissioned')||null,
+    hasAutomatic:gc('c-has-automatic', '_hasAutomatic'),
+    has4x4:gc('c-has-4x4', '_has4x4'),
+    gearboxOilInterval:parseInt(gv('c-gearbox-oil-interval'))||null,
+    gearboxOilLastKm:parseInt(gv('c-gearbox-oil-last'))||null,
+    gearboxOilWarn:parseInt(gv('c-gearbox-oil-warn'))||1000,
+    xferOilInterval:parseInt(gv('c-4x4-oil-interval'))||null,
+    xferOilLastKm:parseInt(gv('c-4x4-oil-last'))||null,
+    xferOilWarn:parseInt(gv('c-4x4-oil-warn'))||1000,
+    note:gv('c-note').trim(),
+    acquired:gDate('c-acquired'),
+    decommissioned:gDate('c-decommissioned'),
     // Tyres — only save when the tab was opened (elements exist)
     ...(document.getElementById('c-tyre-allseason')!==null ? {
       tyreAllSeason: document.getElementById('c-tyre-allseason').checked,
@@ -4536,7 +4576,7 @@ function deleteReminder(id){state.reminders=state.reminders.filter(r=>r.id!==id)
 // ─── IMPORT / EXPORT ─────────────────────────────────────────
 // Backup schema version. Bump when the shape changes (adding/removing top-level fields).
 const BACKUP_SCHEMA_VERSION = 2;
-const APP_VERSION = '3.18.3';
+const APP_VERSION = '3.18.4';
 
 function exportData(){
   const now=new Date();
@@ -5014,8 +5054,8 @@ function renderSettings(){
         <div class="section-title">${cs?'O aplikaci':'About'}</div>
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.18.3</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260824-004</span></div>
+          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.18.4</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260824-006</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           ${(()=>{
@@ -5152,9 +5192,18 @@ function acFilter(field) {
   if (!matches.length) { list.style.display = 'none'; return; }
   list.innerHTML = matches.map((m, i) => {
     const hi = q ? m.replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi'), '<strong>$1</strong>') : m;
-    return `<div class="ac-item" data-val="${m}" onmousedown="acPick('${field}','${m.replace(/'/g,"\\'")}')">` + hi + '</div>';
+    return `<div class="ac-item" data-val="${esc(m)}">` + hi + '</div>';
   }).join('');
   list.style.display = 'block';
+  // Attach mousedown handlers (not click — mousedown fires before the input's
+  // blur, so the picked value is applied before the dropdown auto-hides).
+  // Inline `onmousedown="…"` would violate CSP `script-src 'self'`.
+  list.querySelectorAll('.ac-item').forEach(el => {
+    el.addEventListener('mousedown', ev => {
+      ev.preventDefault();
+      acPick(field, el.dataset.val);
+    });
+  });
 }
 
 function acPick(field, value) {
@@ -5923,7 +5972,14 @@ function doRegister() {
   });
 
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./mycars-sw.js')
+    // Under CSP `require-trusted-types-for 'script'` the URL passed to
+    // ServiceWorkerContainer.register() must be a TrustedScriptURL. Run it
+    // through our `mycars-html` policy; fall back to the raw string when TT
+    // is unavailable (Safari <17, etc.).
+    const swUrl = window.__mycarsTT
+      ? window.__mycarsTT.createScriptURL('./mycars-sw.js')
+      : './mycars-sw.js';
+    navigator.serviceWorker.register(swUrl)
       .then(reg => {
         console.log('[MyCars SW] registered, scope:', reg.scope);
 
