@@ -1,6 +1,6 @@
 # MyCars — Vehicle Maintenance Tracker
 
-**Version:** 3.19.0 · **Build:** 20260824-008
+**Version:** 3.20.0 · **Build:** 20260930-001
 **Author:** kraah  
 **License:** GNU GPL v3 (with §7 attribution requirement — see `LICENSE`)  
 **Live:** https://kraah4.github.io/MyCars/MyCars.html  
@@ -44,7 +44,7 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 | Page | Description |
 | --- | --- |
 | **Fleet** | Vehicle cards split into **Active vehicles** and a collapsible **Archive** section (sold / decommissioned cars). Cards show document pills, current service/job badges and — for vehicles *For sale* — the asking price and listing link |
-| **Dashboard** | Vehicle status, document expiry alerts, last refuel, key statistics including km driven in the current calendar year |
+| **Dashboard** | Vehicle status, document expiry alerts, last refuel, key statistics including km driven in the current calendar year, and a **Notes** card with the vehicle's Markdown-formatted notes (shown only when notes exist) |
 | **Records** | Service records with 5 summary stat cards, full-text search, category filter |
 | **Diary** | Unified chronological timeline of every event across all vehicles — service records, fuel entries, job lifecycle (created / done / cancelled) and vehicle lifecycle (acquired / decommissioned / sold). Grouped by month with sticky headers, full-text search, and multi-select category chips. See the *Diary* section below |
 | **Fuel log** | Fuel entries with per-tank consumption, average price/litre |
@@ -77,7 +77,7 @@ The app supports both **Czech** and **English** — switch via Settings → Inte
 | Tyres | no | Summer / winter / all-season sets, each with **front and rear axle** parameters: width, aspect ratio, rim diameter, load index, speed index, tyre pressure (low/high load). A “Front = rear” toggle hides the rear fields when both axles share the same specification. Each set also has an optional **manufacture date** field (free text, e.g. `2023` or DOT week/year code `2350`). |
 | Documents | no | STK, Emissions, Liability insurance, Comprehensive insurance, Roadside assistance, Motorway vignette — each with expiry date + warning threshold (days) |
 | Oil service | no | Interval (km), last done at (km), warning threshold (km remaining) |
-| Notes | no | Free text |
+| Notes | no | Free text with basic **Markdown** formatting, up to 4 000 characters — edited in its own *Notes* section, rendered on the Dashboard (see *Vehicle notes* below) |
 
 ### Vehicle status (6 values)
 
@@ -106,6 +106,42 @@ A secondary tag that influences a few specific behaviours (e.g. historic cars sk
 | **Veteran** | Same MOT exemptions as Historic; usually paired with status *In restoration* or *In storage* |
 
 ---
+
+### Vehicle notes (Markdown)
+
+*Added in 3.20.0.* Every vehicle has a free-form notes field that supports a small, safe subset of Markdown.
+
+**Where**
+
+- **Edit vehicle** — dedicated *Notes* section (on mobile a separate accordion item whose collapsed header shows the first line of the note). In the *Add vehicle* wizard the field is part of step 3 (*Service*).
+- **Edit / Preview** toggle above the textarea renders the note exactly as it will appear on the Dashboard. A compact syntax hint sits next to the toggle; on narrow screens it moves to its own row and wraps between items (mobile-first).
+- **Dashboard** — *Notes* card between *Tyres* and *Recent records*. The card is hidden when the note is empty. Notes are intentionally **not** shown on Fleet cards.
+
+**Supported syntax**
+
+| Markdown | Result |
+| --- | --- |
+| `# Heading`, `## Heading`, `### Heading` | Three heading levels |
+| `**bold**` / `__bold__` | **bold** |
+| `*italic*` / `_italic_` | *italic* (`_` only at word boundaries, so `file_name_x` stays intact) |
+| `***bold italic***` | ***bold italic*** |
+| `~~strike~~` | ~~strike~~ |
+| `` `code` `` | inline code |
+| `[text](https://…)` | link (opens in a new tab) |
+| bare `https://…` URL | auto-link |
+| `- item` / `* item` / `+ item` | bullet list (an indented next line continues the item) |
+| `1. item` / `1) item` | numbered list |
+| `---` / `***` / `___` | horizontal rule |
+| blank line / single newline | new paragraph / line break |
+
+Not supported (by design, to keep the parser small): nested lists, tables, block quotes, fenced code blocks, images, raw HTML.
+
+**Implementation & security**
+
+- The parser (`renderMarkdown()` in `mycars.js`, ~70 lines) is self-contained — no external library, which also keeps the app compatible with the strict CSP (`script-src 'self'`, Trusted Types).
+- All user text is passed through `esc()` **before** any tag is added, so raw HTML in a note is displayed as text.
+- Links are allowed only with `http://`, `https://` or `mailto:` schemes (`javascript:` and others are rendered as plain text) and get `rel="noopener noreferrer"`.
+- Data model is unchanged — notes are stored in the existing `car.note` string, so older backups import without migration. Existing plain-text notes render as before; only lines starting with `#`, `-`, `*` or a number followed by `.` become headings or lists.
 
 ## Expense Categories
 
@@ -495,7 +531,7 @@ Datum,Typ paliva,Tankováno litrů,Cena za litr,Celková cena,Stav tachometru,Km
 | **WCAG** | Text contrast ratios ≥ 4.5:1 on all three themes |
 | **PWA** | Installable on iOS 16.4+ (Safari → Add to Home Screen) and Android/Chrome |
 | **Service Worker** | Cache-first, offline-capable after first load; update detection with in-app toast notification |
-| **Codebase** | `MyCars.html` (shell, styles) + `mycars.js` (logic, ~5 800 lines) + `mycars-sw.js` (service worker) |
+| **Codebase** | `MyCars.html` (shell, styles) + `mycars.js` (logic, ~6 550 lines) + `mycars-sw.js` (service worker) |
 
 ### localStorage data structure
 

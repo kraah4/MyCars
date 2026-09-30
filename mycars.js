@@ -635,6 +635,75 @@ function uid(){
 // Returns an empty string for null/undefined; stringifies everything else.
 const _ESC_MAP={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;','=':'&#61;'};
 function esc(s){return s==null?'':String(s).replace(/[&<>"'`=]/g,c=>_ESC_MAP[c]);}
+
+// ─── MINI MARKDOWN (vehicle notes) ───────────────────────────
+// Deliberately small subset: # headings (1–3), **bold** / __bold__, *italic* /
+// _italic_, ~~strike~~, `code`, [text](url), bare http(s) links, - / * / +
+// bullet lists, 1. numbered lists, --- rule, paragraphs (single newline = <br>).
+// SECURITY: every piece of user text goes through esc() BEFORE any tag is
+// added; link targets are whitelisted to http(s): and mailto: only. The output
+// is therefore safe to assign to innerHTML (Trusted Types policy is identity).
+function _mdEmph(s){ // s is already escaped
+  return s
+    .replace(/\*\*\*(\S(?:.*?\S)?)\*\*\*/g,'<strong><em>$1</em></strong>')
+    .replace(/\*\*(\S(?:.*?\S)?)\*\*/g,'<strong>$1</strong>')
+    .replace(/(^|[^\w])__(\S(?:.*?\S)?)__(?=[^\w]|$)/g,'$1<strong>$2</strong>')
+    .replace(/\*(\S(?:.*?\S)?)\*/g,'<em>$1</em>')
+    .replace(/(^|[^\w])_(\S(?:.*?\S)?)_(?=[^\w]|$)/g,'$1<em>$2</em>')
+    .replace(/~~(\S(?:.*?\S)?)~~/g,'<del>$1</del>');
+}
+function _mdLinks(s){ // s is raw text (no code spans)
+  const re=/\[([^\]\n]+)\]\(([^)\s]+)\)|(https?:\/\/[^\s<>()]+[^\s<>().,;:!?'"])/g;
+  let out='', last=0, m;
+  while((m=re.exec(s))){
+    out+=_mdEmph(esc(s.slice(last,m.index)));
+    const url=m[2]||m[3];
+    if(/^(https?:\/\/|mailto:)/i.test(url)){
+      const label=m[1]!=null?_mdEmph(esc(m[1])):esc(url);
+      out+=`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    } else {
+      out+=_mdEmph(esc(m[0]));
+    }
+    last=re.lastIndex;
+  }
+  return out+_mdEmph(esc(s.slice(last)));
+}
+function _mdInline(s){
+  return s.split(/(`[^`\n]+`)/).map((p,i)=>
+    i%2 ? `<code>${esc(p.slice(1,-1))}</code>` : _mdLinks(p)
+  ).join('');
+}
+function renderMarkdown(src){
+  const lines=String(src==null?'':src).replace(/\r\n?/g,'\n').split('\n');
+  const out=[]; let para=[], list=null;
+  const flushPara=()=>{ if(para.length){ out.push('<p>'+para.map(_mdInline).join('<br>')+'</p>'); para=[]; } };
+  const flushList=()=>{ if(list){ out.push(`<${list.tag}>`+list.items.map(x=>'<li>'+_mdInline(x)+'</li>').join('')+`</${list.tag}>`); list=null; } };
+  for(const line of lines){
+    let m;
+    if(!line.trim()){ flushPara(); flushList(); continue; }
+    if(/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)){ flushPara(); flushList(); out.push('<hr>'); continue; }
+    if((m=line.match(/^\s*(#{1,3})\s+(.*?)\s*#*\s*$/))){
+      flushPara(); flushList();
+      const lvl=m[1].length+2; // # → h3, ## → h4, ### → h5
+      out.push(`<h${lvl}>${_mdInline(m[2])}</h${lvl}>`); continue;
+    }
+    const ul=line.match(/^\s*[-*+]\s+(.*)$/), ol=line.match(/^\s*\d{1,3}[.)]\s+(.*)$/);
+    if(ul||ol){
+      const tag=ul?'ul':'ol';
+      flushPara();
+      if(list&&list.tag!==tag) flushList();
+      if(!list) list={tag,items:[]};
+      list.items.push((ul||ol)[1]); continue;
+    }
+    if(list){ // continuation line of the last list item
+      if(/^\s+/.test(line)){ list.items[list.items.length-1]+=' '+line.trim(); continue; }
+      flushList();
+    }
+    para.push(line.trim());
+  }
+  flushPara(); flushList();
+  return out.join('');
+}
 // safeId: validates a string safe to use inside onclick="fn('${id}')" (no quotes/slashes/HTML chars).
 // Returns an empty string if the id is not safe — callers must handle the fallback.
 function safeId(id){return /^[A-Za-z0-9_\-]{1,64}$/.test(id||'') ? id : '';}
@@ -1590,6 +1659,10 @@ function sectionSummary(section, car){
     if(car.has4x4&&car.xferOilInterval) parts.push('4×4 '+fmtNum(car.xferOilInterval)+' km');
     return parts.join(' · ');
   }
+  if(section==='notes'){
+    const first=(car.note||'').split('\n').map(l=>l.replace(/^\s*(#{1,3}|[-*+]|\d{1,3}[.)])\s+/,'').replace(/[*_~`]/g,'').trim()).find(Boolean);
+    return first||'';
+  }
   if(section==='tyres'){
     const t=car.tyres;
     if(!t) return '';
@@ -1629,6 +1702,8 @@ function renderCarEditPage(){
       form: buildServiceSectionForm(cs, _carEditDrivetrain.hasAutomatic, _carEditDrivetrain.has4x4)},
     {id:'tyres',   title:cs?'Pneumatiky':'Tyres',
       form:`<div id="car-tab-tyres"></div>`},
+    {id:'notes',   title:cs?'Poznámky':'Notes',
+      form: buildNotesSectionForm(cs, false)},
   ];
 
   const accordionHtml = sections.map(sec=>{
@@ -1730,7 +1805,8 @@ function renderVehicleWizard(){
   const stepForms=[
     buildBasicSectionForm(cs),
     buildDocsSectionForm(cs),
-    buildServiceSectionForm(cs, _wizardDraftData['_hasAutomatic']||false, _wizardDraftData['_has4x4']||false),
+    buildServiceSectionForm(cs, _wizardDraftData['_hasAutomatic']||false, _wizardDraftData['_has4x4']||false)
+      + buildNotesSectionForm(cs, true),
     `<div id="car-tab-tyres"></div>`,
   ];
 
@@ -2224,6 +2300,9 @@ function renderDashboard(){
       return `<div class="section-title" style="margin-top:6px">${cs2?'Pneumatiky':'Tyres'}</div>
         <div class="table-wrap" style="padding:4px 16px;margin-bottom:22px">${rows}</div>`;
     })()}
+
+    ${car.note&&car.note.trim()?`<div class="section-title">${cs?'Poznámky':'Notes'}</div>
+    <div class="table-wrap md-card"><div class="md-note">${renderMarkdown(car.note)}</div></div>`:''}
 
     <div class="section-title">${t('recent')}</div>
     <div class="table-wrap"><div class="table-scroll"><table>
@@ -4342,9 +4421,38 @@ function buildServiceSectionForm(cs, hasAutomatic, has4x4){
   <div class='form-group' id='c-4x4-warn-grp' style='display:${show4x4}'><label class='form-label'>${cs?'Varovat (km zbývá)':'Warn (km left)'}</label><input type='number' class='form-input' id='c-4x4-oil-warn' value='1000'></div>
   <div class='form-section-label'>${cs?'Chladící kapalina':'Coolant'}</div>
   <div class='form-group'><label class='form-label'>${cs?'Typ chladící kapaliny':'Coolant type'}</label><input type='text' class='form-input' id='c-coolant-type' maxlength='100' placeholder='G13 / G12+'></div>
-  <div class='form-section-label'>${cs?'Poznámka k vozidlu':'Vehicle notes'}</div>
-  <div class='form-group full'><textarea class='form-textarea' id='c-note' rows='3' maxlength='2000' placeholder='${cs?'Poznámky...':'Notes...'}'></textarea></div>
 </div>`;
+}
+
+// Vehicle notes (Markdown) — own section in edit page, appended to step 3 in wizard.
+function buildNotesSectionForm(cs, withLabel){
+  return `
+<div class='form-grid'>
+  ${withLabel?`<div class='form-section-label'>${cs?'Poznámky k vozidlu':'Vehicle notes'}</div>`:''}
+  <div class='form-group full'>
+    <div class='md-tabs'>
+      <button type='button' class='md-tab active' data-action='noteTab' data-mode='edit'>${cs?'Upravit':'Edit'}</button>
+      <button type='button' class='md-tab' data-action='noteTab' data-mode='preview'>${cs?'Náhled':'Preview'}</button>
+      <span class='md-hint'><span>**${cs?'tučně':'bold'}**</span><span>*${cs?'kurzíva':'italic'}*</span><span># ${cs?'nadpis':'heading'}</span><span>- ${cs?'seznam':'list'}</span><span>[${cs?'odkaz':'link'}](https://…)</span></span>
+    </div>
+    <textarea class='form-textarea' id='c-note' rows='8' maxlength='4000' placeholder='${cs?'Poznámky… (podporuje Markdown)':'Notes… (Markdown supported)'}'></textarea>
+    <div class='md-note md-preview' id='c-note-preview' hidden></div>
+  </div>
+</div>`;
+}
+
+function setNoteTab(mode){
+  const ta=document.getElementById('c-note'), pv=document.getElementById('c-note-preview');
+  if(!ta||!pv) return;
+  const preview = mode==='preview';
+  if(preview){
+    const v=ta.value.trim();
+    pv.style.minHeight=ta.offsetHeight+'px';
+    pv.innerHTML = v ? renderMarkdown(v)
+      : `<p class='md-empty'>${state.lang==='cs'?'Zatím žádná poznámka':'No notes yet'}</p>`;
+  }
+  ta.hidden=preview; pv.hidden=!preview;
+  document.querySelectorAll('.md-tab').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode));
 }
 
 function saveCar(){
@@ -4603,7 +4711,7 @@ function deleteReminder(id){state.reminders=state.reminders.filter(r=>r.id!==id)
 // ─── IMPORT / EXPORT ─────────────────────────────────────────
 // Backup schema version. Bump when the shape changes (adding/removing top-level fields).
 const BACKUP_SCHEMA_VERSION = 2;
-const APP_VERSION = '3.19.0';
+const APP_VERSION = '3.20.0';
 
 function exportData(){
   const now=new Date();
@@ -5081,8 +5189,8 @@ function renderSettings(){
         <div class="section-title">${cs?'O aplikaci':'About'}</div>
         <div class="settings-card settings-col-card">
           <div class="settings-info-row"><span>${cs?'Aplikace':'Application'}</span><span>MyCars</span></div>
-          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.19.0</span></div>
-          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260824-008</span></div>
+          <div class="settings-info-row"><span>${cs?'Verze':'Version'}</span><span>3.20.0</span></div>
+          <div class="settings-info-row"><span>Build</span><span style="font-family:var(--font-mono)">20260930-001</span></div>
           <div class="settings-info-row"><span>${cs?'Autor':'Author'}</span><span>kraah</span></div>
           <div class="settings-info-row"><span>${cs?'Úložiště':'Storage'}</span><span>localStorage · mycars_v3</span></div>
           ${(()=>{
@@ -6363,6 +6471,7 @@ document.addEventListener('click', function _clickDispatch(e) {
     case 'toggleCswMenu':       toggleCswMenu(); break;
     case 'toggleChartTooltip':  toggleChartTooltip(el); break;
     case 'toggleEditSection':   toggleEditSection(d.id); break;
+    case 'noteTab':             setNoteTab(d.mode); break;
     // Settings
     case 'setLang':             setLang(d.lang); break;
     case 'setTheme':            setTheme(d.theme); break;
